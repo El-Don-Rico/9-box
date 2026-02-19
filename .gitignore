@@ -42,6 +42,9 @@ prisma/dev.db-journal
 # vercel
 .vercel
 
+# cloudflare workers local secrets
+workers/*/.dev.vars
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
