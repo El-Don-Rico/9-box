@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod, getRatingLabel, getRatingColor, getRoleDisplayName } from "@/lib/utils";
+import { formatCyclePeriod, getRatingLabel, getRatingColor } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -38,10 +38,10 @@ function EmployeeDashboard() {
     fetch("/api/cycles")
       .then((r) => r.json())
       .then((cycles: CycleData[]) => {
-        const open = cycles.find((c) => c.status === "OPEN");
-        if (open) {
-          setCycle(open);
-          fetch(`/api/assessments/self?cycleId=${open.id}`)
+        const recent = cycles[0];
+        if (recent) {
+          setCycle(recent);
+          fetch(`/api/assessments/self?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then((assessments) => {
               if (assessments.length > 0) {
@@ -62,9 +62,14 @@ function EmployeeDashboard() {
       {cycle ? (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">
-              Current Cycle: {formatCyclePeriod(cycle.month, cycle.year)}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">
+                {formatCyclePeriod(cycle.month, cycle.year)}
+              </h2>
+              <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
+                {cycle.status === "OPEN" ? "Open" : "Closed"}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -81,7 +86,7 @@ function EmployeeDashboard() {
                 {selfStatus === "submitted" ? "Submitted" : selfStatus === "draft" ? "In Progress" : "Not Started"}
               </Badge>
             </div>
-            {selfStatus !== "submitted" && (
+            {selfStatus !== "submitted" && cycle.status === "OPEN" && (
               <Button onClick={() => router.push(`/self-assessment?cycleId=${cycle.id}`)}>
                 {selfStatus === "draft" ? "Continue Self-Assessment" : "Start Self-Assessment"}
               </Button>
@@ -92,7 +97,7 @@ function EmployeeDashboard() {
         <Card>
           <CardContent>
             <p className="text-sm text-gray-500 py-4 text-center">
-              No active assessment cycle. Check back when your manager opens a new cycle.
+              No assessment cycles found. Check back when your manager opens a new cycle.
             </p>
           </CardContent>
         </Card>
@@ -105,6 +110,7 @@ interface PlacedEmployee {
   id: string;
   name: string;
   role: string;
+  jobTitle: string | null;
   team: string | null;
   box1Label: string;
   box2Label: string;
@@ -122,20 +128,20 @@ function ManagerDashboard() {
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles")
       .then((r) => r.json())
       .then((cycles: CycleData[]) => {
-        const open = cycles.find((c) => c.status === "OPEN");
-        if (open) {
-          setCycle(open);
-          fetch(`/api/team?cycleId=${open.id}`)
+        const recent = cycles[0];
+        if (recent) {
+          setCycle(recent);
+          fetch(`/api/team?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then(setTeam);
-          fetch(`/api/assessments/manager?cycleId=${open.id}`)
+          fetch(`/api/assessments/manager?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then(setAssessments);
         }
@@ -154,6 +160,7 @@ function ManagerDashboard() {
           id: a.employeeId,
           name: a.employee?.name || "Unknown",
           role: a.employee?.role || "EMPLOYEE",
+          jobTitle: a.employee?.jobTitle || null,
           team: a.employee?.team || null,
           box1Label: getBox1Label(a.performance!, a.potential!),
           box2Label: getBox2Label(va, a.engagement!),
@@ -165,16 +172,16 @@ function ManagerDashboard() {
       });
   }, [assessments]);
 
-  const roleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => getRoleDisplayName(e.role)))].sort(), [placedEmployees]);
+  const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
   const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
 
   const filteredEmployees = useMemo(() => {
     return placedEmployees.filter((e) => {
-      if (selectedRoles.length > 0 && !selectedRoles.includes(getRoleDisplayName(e.role))) return false;
+      if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
       if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
       return true;
     });
-  }, [placedEmployees, selectedRoles, selectedTeams]);
+  }, [placedEmployees, selectedTitles, selectedTeams]);
 
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
@@ -191,9 +198,14 @@ function ManagerDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-visory-navy">Dashboard</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          {cycle ? formatCyclePeriod(cycle.month, cycle.year) : "No active cycle"}
-        </p>
+        {cycle && (
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm text-gray-600">{formatCyclePeriod(cycle.month, cycle.year)}</p>
+            <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
+              {cycle.status === "OPEN" ? "Open" : "Closed"}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Admin quick links */}
@@ -239,7 +251,7 @@ function ManagerDashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold">9-Box Grid</h2>
                   <div className="flex flex-wrap items-center gap-2">
-                    <MultiSelect label="Roles" options={roleOptions.map(getRoleDisplayName)} selected={selectedRoles} onChange={setSelectedRoles} />
+                    <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
                     <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
                     <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                       <button

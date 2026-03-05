@@ -6,7 +6,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
+import { formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -22,6 +22,7 @@ interface PlacedEmployee {
   id: string;
   name: string;
   role: string;
+  jobTitle: string | null;
   team: string | null;
   box1Label: string;
   box2Label: string;
@@ -37,7 +38,7 @@ export default function CalibrationPage() {
   const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function CalibrationPage() {
           id: a.employeeId,
           name: a.employee?.name || "Unknown",
           role: a.employee?.role || "EMPLOYEE",
+          jobTitle: a.employee?.jobTitle || null,
           team: a.employee?.team || null,
           box1Label: getBox1Label(a.performance!, a.potential!),
           box2Label: getBox2Label(va, a.engagement!),
@@ -76,16 +78,16 @@ export default function CalibrationPage() {
       });
   }, [assessments]);
 
-  const roleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => getRoleDisplayName(e.role)))].sort(), [placedEmployees]);
+  const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
   const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
 
   const filteredEmployees = useMemo(() => {
     return placedEmployees.filter((e) => {
-      if (selectedRoles.length > 0 && !selectedRoles.includes(getRoleDisplayName(e.role))) return false;
+      if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
       if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
       return true;
     });
-  }, [placedEmployees, selectedRoles, selectedTeams]);
+  }, [placedEmployees, selectedTitles, selectedTeams]);
 
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
@@ -100,12 +102,44 @@ export default function CalibrationPage() {
     });
   }
 
+  const analysisInsights = useMemo(() => {
+    if (filteredEmployees.length === 0) return [];
+    const total = filteredEmployees.length;
+    const insights: { label: string; value: string; color: string }[] = [];
+
+    // Distribution across Box 1
+    const superstars = filteredEmployees.filter((e) => e.box1Label === "Superstar").length;
+    const risingStars = filteredEmployees.filter((e) => e.box1Label === "Rising Star").length;
+    const highPerformers = filteredEmployees.filter((e) => e.box1Label === "High Performer").length;
+    const topTalent = superstars + risingStars + highPerformers;
+    const exitConvos = filteredEmployees.filter((e) => e.box1Label === "Exit Convo" || e.box2Label === "Exit Convo").length;
+    const underperformers = filteredEmployees.filter((e) => e.box1Label === "Underperformer").length;
+    const atRisk = filteredEmployees.filter((e) => e.box2Label === "Drift Risk" || e.box2Label === "Burnout Watch").length;
+
+    // Avg scores
+    const avgPerf = (filteredEmployees.reduce((s, e) => s + e.performance, 0) / total).toFixed(1);
+    const avgPotential = (filteredEmployees.reduce((s, e) => s + e.potential, 0) / total).toFixed(1);
+    const avgValues = (filteredEmployees.reduce((s, e) => s + e.valuesAlignment, 0) / total).toFixed(1);
+    const avgEngagement = (filteredEmployees.reduce((s, e) => s + e.engagement, 0) / total).toFixed(1);
+
+    insights.push({ label: "Top Talent", value: `${topTalent} of ${total} (${Math.round(topTalent / total * 100)}%)`, color: "text-green-700" });
+    insights.push({ label: "At Risk", value: `${atRisk} of ${total}`, color: atRisk > 0 ? "text-orange-600" : "text-green-700" });
+    insights.push({ label: "Exit Conversations Needed", value: `${exitConvos}`, color: exitConvos > 0 ? "text-red-600" : "text-green-700" });
+    insights.push({ label: "Underperformers", value: `${underperformers}`, color: underperformers > 0 ? "text-orange-600" : "text-green-700" });
+    insights.push({ label: "Avg Performance", value: avgPerf, color: "text-visory-navy" });
+    insights.push({ label: "Avg Potential", value: avgPotential, color: "text-visory-navy" });
+    insights.push({ label: "Avg Values Alignment", value: avgValues, color: "text-visory-navy" });
+    insights.push({ label: "Avg Engagement", value: avgEngagement, color: "text-visory-navy" });
+
+    return insights;
+  }, [filteredEmployees]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Calibration</h1>
-          <p className="text-sm text-gray-600 mt-1">9-box grid view for team calibration</p>
+          <h1 className="text-2xl font-bold text-visory-navy">Analysis</h1>
+          <p className="text-sm text-gray-600 mt-1">Team performance analysis and 9-box insights</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select
@@ -117,7 +151,7 @@ export default function CalibrationPage() {
               <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
             ))}
           </select>
-          <MultiSelect label="Roles" options={roleOptions} selected={selectedRoles} onChange={setSelectedRoles} />
+          <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
           <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
@@ -185,6 +219,25 @@ export default function CalibrationPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Key Analysis Insights */}
+      {analysisInsights.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Key Insights</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {analysisInsights.map((insight) => (
+                <div key={insight.label} className="text-center p-3 rounded-lg bg-visory-grey">
+                  <p className={`text-xl font-bold ${insight.color}`}>{insight.value}</p>
+                  <p className="text-xs text-gray-600 mt-1">{insight.label}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Prescribed Actions Summary */}
       {filteredEmployees.length > 0 && (
