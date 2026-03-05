@@ -99,6 +99,7 @@ model ManagerAssessment {
   trend               TrendDirection?
   notes               String?
   submittedAt         DateTime?
+  resultsSentAt       DateTime?
   oneOnOneComplete    Boolean   @default(false)
   oneOnOneCompletedAt DateTime?
   createdAt           DateTime  @default(now())

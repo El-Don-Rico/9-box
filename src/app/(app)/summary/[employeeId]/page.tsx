@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getRatingLabel, getRatingColor, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -36,6 +38,7 @@ interface SummaryData {
     submittedAt: string | null;
   } | null;
   managerAssessment: {
+    id: string;
     performance: number | null;
     performanceEvidence: string | null;
     potential: number | null;
@@ -49,6 +52,7 @@ interface SummaryData {
     engagementEvidence: string | null;
     notes: string | null;
     submittedAt: string | null;
+    resultsSentAt: string | null;
     manager: { id: string; name: string };
   } | null;
 }
@@ -81,10 +85,13 @@ function RatingComparison({ label, selfRating, managerRating }: { label: string;
 
 export default function SummaryPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const cycleId = searchParams.get("cycleId");
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [sendingResults, setSendingResults] = useState(false);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -94,10 +101,33 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       .catch(() => setLoading(false));
   }, [employeeId, cycleId]);
 
+  async function handleSendResults() {
+    if (!data?.managerAssessment?.id) return;
+    setSendingResults(true);
+    try {
+      const res = await fetch("/api/assessments/manager/send-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId: data.managerAssessment.id }),
+      });
+      if (res.ok) {
+        setData((prev) => prev ? {
+          ...prev,
+          managerAssessment: prev.managerAssessment ? { ...prev.managerAssessment, resultsSentAt: new Date().toISOString() } : null,
+        } : null);
+      }
+    } finally {
+      setSendingResults(false);
+      setShowSendConfirm(false);
+    }
+  }
+
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
   if (!data || !data.employee) return <div className="text-center py-12 text-gray-500">Summary not found.</div>;
 
   const { employee, cycle, selfAssessment: self, managerAssessment: mgr } = data;
+  const isManager = mgr?.manager?.id === session?.user?.id;
+  const canSendResults = isManager && mgr?.submittedAt && self?.submittedAt && !mgr?.resultsSentAt;
 
   const mgrValuesAlignment = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
     ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
@@ -114,9 +144,19 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
           </p>
         )}
-        <p className="text-sm text-gray-600 mt-1">
-          Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
-        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-sm text-gray-600">
+            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
+          </p>
+          {mgr?.resultsSentAt && (
+            <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
+          )}
+        </div>
+        {canSendResults && (
+          <Button className="mt-3" size="sm" onClick={() => setShowSendConfirm(true)}>
+            Send Results to {employee.name}
+          </Button>
+        )}
       </div>
 
       {/* Talent Density & Cultural Momentum Scores */}
@@ -294,6 +334,29 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {showSendConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
+              <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
+              <p className="text-sm text-amber-700">
+                Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              This will make your assessment visible to {employee.name}. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" size="sm" onClick={() => setShowSendConfirm(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleSendResults} disabled={sendingResults}>
+                {sendingResults ? "Sending..." : "Confirm & Send Results"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -71,4 +71,5 @@ export interface TeamMemberStatus {
   email: string;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  resultsSentAt: string | null;
 }

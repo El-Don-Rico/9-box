@@ -120,6 +120,29 @@ interface PlacedEmployee {
   engagement: number;
 }
 
+function SendResultsConfirmModal({ memberName, onConfirm, onCancel }: { memberName: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {memberName}?</h3>
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
+          <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
+          <p className="text-sm text-amber-700">
+            Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+          </p>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          This will make your assessment visible to {memberName}. This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={onConfirm}>Confirm &amp; Send Results</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ManagerDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -130,6 +153,8 @@ function ManagerDashboard() {
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [sendConfirm, setSendConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
+  const [sendingResults, setSendingResults] = useState(false);
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -186,6 +211,25 @@ function ManagerDashboard() {
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
   const yLabel = activeGrid === "box1" ? "Potential" : "Engagement";
+
+  async function handleSendResults(memberId: string) {
+    const assessment = assessments.find((a) => a.employeeId === memberId);
+    if (!assessment) return;
+    setSendingResults(true);
+    try {
+      const res = await fetch("/api/assessments/manager/send-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId: assessment.id }),
+      });
+      if (res.ok) {
+        setTeam((prev) => prev.map((m) => m.id === memberId ? { ...m, resultsSentAt: new Date().toISOString() } : m));
+      }
+    } finally {
+      setSendingResults(false);
+      setSendConfirm(null);
+    }
+  }
 
   function getEmployeesForCell(cell: GridCellConfig) {
     return filteredEmployees.filter((e) => {
@@ -415,6 +459,18 @@ function ManagerDashboard() {
                       >
                         {member.managerAssessmentStatus === "submitted" ? "View" : "Assess"}
                       </Button>
+                      {member.managerAssessmentStatus === "submitted" && member.selfAssessmentStatus === "submitted" && !member.resultsSentAt && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => setSendConfirm({ memberId: member.id, memberName: member.name })}
+                        >
+                          Send Results
+                        </Button>
+                      )}
+                      {member.resultsSentAt && (
+                        <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -427,6 +483,14 @@ function ManagerDashboard() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {sendConfirm && (
+        <SendResultsConfirmModal
+          memberName={sendConfirm.memberName}
+          onConfirm={() => handleSendResults(sendConfirm.memberId)}
+          onCancel={() => setSendConfirm(null)}
+        />
       )}
     </div>
   );
