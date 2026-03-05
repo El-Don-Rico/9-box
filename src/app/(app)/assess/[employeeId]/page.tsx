@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
-import { Button } from "@/components/ui/button";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
@@ -15,7 +14,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [oneOnOneComplete, setOneOnOneComplete] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
 
   useEffect(() => {
@@ -27,7 +25,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           const a = data[0];
           setAssessmentId(a.id);
           setIsSubmitted(!!a.submittedAt);
-          setOneOnOneComplete(a.oneOnOneComplete);
           setEmployeeName(a.employee?.name || "");
           setValues({
             performance: a.performance,
@@ -41,7 +38,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
             valuesEvidence: a.valuesEvidence || "",
             engagement: a.engagement,
             engagementEvidence: a.engagementEvidence || "",
-            trend: a.trend,
             notes: a.notes || "",
           });
         }
@@ -72,22 +68,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       setSubmitting(false);
     }
   }, [cycleId, employeeId, values]);
-
-  const markOneOnOneComplete = async () => {
-    if (!assessmentId) return;
-    await fetch(`/api/assessments/manager/${assessmentId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ oneOnOneComplete: true }),
-    });
-    setOneOnOneComplete(true);
-  };
-
-  const trendOptions = [
-    { value: "IMPROVING", label: "Improving" },
-    { value: "STABLE", label: "Stable" },
-    { value: "DECLINING", label: "Declining" },
-  ];
 
   const steps: StepConfig[] = [
     {
@@ -157,32 +137,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Observable behaviours..." />,
     },
     {
-      id: "trend",
-      title: "Trend",
-      description: "Compared to last month, what direction is this employee trending?",
-      render: (val, onChange) => (
-        <div className="flex flex-col sm:flex-row gap-3">
-          {trendOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => (onChange as (v: string) => void)(opt.value)}
-              className={`flex-1 p-4 rounded-lg border-2 text-center transition-all ${
-                val === opt.value
-                  ? "border-visory bg-visory-light text-visory-dark font-semibold"
-                  : "border-gray-200 hover:border-gray-300 text-gray-700"
-              }`}
-            >
-              <span className="text-lg block">
-                {opt.value === "IMPROVING" ? "↑" : opt.value === "STABLE" ? "→" : "↓"}
-              </span>
-              <span className="text-sm">{opt.label}</span>
-            </button>
-          ))}
-        </div>
-      ),
-    },
-    {
       id: "notes",
       title: "Additional Notes",
       description: "Any other observations or feedback for this employee.",
@@ -205,16 +159,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           <h1 className="text-2xl font-bold text-gray-900">Manager Assessment</h1>
           {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
         </div>
-        {isSubmitted && !oneOnOneComplete && (
-          <Button onClick={markOneOnOneComplete}>
-            Mark 1:1 Complete
-          </Button>
-        )}
-        {oneOnOneComplete && (
-          <span className="text-sm text-green-700 font-medium bg-green-50 px-3 py-1 rounded-lg">
-            1:1 Completed
-          </span>
-        )}
       </div>
       <StepForm
         steps={steps}

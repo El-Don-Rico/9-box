@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       managerAssessmentsReceived: cycleId
         ? {
             where: { cycleId, managerId: session.user.id },
-            select: { id: true, submittedAt: true, oneOnOneComplete: true },
+            select: { id: true, submittedAt: true },
           }
         : undefined,
     },
@@ -52,7 +52,6 @@ export async function GET(request: Request) {
         : managerAssessment.submittedAt
           ? "submitted"
           : "draft",
-      oneOnOneComplete: managerAssessment?.oneOnOneComplete ?? false,
     };
   });
 

@@ -56,11 +56,6 @@ export async function PUT(
 
   const body = await request.json();
 
-  // Handle 1:1 completion
-  if (body.oneOnOneComplete && !existing.oneOnOneComplete) {
-    body.oneOnOneCompletedAt = new Date();
-  }
-
   const assessment = await prisma.managerAssessment.update({
     where: { id },
     data: body,

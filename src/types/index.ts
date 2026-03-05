@@ -34,11 +34,8 @@ export interface ManagerAssessmentData {
   valuesEvidence: string | null;
   engagement: number | null;
   engagementEvidence: string | null;
-  trend: "IMPROVING" | "STABLE" | "DECLINING" | null;
   notes: string | null;
   submittedAt: string | null;
-  oneOnOneComplete: boolean;
-  oneOnOneCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   employee?: { id: string; name: string; email: string };
@@ -74,5 +71,4 @@ export interface TeamMemberStatus {
   email: string;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
-  oneOnOneComplete: boolean;
 }

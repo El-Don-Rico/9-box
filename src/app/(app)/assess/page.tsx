@@ -92,9 +92,6 @@ export default function AssessTeamPage() {
                   >
                     Mgr: {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
                   </Badge>
-                  {member.oneOnOneComplete && (
-                    <Badge className="bg-visory-light text-visory-dark border-visory/20">1:1 Done</Badge>
-                  )}
                   <Button
                     size="sm"
                     variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}
@@ -102,6 +99,15 @@ export default function AssessTeamPage() {
                   >
                     {member.managerAssessmentStatus === "submitted" ? "View" : "Assess"}
                   </Button>
+                  {member.managerAssessmentStatus === "submitted" && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => router.push(`/summary/${member.id}?cycleId=${selectedCycleId}`)}
+                    >
+                      Summary
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

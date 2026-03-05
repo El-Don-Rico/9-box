@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getRatingLabel, getRatingColor, formatCyclePeriod, getTrendIcon } from "@/lib/utils";
+import { getRatingLabel, getRatingColor, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -28,9 +28,8 @@ interface ResultData {
   potentialEvidence: string | null;
   valuesEvidence: string | null;
   engagementEvidence: string | null;
-  trend: string | null;
   notes: string | null;
-  oneOnOneComplete: boolean;
+  submittedAt: string | null;
   cycle: { month: number; year: number };
 }
 
@@ -43,8 +42,8 @@ export default function MyResultsPage() {
     fetch("/api/assessments/manager?employeeId=" + session?.user?.id)
       .then((r) => r.json())
       .then((data) => {
-        // Only show results where 1:1 is complete
-        setResults(data.filter((a: ResultData) => a.oneOnOneComplete));
+        // Only show submitted results
+        setResults(data.filter((a: ResultData) => a.submittedAt));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -58,7 +57,7 @@ export default function MyResultsPage() {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">My Results</h1>
-        <p className="text-gray-500">No results available yet. Results appear after your 1:1 with your manager.</p>
+        <p className="text-gray-500">No results available yet. Results appear after your manager submits your assessment.</p>
       </div>
     );
   }
@@ -83,9 +82,6 @@ export default function MyResultsPage() {
           <Card key={result.id}>
             <CardHeader>
               <h2 className="text-lg font-semibold">{formatCyclePeriod(result.cycle.month, result.cycle.year)}</h2>
-              {result.trend && (
-                <span className="text-sm text-gray-600">Trend: {getTrendIcon(result.trend)} {result.trend.charAt(0) + result.trend.slice(1).toLowerCase()}</span>
-              )}
             </CardHeader>
             <CardContent className="space-y-6">
               {/* 9-Box Placements */}

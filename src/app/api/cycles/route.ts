@@ -42,6 +42,31 @@ export async function POST(request: Request) {
     data: { month, year },
   });
 
+  // Auto-create self-assessments for all active users
+  // and manager assessments for all active users who have a manager
+  const activeUsers = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, managerId: true },
+  });
+
+  const selfAssessmentData = activeUsers.map((u) => ({
+    cycleId: cycle.id,
+    employeeId: u.id,
+  }));
+
+  const managerAssessmentData = activeUsers
+    .filter((u) => u.managerId)
+    .map((u) => ({
+      cycleId: cycle.id,
+      managerId: u.managerId!,
+      employeeId: u.id,
+    }));
+
+  await prisma.selfAssessment.createMany({ data: selfAssessmentData });
+  if (managerAssessmentData.length > 0) {
+    await prisma.managerAssessment.createMany({ data: managerAssessmentData });
+  }
+
   return NextResponse.json(cycle, { status: 201 });
 }
 

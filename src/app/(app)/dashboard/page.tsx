@@ -13,10 +13,11 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const role = session?.user?.role;
 
+  if (!role) return <div className="text-center py-12 text-gray-500">Loading...</div>;
   if (role === "EMPLOYEE") return <EmployeeDashboard />;
-  if (role === "MANAGER" || role === "AREA_LEAD" || role === "LEADERSHIP") return <ManagerDashboard />;
+  // All manager+ roles see both their own self-assessment and team management
   if (role === "ADMIN") return <AdminDashboard />;
-  return <div className="text-center py-12 text-gray-500">Loading...</div>;
+  return <ManagerDashboard />;
 }
 
 function EmployeeDashboard() {
@@ -112,7 +113,6 @@ function ManagerDashboard() {
 
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
-  const oneOnOneDone = team.filter((t) => t.oneOnOneComplete).length;
 
   return (
     <div className="space-y-6">
@@ -125,7 +125,7 @@ function ManagerDashboard() {
 
       {cycle && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card>
               <CardContent className="py-4">
                 <p className="text-2xl font-bold text-visory">{selfDone}/{team.length}</p>
@@ -136,12 +136,6 @@ function ManagerDashboard() {
               <CardContent className="py-4">
                 <p className="text-2xl font-bold text-visory">{assessed}/{team.length}</p>
                 <p className="text-sm text-gray-600">Manager Assessments Done</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-4">
-                <p className="text-2xl font-bold text-visory">{oneOnOneDone}/{team.length}</p>
-                <p className="text-sm text-gray-600">1:1s Complete</p>
               </CardContent>
             </Card>
           </div>
@@ -181,9 +175,6 @@ function ManagerDashboard() {
                       >
                         Mgr: {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
                       </Badge>
-                      {member.oneOnOneComplete && (
-                        <Badge className="bg-visory-light text-visory-dark border-visory/20">1:1 Done</Badge>
-                      )}
                       <Button
                         size="sm"
                         variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}
