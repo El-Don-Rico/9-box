@@ -103,9 +103,9 @@ interface RatingStepProps {
 
 export function RatingStep({ value, onChange, labels }: RatingStepProps) {
   const defaultLabels: Record<number, string> = {
-    1: "Low",
-    2: "Medium",
-    3: "High",
+    1: "Below",
+    2: "Meeting",
+    3: "Exceeding",
   };
   const displayLabels = labels || defaultLabels;
 

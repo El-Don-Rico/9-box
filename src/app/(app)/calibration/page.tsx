@@ -27,7 +27,7 @@ interface PlacedEmployee {
   box1Label: string;
   box2Label: string;
   performance: number;
-  potential: number;
+  growthReadiness: number;
   valuesAlignment: number;
   engagement: number;
 }
@@ -59,7 +59,7 @@ export default function CalibrationPage() {
 
   const placedEmployees = useMemo<PlacedEmployee[]>(() => {
     return assessments
-      .filter((a) => a.submittedAt && a.performance && a.potential && a.engagement && a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy)
+      .filter((a) => a.submittedAt && a.performance && a.growthReadiness && a.engagement && a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy)
       .map((a) => {
         const va = getValuesAlignment(a.valCustomerFirst!, a.valStepIntoArena!, a.valFlockToProblems!, a.valGiveEnergy!);
         return {
@@ -68,10 +68,10 @@ export default function CalibrationPage() {
           role: a.employee?.role || "EMPLOYEE",
           jobTitle: a.employee?.jobTitle || null,
           team: a.employee?.team || null,
-          box1Label: getBox1Label(a.performance!, a.potential!),
+          box1Label: getBox1Label(a.performance!, a.growthReadiness!),
           box2Label: getBox2Label(va, a.engagement!),
           performance: a.performance!,
-          potential: a.potential!,
+          growthReadiness: a.growthReadiness!,
           valuesAlignment: va,
           engagement: a.engagement!,
         };
@@ -91,12 +91,12 @@ export default function CalibrationPage() {
 
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
-  const yLabel = activeGrid === "box1" ? "Potential" : "Engagement";
+  const yLabel = activeGrid === "box1" ? "Growth Readiness" : "Engagement";
 
   function getEmployeesForCell(cell: GridCellConfig) {
     return filteredEmployees.filter((e) => {
       if (activeGrid === "box1") {
-        return e.performance === cell.x && e.potential === cell.y;
+        return e.performance === cell.x && e.growthReadiness === cell.y;
       }
       return e.valuesAlignment === cell.x && e.engagement === cell.y;
     });
@@ -108,22 +108,22 @@ export default function CalibrationPage() {
     const insights: { label: string; value: string; color: string }[] = [];
 
     // Distribution across Box 1
-    const superstars = filteredEmployees.filter((e) => e.box1Label === "Superstar").length;
-    const risingStars = filteredEmployees.filter((e) => e.box1Label === "Rising Star").length;
-    const highPerformers = filteredEmployees.filter((e) => e.box1Label === "High Performer").length;
-    const topTalent = superstars + risingStars + highPerformers;
-    const exitConvos = filteredEmployees.filter((e) => e.box1Label === "Exit Convo" || e.box2Label === "Exit Convo").length;
-    const underperformers = filteredEmployees.filter((e) => e.box1Label === "Underperformer").length;
-    const atRisk = filteredEmployees.filter((e) => e.box2Label === "Drift Risk" || e.box2Label === "Burnout Watch").length;
+    const readyToPromote = filteredEmployees.filter((e) => e.box1Label === "Ready to Promote").length;
+    const stretchDevelop = filteredEmployees.filter((e) => e.box1Label === "Stretch & Develop").length;
+    const expandRole = filteredEmployees.filter((e) => e.box1Label === "Expand the Role").length;
+    const topTalent = readyToPromote + stretchDevelop + expandRole;
+    const interveneNow = filteredEmployees.filter((e) => e.box1Label === "Intervene Now" || e.box2Label === "Assess the Fit").length;
+    const buildFoundations = filteredEmployees.filter((e) => e.box1Label === "Build the Foundations").length;
+    const atRisk = filteredEmployees.filter((e) => e.box2Label === "Have the Conversation" || e.box2Label === "Find What's Draining").length;
 
     // Avg scores
     const avgPerf = (filteredEmployees.reduce((s, e) => s + e.performance, 0) / total).toFixed(1);
-    const avgPotential = (filteredEmployees.reduce((s, e) => s + e.potential, 0) / total).toFixed(1);
+    const avgGrowthReadiness = (filteredEmployees.reduce((s, e) => s + e.growthReadiness, 0) / total).toFixed(1);
     const avgValues = (filteredEmployees.reduce((s, e) => s + e.valuesAlignment, 0) / total).toFixed(1);
     const avgEngagement = (filteredEmployees.reduce((s, e) => s + e.engagement, 0) / total).toFixed(1);
 
-    // Talent Density = Performance × Potential (max 9, target 6)
-    const avgTalentDensity = (filteredEmployees.reduce((s, e) => s + e.performance * e.potential, 0) / total).toFixed(1);
+    // Talent Density = Performance × Growth Readiness (max 9, target 6)
+    const avgTalentDensity = (filteredEmployees.reduce((s, e) => s + e.performance * e.growthReadiness, 0) / total).toFixed(1);
     // Cultural Momentum = Values Alignment × Engagement (max 9, target 6)
     const avgCulturalMomentum = (filteredEmployees.reduce((s, e) => s + e.valuesAlignment * e.engagement, 0) / total).toFixed(1);
 
@@ -131,8 +131,8 @@ export default function CalibrationPage() {
     insights.push({ label: "Avg Cultural Momentum (target 6/9)", value: `${avgCulturalMomentum}/9`, color: parseFloat(avgCulturalMomentum) >= 6 ? "text-green-700" : "text-orange-600" });
     insights.push({ label: "Top Talent", value: `${topTalent} of ${total} (${Math.round(topTalent / total * 100)}%)`, color: "text-green-700" });
     insights.push({ label: "At Risk", value: `${atRisk} of ${total}`, color: atRisk > 0 ? "text-orange-600" : "text-green-700" });
-    insights.push({ label: "Exit Conversations Needed", value: `${exitConvos}`, color: exitConvos > 0 ? "text-red-600" : "text-green-700" });
-    insights.push({ label: "Underperformers", value: `${underperformers}`, color: underperformers > 0 ? "text-orange-600" : "text-green-700" });
+    insights.push({ label: "Intervene Now", value: `${interveneNow}`, color: interveneNow > 0 ? "text-red-600" : "text-green-700" });
+    insights.push({ label: "Build Foundations", value: `${buildFoundations}`, color: buildFoundations > 0 ? "text-orange-600" : "text-green-700" });
 
     return insights;
   }, [filteredEmployees]);

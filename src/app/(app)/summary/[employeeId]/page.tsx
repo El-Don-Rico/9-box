@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, formatCyclePeriod } from "@/lib/utils";
+import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -41,8 +41,8 @@ interface SummaryData {
     id: string;
     performance: number | null;
     performanceEvidence: string | null;
-    potential: number | null;
-    potentialEvidence: string | null;
+    growthReadiness: number | null;
+    growthReadinessEvidence: string | null;
     valCustomerFirst: number | null;
     valStepIntoArena: number | null;
     valFlockToProblems: number | null;
@@ -57,7 +57,7 @@ interface SummaryData {
   } | null;
 }
 
-function RatingComparison({ label, selfRating, managerRating }: { label: string; selfRating: number | null; managerRating: number | null }) {
+function RatingComparison({ label, selfRating, managerRating, labelFn = getRatingLabel }: { label: string; selfRating: number | null; managerRating: number | null; labelFn?: (r: number) => string }) {
   return (
     <div className="flex items-center justify-between py-2">
       <span className="text-sm font-medium text-visory-navy">{label}</span>
@@ -65,7 +65,7 @@ function RatingComparison({ label, selfRating, managerRating }: { label: string;
         <div className="text-center">
           <p className="text-xs text-gray-500 mb-1">Self</p>
           {selfRating ? (
-            <Badge className={getRatingColor(selfRating)}>{getRatingLabel(selfRating)}</Badge>
+            <Badge className={getRatingColor(selfRating)}>{labelFn(selfRating)}</Badge>
           ) : (
             <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
           )}
@@ -73,7 +73,7 @@ function RatingComparison({ label, selfRating, managerRating }: { label: string;
         <div className="text-center">
           <p className="text-xs text-gray-500 mb-1">Manager</p>
           {managerRating ? (
-            <Badge className={getRatingColor(managerRating)}>{getRatingLabel(managerRating)}</Badge>
+            <Badge className={getRatingColor(managerRating)}>{labelFn(managerRating)}</Badge>
           ) : (
             <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
           )}
@@ -132,7 +132,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
   const mgrValuesAlignment = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
     ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
     : null;
-  const box1Label = mgr?.performance && mgr?.potential ? getBox1Label(mgr.performance, mgr.potential) : null;
+  const box1Label = mgr?.performance && mgr?.growthReadiness ? getBox1Label(mgr.performance, mgr.growthReadiness) : null;
   const box2Label = mgrValuesAlignment && mgr?.engagement ? getBox2Label(mgrValuesAlignment, mgr.engagement) : null;
 
   return (
@@ -160,14 +160,14 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       </div>
 
       {/* Talent Density & Cultural Momentum Scores */}
-      {(mgr?.performance && mgr?.potential) || (mgrValuesAlignment && mgr?.engagement) ? (
+      {(mgr?.performance && mgr?.growthReadiness) || (mgrValuesAlignment && mgr?.engagement) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {mgr?.performance && mgr?.potential && (
+          {mgr?.performance && mgr?.growthReadiness && (
             <Card>
               <CardContent className="py-4 text-center">
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Talent Density</p>
-                <p className={`text-3xl font-bold ${mgr.performance * mgr.potential >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgr.performance * mgr.potential}/9
+                <p className={`text-3xl font-bold ${mgr.performance * mgr.growthReadiness >= 6 ? "text-green-700" : "text-orange-600"}`}>
+                  {mgr.performance * mgr.growthReadiness}/9
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
               </CardContent>
@@ -215,7 +215,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <CardContent>
           <div className="divide-y divide-gray-100">
             <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
-            <RatingComparison label="Potential" selfRating={null} managerRating={mgr?.potential ?? null} />
+            <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
             <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
             <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
             <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
@@ -298,10 +298,10 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
                 <p className="text-sm text-visory-navy">{mgr.performanceEvidence}</p>
               </div>
             )}
-            {mgr.potentialEvidence && (
+            {mgr.growthReadinessEvidence && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Potential Evidence</p>
-                <p className="text-sm text-visory-navy">{mgr.potentialEvidence}</p>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Growth Readiness Evidence</p>
+                <p className="text-sm text-visory-navy">{mgr.growthReadinessEvidence}</p>
               </div>
             )}
             {mgr.valuesEvidence && (

@@ -29,8 +29,8 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           setValues({
             performance: a.performance,
             performanceEvidence: a.performanceEvidence || "",
-            potential: a.potential,
-            potentialEvidence: a.potentialEvidence || "",
+            growthReadiness: a.growthReadiness,
+            growthReadinessEvidence: a.growthReadinessEvidence || "",
             valCustomerFirst: a.valCustomerFirst,
             valStepIntoArena: a.valStepIntoArena,
             valFlockToProblems: a.valFlockToProblems,
@@ -83,15 +83,15 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe specific examples of performance..." />,
     },
     {
-      id: "potential",
-      title: "Potential Rating",
-      description: "Rate this employee's potential for growth and advancement.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      id: "growthReadiness",
+      title: "Growth Readiness Rating",
+      description: "Rate this employee's readiness for growth and advancement.",
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }} />,
     },
     {
-      id: "potentialEvidence",
-      title: "Potential Evidence",
-      description: "What evidence supports this potential rating?",
+      id: "growthReadinessEvidence",
+      title: "Growth Readiness Evidence",
+      description: "What evidence supports this growth readiness rating?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe growth indicators, learning agility..." />,
     },
     {

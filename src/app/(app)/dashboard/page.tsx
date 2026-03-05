@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod, getRatingLabel, getRatingColor } from "@/lib/utils";
+import { formatCyclePeriod, getRatingLabel, getRatingColor, getGrowthReadinessLabel } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -115,7 +115,7 @@ interface PlacedEmployee {
   box1Label: string;
   box2Label: string;
   performance: number;
-  potential: number;
+  growthReadiness: number;
   valuesAlignment: number;
   engagement: number;
 }
@@ -178,7 +178,7 @@ function ManagerDashboard() {
 
   const placedEmployees = useMemo<PlacedEmployee[]>(() => {
     return assessments
-      .filter((a) => a.submittedAt && a.performance && a.potential && a.engagement && a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy)
+      .filter((a) => a.submittedAt && a.performance && a.growthReadiness && a.engagement && a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy)
       .map((a) => {
         const va = getValuesAlignment(a.valCustomerFirst!, a.valStepIntoArena!, a.valFlockToProblems!, a.valGiveEnergy!);
         return {
@@ -187,10 +187,10 @@ function ManagerDashboard() {
           role: a.employee?.role || "EMPLOYEE",
           jobTitle: a.employee?.jobTitle || null,
           team: a.employee?.team || null,
-          box1Label: getBox1Label(a.performance!, a.potential!),
+          box1Label: getBox1Label(a.performance!, a.growthReadiness!),
           box2Label: getBox2Label(va, a.engagement!),
           performance: a.performance!,
-          potential: a.potential!,
+          growthReadiness: a.growthReadiness!,
           valuesAlignment: va,
           engagement: a.engagement!,
         };
@@ -210,7 +210,7 @@ function ManagerDashboard() {
 
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
-  const yLabel = activeGrid === "box1" ? "Potential" : "Engagement";
+  const yLabel = activeGrid === "box1" ? "Growth Readiness" : "Engagement";
 
   async function handleSendResults(memberId: string) {
     const assessment = assessments.find((a) => a.employeeId === memberId);
@@ -233,7 +233,7 @@ function ManagerDashboard() {
 
   function getEmployeesForCell(cell: GridCellConfig) {
     return filteredEmployees.filter((e) => {
-      if (activeGrid === "box1") return e.performance === cell.x && e.potential === cell.y;
+      if (activeGrid === "box1") return e.performance === cell.x && e.growthReadiness === cell.y;
       return e.valuesAlignment === cell.x && e.engagement === cell.y;
     });
   }
@@ -374,8 +374,8 @@ function ManagerDashboard() {
                               <p className="text-[10px] text-gray-500 mt-0.5">Perf</p>
                             </div>
                             <div className="text-center">
-                              <Badge className={getRatingColor(emp.potential)}>{getRatingLabel(emp.potential)}</Badge>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Potential</p>
+                              <Badge className={getRatingColor(emp.growthReadiness)}>{getGrowthReadinessLabel(emp.growthReadiness)}</Badge>
+                              <p className="text-[10px] text-gray-500 mt-0.5">Growth</p>
                             </div>
                             <div className="text-center">
                               <Badge className={getRatingColor(emp.valuesAlignment)}>{getRatingLabel(emp.valuesAlignment)}</Badge>

@@ -14,9 +14,18 @@ export function getCurrentPeriod(): { month: number; year: number } {
 
 export function getRatingLabel(rating: number): string {
   switch (rating) {
-    case 1: return "Low";
-    case 2: return "Medium";
-    case 3: return "High";
+    case 1: return "Below";
+    case 2: return "Meeting";
+    case 3: return "Exceeding";
+    default: return String(rating);
+  }
+}
+
+export function getGrowthReadinessLabel(rating: number): string {
+  switch (rating) {
+    case 1: return "Developing";
+    case 2: return "Building";
+    case 3: return "Ready Now";
     default: return String(rating);
   }
 }

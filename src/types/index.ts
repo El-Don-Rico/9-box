@@ -25,8 +25,8 @@ export interface ManagerAssessmentData {
   employeeId: string;
   performance: number | null;
   performanceEvidence: string | null;
-  potential: number | null;
-  potentialEvidence: string | null;
+  growthReadiness: number | null;
+  growthReadinessEvidence: string | null;
   valCustomerFirst: number | null;
   valStepIntoArena: number | null;
   valFlockToProblems: number | null;
