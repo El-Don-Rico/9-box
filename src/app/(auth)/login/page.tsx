@@ -45,7 +45,7 @@ export default function LoginPage() {
       <CardHeader>
         <h1 className="text-2xl font-bold text-visory">Visory</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Sign in to your performance management dashboard
+          Sign in to Visory Performance
         </p>
       </CardHeader>
       <CardContent>

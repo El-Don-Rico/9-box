@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -69,7 +70,17 @@ export default function InviteRegisterPage({ params }: { params: Promise<{ token
         setError(data.error || "Registration failed");
         return;
       }
-      router.push("/login?registered=true");
+      // Auto sign-in after successful registration
+      const signInResult = await signIn("credentials", {
+        email: invitation!.email,
+        password,
+        redirect: false,
+      });
+      if (signInResult?.ok) {
+        router.push("/dashboard");
+      } else {
+        router.push("/login?registered=true");
+      }
     } catch {
       setError("An unexpected error occurred");
     } finally {
