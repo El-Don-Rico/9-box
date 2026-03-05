@@ -1,57 +1,78 @@
-export type RatingLevel = "LOW" | "MEDIUM" | "HIGH";
+export type { Role } from "@prisma/client";
 
-export interface EmployeeFormData {
-  name: string;
-  role: string;
-  department: string;
-}
-
-export interface AssessmentFormData {
-  performance: RatingLevel | null;
-  potential: RatingLevel | null;
-  engagement: RatingLevel | null;
-  performanceComment: string;
-  potentialComment: string;
-  engagementComment: string;
-  notes: string;
-}
-
-export interface EmployeeWithAssessment {
+export interface UserProfile {
   id: string;
+  email: string;
   name: string;
   role: string;
-  department: string;
+  managerId: string | null;
+  isActive: boolean;
+  manager?: { id: string; name: string } | null;
+}
+
+export interface CycleData {
+  id: string;
+  month: number;
+  year: number;
+  status: "OPEN" | "CLOSED";
+  createdAt: string;
+}
+
+export interface ManagerAssessmentData {
+  id: string;
+  cycleId: string;
   managerId: string;
-  createdAt: string;
-  updatedAt: string;
-  assessments: AssessmentData[];
-}
-
-export interface AssessmentData {
-  id: string;
   employeeId: string;
-  period: string;
-  performance: RatingLevel;
-  potential: RatingLevel;
-  engagement: RatingLevel;
-  performanceComment: string | null;
-  potentialComment: string | null;
-  engagementComment: string | null;
+  performance: number | null;
+  performanceEvidence: string | null;
+  potential: number | null;
+  potentialEvidence: string | null;
+  valCustomerFirst: number | null;
+  valStepIntoArena: number | null;
+  valFlockToProblems: number | null;
+  valGiveEnergy: number | null;
+  valuesEvidence: string | null;
+  engagement: number | null;
+  engagementEvidence: string | null;
+  trend: "IMPROVING" | "STABLE" | "DECLINING" | null;
   notes: string | null;
+  submittedAt: string | null;
+  oneOnOneComplete: boolean;
+  oneOnOneCompletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee?: { id: string; name: string; email: string };
+  manager?: { id: string; name: string };
+}
+
+export interface SelfAssessmentData {
+  id: string;
+  cycleId: string;
+  employeeId: string;
+  performance: number | null;
+  performanceJustification: string | null;
+  achievements: string | null;
+  blockers: string | null;
+  learning: string | null;
+  valCustomerFirst: number | null;
+  valStepIntoArena: number | null;
+  valFlockToProblems: number | null;
+  valGiveEnergy: number | null;
+  valuesReflection: string | null;
+  engagement: number | null;
+  engagementDriver: string | null;
+  supportNeeded: string | null;
+  goalsNextMonth: string | null;
+  submittedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface BatchAssessmentPayload {
-  period: string;
-  assessments: Array<{
-    employeeId: string;
-    performance: RatingLevel;
-    potential: RatingLevel;
-    engagement: RatingLevel;
-    performanceComment?: string;
-    potentialComment?: string;
-    engagementComment?: string;
-    notes?: string;
-  }>;
+export interface TeamMemberStatus {
+  id: string;
+  name: string;
+  email: string;
+  selfAssessmentStatus: "not_started" | "draft" | "submitted";
+  managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  oneOnOneComplete: boolean;
 }

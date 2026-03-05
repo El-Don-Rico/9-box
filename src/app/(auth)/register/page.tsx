@@ -57,9 +57,9 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader>
-        <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
+        <h1 className="text-2xl font-bold text-visory">Create Account</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Register as a manager to start assessments
+          Register to join the Visory performance platform
         </p>
       </CardHeader>
       <CardContent>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-visory hover:text-visory-dark"
           >
             Sign in
           </Link>

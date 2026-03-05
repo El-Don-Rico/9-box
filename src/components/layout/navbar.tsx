@@ -4,19 +4,36 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { getRoleDisplayName } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 
-const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/employees", label: "Employees" },
-  { href: "/assessments", label: "Assessments" },
-  { href: "/nine-box", label: "9-Box Grid" },
-];
+function getNavLinks(role: string) {
+  const links = [{ href: "/dashboard", label: "Dashboard" }];
+
+  if (role === "EMPLOYEE") {
+    links.push({ href: "/self-assessment", label: "Self-Assessment" });
+    links.push({ href: "/my-results", label: "My Results" });
+  }
+
+  if (["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(role)) {
+    links.push({ href: "/assess", label: "Assess Team" });
+    links.push({ href: "/calibration", label: "Calibration" });
+  }
+
+  if (role === "ADMIN") {
+    links.push({ href: "/admin", label: "Admin" });
+  }
+
+  return links;
+}
 
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const role = session?.user?.role || "EMPLOYEE";
+  const navLinks = getNavLinks(role);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -25,9 +42,9 @@ export function Navbar() {
           <div className="flex items-center gap-8">
             <Link
               href="/dashboard"
-              className="text-lg font-bold text-blue-600"
+              className="text-lg font-bold text-visory"
             >
-              9-Box
+              Visory
             </Link>
             <div className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => (
@@ -37,7 +54,7 @@ export function Navbar() {
                   className={cn(
                     "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     pathname.startsWith(link.href)
-                      ? "bg-blue-50 text-blue-700"
+                      ? "bg-visory-light text-visory-dark"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   )}
                 >
@@ -47,7 +64,12 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {role !== "EMPLOYEE" && (
+              <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">
+                {getRoleDisplayName(role)}
+              </Badge>
+            )}
             <span className="text-sm text-gray-600">
               {session?.user?.name}
             </span>
@@ -98,7 +120,7 @@ export function Navbar() {
                 className={cn(
                   "block px-3 py-2 rounded-lg text-sm font-medium",
                   pathname.startsWith(link.href)
-                    ? "bg-blue-50 text-blue-700"
+                    ? "bg-visory-light text-visory-dark"
                     : "text-gray-600 hover:bg-gray-50"
                 )}
               >
@@ -106,12 +128,17 @@ export function Navbar() {
               </Link>
             ))}
             <div className="border-t border-gray-100 pt-2 mt-2 px-3">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 mb-1">
                 {session?.user?.name}
               </p>
+              {role !== "EMPLOYEE" && (
+                <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs mb-2">
+                  {getRoleDisplayName(role)}
+                </Badge>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="text-sm text-red-600 font-medium"
+                className="block text-sm text-red-600 font-medium mt-2"
               >
                 Sign Out
               </button>

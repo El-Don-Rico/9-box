@@ -43,9 +43,9 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <h1 className="text-2xl font-bold text-gray-900">Sign In</h1>
+        <h1 className="text-2xl font-bold text-visory">Visory</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Access your 9-Box Assessment dashboard
+          Sign in to your performance management dashboard
         </p>
       </CardHeader>
       <CardContent>
@@ -61,7 +61,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="you@visory.com"
             required
           />
           <Input
@@ -81,7 +81,7 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-visory hover:text-visory-dark"
           >
             Register
           </Link>

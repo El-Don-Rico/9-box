@@ -2,41 +2,50 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
   return classes.filter(Boolean).join(" ");
 }
 
-export function formatPeriod(period: string): string {
-  const [year, month] = period.split("-");
-  const date = new Date(parseInt(year), parseInt(month) - 1);
+export function formatCyclePeriod(month: number, year: number): string {
+  const date = new Date(year, month - 1);
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-export function getCurrentPeriod(): string {
+export function getCurrentPeriod(): { month: number; year: number } {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
 }
 
-export function getRatingColor(rating: string): string {
+export function getRatingLabel(rating: number): string {
   switch (rating) {
-    case "LOW":
-      return "bg-red-100 text-red-800 border-red-300";
-    case "MEDIUM":
-      return "bg-amber-100 text-amber-800 border-amber-300";
-    case "HIGH":
-      return "bg-green-100 text-green-800 border-green-300";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-300";
+    case 1: return "Low";
+    case 2: return "Medium";
+    case 3: return "High";
+    default: return String(rating);
   }
 }
 
-export function getRatingLabel(rating: string): string {
+export function getRatingColor(rating: number): string {
   switch (rating) {
-    case "LOW":
-      return "Low";
-    case "MEDIUM":
-      return "Medium";
-    case "HIGH":
-      return "High";
-    default:
-      return rating;
+    case 1: return "bg-red-100 text-red-800 border-red-300";
+    case 2: return "bg-amber-100 text-amber-800 border-amber-300";
+    case 3: return "bg-green-100 text-green-800 border-green-300";
+    default: return "bg-gray-100 text-gray-800 border-gray-300";
+  }
+}
+
+export function getRoleDisplayName(role: string): string {
+  switch (role) {
+    case "EMPLOYEE": return "Employee";
+    case "MANAGER": return "Manager";
+    case "AREA_LEAD": return "Area Lead";
+    case "LEADERSHIP": return "Leadership";
+    case "ADMIN": return "Admin";
+    default: return role;
+  }
+}
+
+export function getTrendIcon(trend: string): string {
+  switch (trend) {
+    case "IMPROVING": return "↑";
+    case "STABLE": return "→";
+    case "DECLINING": return "↓";
+    default: return "";
   }
 }

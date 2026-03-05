@@ -6,45 +6,117 @@ datasource db {
   provider = "postgresql"
 }
 
-model Manager {
-  id           String     @id @default(cuid())
-  email        String     @unique
+enum Role {
+  EMPLOYEE
+  MANAGER
+  AREA_LEAD
+  LEADERSHIP
+  ADMIN
+}
+
+enum CycleStatus {
+  OPEN
+  CLOSED
+}
+
+enum TrendDirection {
+  IMPROVING
+  STABLE
+  DECLINING
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
   name         String
   passwordHash String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  employees    Employee[]
-}
+  role         Role     @default(EMPLOYEE)
+  managerId    String?
+  manager      User?    @relation("ManagerReports", fields: [managerId], references: [id])
+  reports      User[]   @relation("ManagerReports")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-model Employee {
-  id          String       @id @default(cuid())
-  name        String
-  role        String
-  department  String
-  managerId   String
-  manager     Manager      @relation(fields: [managerId], references: [id], onDelete: Cascade)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  assessments Assessment[]
+  managerAssessmentsGiven    ManagerAssessment[] @relation("AssessmentByManager")
+  managerAssessmentsReceived ManagerAssessment[] @relation("AssessmentForEmployee")
+  selfAssessments            SelfAssessment[]
 
   @@index([managerId])
+  @@index([role])
 }
 
-model Assessment {
-  id                   String   @id @default(cuid())
-  employeeId           String
-  employee             Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  period               String
-  performance          String
-  potential            String
-  engagement           String
-  performanceComment   String?
-  potentialComment     String?
-  engagementComment    String?
-  notes                String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+model AssessmentCycle {
+  id        String      @id @default(cuid())
+  month     Int
+  year      Int
+  status    CycleStatus @default(OPEN)
+  createdAt DateTime    @default(now())
 
-  @@unique([employeeId, period])
+  managerAssessments ManagerAssessment[]
+  selfAssessments    SelfAssessment[]
+
+  @@unique([month, year])
+}
+
+model ManagerAssessment {
+  id                  String    @id @default(cuid())
+  cycleId             String
+  cycle               AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  managerId           String
+  manager             User      @relation("AssessmentByManager", fields: [managerId], references: [id], onDelete: Cascade)
+  employeeId          String
+  employee            User      @relation("AssessmentForEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  performance         Int?
+  performanceEvidence String?
+  potential           Int?
+  potentialEvidence   String?
+  valCustomerFirst    Int?
+  valStepIntoArena    Int?
+  valFlockToProblems  Int?
+  valGiveEnergy       Int?
+  valuesEvidence      String?
+  engagement          Int?
+  engagementEvidence  String?
+  trend               TrendDirection?
+  notes               String?
+  submittedAt         DateTime?
+  oneOnOneComplete    Boolean   @default(false)
+  oneOnOneCompletedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([cycleId, managerId, employeeId])
+  @@index([cycleId])
+  @@index([managerId])
+  @@index([employeeId])
+}
+
+model SelfAssessment {
+  id                       String    @id @default(cuid())
+  cycleId                  String
+  cycle                    AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId               String
+  employee                 User      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  performance              Int?
+  performanceJustification String?
+  achievements             String?
+  blockers                 String?
+  learning                 String?
+  valCustomerFirst         Int?
+  valStepIntoArena         Int?
+  valFlockToProblems       Int?
+  valGiveEnergy            Int?
+  valuesReflection         String?
+  engagement               Int?
+  engagementDriver         String?
+  supportNeeded            String?
+  goalsNextMonth           String?
+  submittedAt              DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@unique([cycleId, employeeId])
+  @@index([cycleId])
   @@index([employeeId])
 }

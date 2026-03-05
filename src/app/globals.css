@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
+  --background: #ffffff;
+  --foreground: #2d2d2d;
+  --visory-pink: #e31b6d;
+  --visory-pink-light: #fbe8f0;
+  --visory-pink-dark: #b91556;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-visory: var(--visory-pink);
+  --color-visory-light: var(--visory-pink-light);
+  --color-visory-dark: var(--visory-pink-dark);
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 }

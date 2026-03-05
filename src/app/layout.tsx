@@ -3,8 +3,8 @@ import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "9-Box Assessment",
-  description: "Monthly employee performance and potential assessment tool",
+  title: "Visory Performance",
+  description: "Monthly performance management and 9-box assessment tool",
 };
 
 export default function RootLayout({
