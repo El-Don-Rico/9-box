@@ -14,7 +14,7 @@ export default function Error({
     <div className="flex items-center justify-center py-12">
       <Card className="max-w-md w-full">
         <CardContent className="py-8 text-center">
-          <p className="text-lg font-medium text-gray-900">
+          <p className="text-lg font-medium text-visory-navy">
             Something went wrong
           </p>
           <p className="text-sm text-gray-500 mt-1">

@@ -53,7 +53,7 @@ export default function AdminCyclesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Assessment Cycles</h1>
+          <h1 className="text-2xl font-bold text-visory-navy">Assessment Cycles</h1>
           <p className="text-sm text-gray-600 mt-1">Manage monthly assessment cycles</p>
         </div>
         <Button onClick={createCycle} disabled={creating}>
@@ -67,7 +67,7 @@ export default function AdminCyclesPage() {
             {cycles.map((cycle) => (
               <div key={cycle.id} className="py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-visory-navy">
                     {formatCyclePeriod(cycle.month, cycle.year)}
                   </p>
                 </div>

@@ -58,7 +58,7 @@ export function StepForm({
 
       {/* Step content */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8 min-h-[300px]">
-        <h2 className="text-xl font-semibold text-gray-900 mb-1">{step.title}</h2>
+        <h2 className="text-xl font-semibold text-visory-navy mb-1">{step.title}</h2>
         {step.description && (
           <p className="text-sm text-gray-500 mb-6">{step.description}</p>
         )}
@@ -120,7 +120,7 @@ export function RatingStep({ value, onChange, labels }: RatingStepProps) {
             "flex-1 p-4 rounded-lg border-2 text-center transition-all",
             value === rating
               ? "border-visory bg-visory-light text-visory-dark font-semibold"
-              : "border-gray-200 hover:border-gray-300 text-gray-700"
+              : "border-gray-200 hover:border-gray-300 text-visory-navy"
           )}
         >
           <span className="text-2xl font-bold block">{rating}</span>

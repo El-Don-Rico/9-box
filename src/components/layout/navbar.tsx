@@ -35,13 +35,13 @@ export function Navbar() {
   const navLinks = getNavLinks(role);
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-visory-navy sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link
               href="/dashboard"
-              className="text-lg font-bold text-visory"
+              className="text-lg font-bold text-visory font-heading"
             >
               Visory
             </Link>
@@ -53,8 +53,8 @@ export function Navbar() {
                   className={cn(
                     "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     pathname.startsWith(link.href)
-                      ? "bg-visory-light text-visory-dark"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   {link.label}
@@ -65,23 +65,23 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-3">
             {role !== "EMPLOYEE" && (
-              <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">
+              <Badge className="bg-white/15 text-white border-white/20 text-xs">
                 {getRoleDisplayName(role)}
               </Badge>
             )}
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-white/80">
               {session?.user?.name}
             </span>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+              className="text-sm text-white/60 hover:text-white font-medium"
             >
               Sign Out
             </button>
           </div>
 
           <button
-            className="md:hidden p-2 text-gray-600 hover:text-gray-900"
+            className="md:hidden p-2 text-white/80 hover:text-white"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             <svg
@@ -119,25 +119,25 @@ export function Navbar() {
                 className={cn(
                   "block px-3 py-2 rounded-lg text-sm font-medium",
                   pathname.startsWith(link.href)
-                    ? "bg-visory-light text-visory-dark"
-                    : "text-gray-600 hover:bg-gray-50"
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 )}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-gray-100 pt-2 mt-2 px-3">
-              <p className="text-sm text-gray-600 mb-1">
+            <div className="border-t border-white/20 pt-2 mt-2 px-3">
+              <p className="text-sm text-white/80 mb-1">
                 {session?.user?.name}
               </p>
               {role !== "EMPLOYEE" && (
-                <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs mb-2">
+                <Badge className="bg-white/15 text-white border-white/20 text-xs mb-2">
                   {getRoleDisplayName(role)}
                 </Badge>
               )}
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="block text-sm text-red-600 font-medium mt-2"
+                className="block text-sm text-visory font-medium mt-2"
               >
                 Sign Out
               </button>

@@ -158,7 +158,7 @@ export default function SelfAssessmentPage() {
   return (
     <div className="py-4">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Self-Assessment</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">Self-Assessment</h1>
         <p className="text-sm text-gray-600 mt-1">
           Take your time. Your responses auto-save as drafts.
         </p>

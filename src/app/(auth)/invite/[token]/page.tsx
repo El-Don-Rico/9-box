@@ -118,8 +118,8 @@ export default function InviteRegisterPage({ params }: { params: Promise<{ token
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <p className="text-sm text-gray-900 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+            <label className="block text-sm font-medium text-visory-navy mb-1">Email</label>
+            <p className="text-sm text-visory-navy bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
               {invitation.email}
             </p>
           </div>

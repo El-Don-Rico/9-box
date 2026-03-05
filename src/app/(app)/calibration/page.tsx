@@ -104,7 +104,7 @@ export default function CalibrationPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calibration</h1>
+          <h1 className="text-2xl font-bold text-visory-navy">Calibration</h1>
           <p className="text-sm text-gray-600 mt-1">9-box grid view for team calibration</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -122,13 +122,13 @@ export default function CalibrationPage() {
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
               onClick={() => setActiveGrid("box1")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
             >
               Perf x Potential
             </button>
             <button
               onClick={() => setActiveGrid("box2")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
             >
               Values x Engagement
             </button>
@@ -142,7 +142,7 @@ export default function CalibrationPage() {
             {/* Y-axis label */}
             <div className="flex flex-col justify-between items-center w-8 py-4">
               <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">High</span>
-              <span className="text-xs font-semibold text-gray-700 -rotate-90 whitespace-nowrap">{yLabel}</span>
+              <span className="text-xs font-semibold text-visory-navy -rotate-90 whitespace-nowrap">{yLabel}</span>
               <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">Low</span>
             </div>
 
@@ -156,7 +156,7 @@ export default function CalibrationPage() {
                       key={`${cell.x}-${cell.y}`}
                       className={`rounded-lg border-2 p-3 min-h-[100px] ${cell.colorClass}`}
                     >
-                      <p className="text-xs font-semibold text-gray-700 mb-2">{cell.label}</p>
+                      <p className="text-xs font-semibold text-visory-navy mb-2">{cell.label}</p>
                       <div className="flex flex-wrap gap-1">
                         {emps.map((emp) => (
                           <Badge key={emp.id} className="bg-white/80 text-gray-800 border-gray-300 text-xs">
@@ -172,7 +172,7 @@ export default function CalibrationPage() {
               {/* X-axis label */}
               <div className="flex justify-between items-center mt-2 px-4">
                 <span className="text-xs font-medium text-gray-500">Low</span>
-                <span className="text-xs font-semibold text-gray-700">{xLabel}</span>
+                <span className="text-xs font-semibold text-visory-navy">{xLabel}</span>
                 <span className="text-xs font-medium text-gray-500">High</span>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function CalibrationPage() {
                 return (
                   <div key={emp.id} className="py-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">{emp.name}</span>
+                      <span className="text-sm font-medium text-visory-navy">{emp.name}</span>
                       <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{label}</Badge>
                     </div>
                     <p className="text-sm text-gray-600">{action}</p>

@@ -1,11 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #2d2d2d;
-  --visory-pink: #e31b6d;
-  --visory-pink-light: #fbe8f0;
-  --visory-pink-dark: #b91556;
+  --background: #fafafa;
+  --foreground: #00314f;
+  --visory-pink: #df0074;
+  --visory-pink-light: rgba(223, 0, 116, 0.08);
+  --visory-pink-dark: #c80068;
+  --visory-navy: #00314f;
+  --visory-navy-light: rgba(0, 49, 79, 0.08);
+  --visory-light-grey: #f3f5f6;
+  --visory-mid-grey: #6b7683;
+  --visory-border-grey: #ccd6dc;
+  --visory-link: #644ef7;
 }
 
 @theme inline {
@@ -14,12 +20,25 @@
   --color-visory: var(--visory-pink);
   --color-visory-light: var(--visory-pink-light);
   --color-visory-dark: var(--visory-pink-dark);
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  --color-visory-navy: var(--visory-navy);
+  --color-visory-navy-light: var(--visory-navy-light);
+  --color-visory-grey: var(--visory-light-grey);
+  --color-visory-mid-grey: var(--visory-mid-grey);
+  --color-visory-border: var(--visory-border-grey);
+  --color-visory-link: var(--visory-link);
+  --font-heading: "Philosopher", Georgia, serif;
+  --font-body: "Lato", Arial, Helvetica, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  color: var(--visory-navy);
+  font-weight: 700;
 }

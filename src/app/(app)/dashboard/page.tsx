@@ -55,7 +55,7 @@ function EmployeeDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">My Dashboard</h1>
         <p className="text-sm text-gray-600 mt-1">Your performance cycle status</p>
       </div>
 
@@ -190,7 +190,7 @@ function ManagerDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">Dashboard</h1>
         <p className="text-sm text-gray-600 mt-1">
           {cycle ? formatCyclePeriod(cycle.month, cycle.year) : "No active cycle"}
         </p>
@@ -201,13 +201,13 @@ function ManagerDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/cycles")}>
             <CardContent className="py-4">
-              <h3 className="text-sm font-semibold text-gray-900">Assessment Cycles</h3>
+              <h3 className="text-sm font-semibold text-visory-navy">Assessment Cycles</h3>
               <p className="text-xs text-gray-600 mt-1">Open, close, and manage monthly cycles</p>
             </CardContent>
           </Card>
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/users")}>
             <CardContent className="py-4">
-              <h3 className="text-sm font-semibold text-gray-900">User Management</h3>
+              <h3 className="text-sm font-semibold text-visory-navy">User Management</h3>
               <p className="text-xs text-gray-600 mt-1">Invite users, assign roles and managers</p>
             </CardContent>
           </Card>
@@ -244,13 +244,13 @@ function ManagerDashboard() {
                     <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                       <button
                         onClick={() => setActiveGrid("box1")}
-                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
                       >
                         Perf x Potential
                       </button>
                       <button
                         onClick={() => setActiveGrid("box2")}
-                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
                       >
                         Values x Engagement
                       </button>
@@ -262,7 +262,7 @@ function ManagerDashboard() {
                 <div className="flex gap-2">
                   <div className="flex flex-col justify-between items-center w-8 py-4">
                     <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">High</span>
-                    <span className="text-xs font-semibold text-gray-700 -rotate-90 whitespace-nowrap">{yLabel}</span>
+                    <span className="text-xs font-semibold text-visory-navy -rotate-90 whitespace-nowrap">{yLabel}</span>
                     <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">Low</span>
                   </div>
                   <div className="flex-1">
@@ -274,7 +274,7 @@ function ManagerDashboard() {
                             key={`${cell.x}-${cell.y}`}
                             className={`rounded-lg border-2 p-3 min-h-[80px] ${cell.colorClass}`}
                           >
-                            <p className="text-xs font-semibold text-gray-700 mb-1">{cell.label}</p>
+                            <p className="text-xs font-semibold text-visory-navy mb-1">{cell.label}</p>
                             <div className="flex flex-wrap gap-1">
                               {emps.map((emp) => (
                                 <Badge key={emp.id} className="bg-white/80 text-gray-800 border-gray-300 text-xs">
@@ -288,7 +288,7 @@ function ManagerDashboard() {
                     </div>
                     <div className="flex justify-between items-center mt-2 px-4">
                       <span className="text-xs font-medium text-gray-500">Low</span>
-                      <span className="text-xs font-semibold text-gray-700">{xLabel}</span>
+                      <span className="text-xs font-semibold text-visory-navy">{xLabel}</span>
                       <span className="text-xs font-medium text-gray-500">High</span>
                     </div>
                   </div>
@@ -311,7 +311,7 @@ function ManagerDashboard() {
                     return (
                       <div key={emp.id} className="py-4 space-y-2">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-gray-900">{emp.name}</span>
+                          <span className="text-sm font-semibold text-visory-navy">{emp.name}</span>
                           <div className="flex flex-wrap gap-2">
                             <div className="text-center">
                               <Badge className={getRatingColor(emp.performance)}>{getRatingLabel(emp.performance)}</Badge>
@@ -370,7 +370,7 @@ function ManagerDashboard() {
                 {team.map((member) => (
                   <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                      <p className="text-sm font-medium text-visory-navy">{member.name}</p>
                       <p className="text-xs text-gray-500">{member.email}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

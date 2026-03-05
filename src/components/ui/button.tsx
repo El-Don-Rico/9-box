@@ -19,11 +19,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           variant === "primary" &&
             "bg-visory text-white hover:bg-visory-dark focus:ring-visory",
           variant === "secondary" &&
-            "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-visory",
+            "bg-white text-visory-navy border border-gray-300 hover:bg-gray-50 focus:ring-visory",
           variant === "danger" &&
             "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
           variant === "ghost" &&
-            "text-gray-700 hover:bg-gray-100 focus:ring-gray-500",
+            "text-visory-navy hover:bg-gray-100 focus:ring-gray-500",
           size === "sm" && "px-3 py-1.5 text-sm",
           size === "md" && "px-4 py-2 text-sm",
           size === "lg" && "px-6 py-3 text-base",

@@ -156,7 +156,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
     <div className="py-4">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manager Assessment</h1>
+          <h1 className="text-2xl font-bold text-visory-navy">Manager Assessment</h1>
           {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
         </div>
       </div>

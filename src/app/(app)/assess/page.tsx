@@ -43,7 +43,7 @@ export default function AssessTeamPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Assess Team</h1>
+          <h1 className="text-2xl font-bold text-visory-navy">Assess Team</h1>
           <p className="text-sm text-gray-600 mt-1">Review and assess your direct reports</p>
         </div>
         <select
@@ -66,7 +66,7 @@ export default function AssessTeamPage() {
             {team.map((member) => (
               <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                  <p className="text-sm font-medium text-visory-navy">{member.name}</p>
                   <p className="text-xs text-gray-500">{member.email}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

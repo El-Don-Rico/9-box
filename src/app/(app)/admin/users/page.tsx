@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-2xl font-bold text-visory-navy">User Management</h1>
           <p className="text-sm text-gray-600 mt-1">Invite users and manage roles</p>
         </div>
         <Button onClick={() => setShowInviteForm(!showInviteForm)}>
@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
                   placeholder="e.g. Engineering"
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <label className="block text-sm font-medium text-visory-navy mb-1">Role</label>
                   <select
                     value={newInvite.role}
                     onChange={(e) => setNewInvite((u) => ({ ...u, role: e.target.value }))}
@@ -165,7 +165,7 @@ export default function AdminUsersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
+                  <label className="block text-sm font-medium text-visory-navy mb-1">Manager</label>
                   <select
                     value={newInvite.managerId}
                     onChange={(e) => setNewInvite((u) => ({ ...u, managerId: e.target.value }))}
@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
               {pendingInvitations.map((inv) => (
                 <div key={inv.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{inv.name}</p>
+                    <p className="text-sm font-medium text-visory-navy">{inv.name}</p>
                     <p className="text-xs text-gray-500">{inv.email}</p>
                     <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-xs mt-1">
                       {getRoleDisplayName(inv.role)}
@@ -228,7 +228,7 @@ export default function AdminUsersPage() {
               <div key={user.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-sm font-medium text-visory-navy">{user.name}</p>
                     {!user.isActive && (
                       <Badge className="bg-red-100 text-red-800 border-red-300">Inactive</Badge>
                     )}

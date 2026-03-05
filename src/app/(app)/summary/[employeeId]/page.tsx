@@ -56,7 +56,7 @@ interface SummaryData {
 function RatingComparison({ label, selfRating, managerRating }: { label: string; selfRating: number | null; managerRating: number | null }) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <span className="text-sm font-medium text-visory-navy">{label}</span>
       <div className="flex items-center gap-3">
         <div className="text-center">
           <p className="text-xs text-gray-500 mb-1">Self</p>
@@ -108,7 +108,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
         {(employee.jobTitle || employee.team) && (
           <p className="text-sm text-gray-500 mt-0.5">
             {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
@@ -126,14 +126,14 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             <div className={`rounded-lg border-2 p-4 ${getBox1Color(box1Label)}`}>
               <p className="text-xs font-medium text-gray-500 uppercase">Performance x Potential</p>
               <p className="text-lg font-bold mt-1">{box1Label}</p>
-              <p className="text-sm text-gray-700 mt-2">{getBox1Action(box1Label)}</p>
+              <p className="text-sm text-visory-navy mt-2">{getBox1Action(box1Label)}</p>
             </div>
           )}
           {box2Label && (
             <div className={`rounded-lg border-2 p-4 ${getBox2Color(box2Label)}`}>
               <p className="text-xs font-medium text-gray-500 uppercase">Values x Engagement</p>
               <p className="text-lg font-bold mt-1">{box2Label}</p>
-              <p className="text-sm text-gray-700 mt-2">{getBox2Action(box2Label)}</p>
+              <p className="text-sm text-visory-navy mt-2">{getBox2Action(box2Label)}</p>
             </div>
           )}
         </div>
@@ -167,49 +167,49 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             {self.performanceJustification && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Justification</p>
-                <p className="text-sm text-gray-700">{self.performanceJustification}</p>
+                <p className="text-sm text-visory-navy">{self.performanceJustification}</p>
               </div>
             )}
             {self.achievements && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Key Achievements</p>
-                <p className="text-sm text-gray-700">{self.achievements}</p>
+                <p className="text-sm text-visory-navy">{self.achievements}</p>
               </div>
             )}
             {self.blockers && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Blockers / Challenges</p>
-                <p className="text-sm text-gray-700">{self.blockers}</p>
+                <p className="text-sm text-visory-navy">{self.blockers}</p>
               </div>
             )}
             {self.learning && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
-                <p className="text-sm text-gray-700">{self.learning}</p>
+                <p className="text-sm text-visory-navy">{self.learning}</p>
               </div>
             )}
             {self.valuesReflection && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Reflection</p>
-                <p className="text-sm text-gray-700">{self.valuesReflection}</p>
+                <p className="text-sm text-visory-navy">{self.valuesReflection}</p>
               </div>
             )}
             {self.engagementDriver && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Driver</p>
-                <p className="text-sm text-gray-700">{self.engagementDriver}</p>
+                <p className="text-sm text-visory-navy">{self.engagementDriver}</p>
               </div>
             )}
             {self.supportNeeded && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Support Needed</p>
-                <p className="text-sm text-gray-700">{self.supportNeeded}</p>
+                <p className="text-sm text-visory-navy">{self.supportNeeded}</p>
               </div>
             )}
             {self.goalsNextMonth && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
-                <p className="text-sm text-gray-700">{self.goalsNextMonth}</p>
+                <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
               </div>
             )}
           </CardContent>
@@ -227,31 +227,31 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             {mgr.performanceEvidence && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Evidence</p>
-                <p className="text-sm text-gray-700">{mgr.performanceEvidence}</p>
+                <p className="text-sm text-visory-navy">{mgr.performanceEvidence}</p>
               </div>
             )}
             {mgr.potentialEvidence && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Potential Evidence</p>
-                <p className="text-sm text-gray-700">{mgr.potentialEvidence}</p>
+                <p className="text-sm text-visory-navy">{mgr.potentialEvidence}</p>
               </div>
             )}
             {mgr.valuesEvidence && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Evidence</p>
-                <p className="text-sm text-gray-700">{mgr.valuesEvidence}</p>
+                <p className="text-sm text-visory-navy">{mgr.valuesEvidence}</p>
               </div>
             )}
             {mgr.engagementEvidence && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Evidence</p>
-                <p className="text-sm text-gray-700">{mgr.engagementEvidence}</p>
+                <p className="text-sm text-visory-navy">{mgr.engagementEvidence}</p>
               </div>
             )}
             {mgr.notes && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Additional Notes</p>
-                <p className="text-sm text-gray-700">{mgr.notes}</p>
+                <p className="text-sm text-visory-navy">{mgr.notes}</p>
               </div>
             )}
           </CardContent>

@@ -56,7 +56,7 @@ export default function MyResultsPage() {
   if (results.length === 0) {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Results</h1>
+        <h1 className="text-2xl font-bold text-visory-navy mb-2">My Results</h1>
         <p className="text-gray-500">No results available yet. Results appear after your manager submits your assessment.</p>
       </div>
     );
@@ -65,7 +65,7 @@ export default function MyResultsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Results</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">My Results</h1>
         <p className="text-sm text-gray-600 mt-1">Your assessment results and prescribed actions</p>
       </div>
 
@@ -90,14 +90,14 @@ export default function MyResultsPage() {
                   <div className={`rounded-lg border-2 p-4 ${getBox1Color(box1Label)}`}>
                     <p className="text-xs font-medium text-gray-500 uppercase">Performance x Potential</p>
                     <p className="text-lg font-bold mt-1">{box1Label}</p>
-                    <p className="text-sm text-gray-700 mt-2">{getBox1Action(box1Label)}</p>
+                    <p className="text-sm text-visory-navy mt-2">{getBox1Action(box1Label)}</p>
                   </div>
                 )}
                 {box2Label && (
                   <div className={`rounded-lg border-2 p-4 ${getBox2Color(box2Label)}`}>
                     <p className="text-xs font-medium text-gray-500 uppercase">Values x Engagement</p>
                     <p className="text-lg font-bold mt-1">{box2Label}</p>
-                    <p className="text-sm text-gray-700 mt-2">{getBox2Action(box2Label)}</p>
+                    <p className="text-sm text-visory-navy mt-2">{getBox2Action(box2Label)}</p>
                   </div>
                 )}
               </div>
@@ -134,19 +134,19 @@ export default function MyResultsPage() {
               {result.performanceEvidence && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Feedback</p>
-                  <p className="text-sm text-gray-700">{result.performanceEvidence}</p>
+                  <p className="text-sm text-visory-navy">{result.performanceEvidence}</p>
                 </div>
               )}
               {result.potentialEvidence && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Potential Feedback</p>
-                  <p className="text-sm text-gray-700">{result.potentialEvidence}</p>
+                  <p className="text-sm text-visory-navy">{result.potentialEvidence}</p>
                 </div>
               )}
               {result.notes && (
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Additional Notes</p>
-                  <p className="text-sm text-gray-700">{result.notes}</p>
+                  <p className="text-sm text-visory-navy">{result.notes}</p>
                 </div>
               )}
             </CardContent>

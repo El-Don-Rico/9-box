@@ -44,7 +44,7 @@ export function MultiSelect({ label, options, selected, onChange }: MultiSelectP
         className={cn(
           "rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-left min-w-[120px] flex items-center justify-between gap-2",
           open ? "ring-2 ring-visory border-visory" : "hover:bg-gray-50",
-          selected.length > 0 ? "bg-visory-light text-visory-dark" : "bg-white text-gray-700"
+          selected.length > 0 ? "bg-visory-light text-visory-dark" : "bg-white text-visory-navy"
         )}
       >
         <span className="truncate">{displayText}</span>
@@ -66,7 +66,7 @@ export function MultiSelect({ label, options, selected, onChange }: MultiSelectP
           {options.map((opt) => (
             <label
               key={opt}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-visory-navy hover:bg-gray-50 cursor-pointer"
             >
               <input
                 type="checkbox"
