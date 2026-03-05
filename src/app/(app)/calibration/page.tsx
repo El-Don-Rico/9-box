@@ -122,14 +122,17 @@ export default function CalibrationPage() {
     const avgValues = (filteredEmployees.reduce((s, e) => s + e.valuesAlignment, 0) / total).toFixed(1);
     const avgEngagement = (filteredEmployees.reduce((s, e) => s + e.engagement, 0) / total).toFixed(1);
 
+    // Talent Density = Performance × Potential (max 9, target 6)
+    const avgTalentDensity = (filteredEmployees.reduce((s, e) => s + e.performance * e.potential, 0) / total).toFixed(1);
+    // Cultural Momentum = Values Alignment × Engagement (max 9, target 6)
+    const avgCulturalMomentum = (filteredEmployees.reduce((s, e) => s + e.valuesAlignment * e.engagement, 0) / total).toFixed(1);
+
+    insights.push({ label: "Avg Talent Density (target 6/9)", value: `${avgTalentDensity}/9`, color: parseFloat(avgTalentDensity) >= 6 ? "text-green-700" : "text-orange-600" });
+    insights.push({ label: "Avg Cultural Momentum (target 6/9)", value: `${avgCulturalMomentum}/9`, color: parseFloat(avgCulturalMomentum) >= 6 ? "text-green-700" : "text-orange-600" });
     insights.push({ label: "Top Talent", value: `${topTalent} of ${total} (${Math.round(topTalent / total * 100)}%)`, color: "text-green-700" });
     insights.push({ label: "At Risk", value: `${atRisk} of ${total}`, color: atRisk > 0 ? "text-orange-600" : "text-green-700" });
     insights.push({ label: "Exit Conversations Needed", value: `${exitConvos}`, color: exitConvos > 0 ? "text-red-600" : "text-green-700" });
     insights.push({ label: "Underperformers", value: `${underperformers}`, color: underperformers > 0 ? "text-orange-600" : "text-green-700" });
-    insights.push({ label: "Avg Performance", value: avgPerf, color: "text-visory-navy" });
-    insights.push({ label: "Avg Potential", value: avgPotential, color: "text-visory-navy" });
-    insights.push({ label: "Avg Values Alignment", value: avgValues, color: "text-visory-navy" });
-    insights.push({ label: "Avg Engagement", value: avgEngagement, color: "text-visory-navy" });
 
     return insights;
   }, [filteredEmployees]);
@@ -158,13 +161,13 @@ export default function CalibrationPage() {
               onClick={() => setActiveGrid("box1")}
               className={`px-3 py-2 text-sm font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
             >
-              Perf x Potential
+              Talent Density
             </button>
             <button
               onClick={() => setActiveGrid("box2")}
               className={`px-3 py-2 text-sm font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
             >
-              Values x Engagement
+              Cultural Momentum
             </button>
           </div>
         </div>

@@ -258,13 +258,13 @@ function ManagerDashboard() {
                         onClick={() => setActiveGrid("box1")}
                         className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
                       >
-                        Perf x Potential
+                        Talent Density
                       </button>
                       <button
                         onClick={() => setActiveGrid("box2")}
                         className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
                       >
-                        Values x Engagement
+                        Cultural Momentum
                       </button>
                     </div>
                   </div>

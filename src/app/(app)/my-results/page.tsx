@@ -84,18 +84,42 @@ export default function MyResultsPage() {
               <h2 className="text-lg font-semibold">{formatCyclePeriod(result.cycle.month, result.cycle.year)}</h2>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Talent Density & Cultural Momentum Scores */}
+              {(result.performance && result.potential) || (valuesAlignment && result.engagement) ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {result.performance && result.potential && (
+                    <div className="text-center p-3 rounded-lg bg-visory-grey">
+                      <p className="text-xs font-medium text-gray-500 uppercase mb-1">Talent Density</p>
+                      <p className={`text-2xl font-bold ${result.performance * result.potential >= 6 ? "text-green-700" : "text-orange-600"}`}>
+                        {result.performance * result.potential}/9
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+                    </div>
+                  )}
+                  {valuesAlignment && result.engagement && (
+                    <div className="text-center p-3 rounded-lg bg-visory-grey">
+                      <p className="text-xs font-medium text-gray-500 uppercase mb-1">Cultural Momentum</p>
+                      <p className={`text-2xl font-bold ${valuesAlignment * result.engagement >= 6 ? "text-green-700" : "text-orange-600"}`}>
+                        {valuesAlignment * result.engagement}/9
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {/* 9-Box Placements */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {box1Label && (
                   <div className={`rounded-lg border-2 p-4 ${getBox1Color(box1Label)}`}>
-                    <p className="text-xs font-medium text-gray-500 uppercase">Performance x Potential</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
                     <p className="text-lg font-bold mt-1">{box1Label}</p>
                     <p className="text-sm text-visory-navy mt-2">{getBox1Action(box1Label)}</p>
                   </div>
                 )}
                 {box2Label && (
                   <div className={`rounded-lg border-2 p-4 ${getBox2Color(box2Label)}`}>
-                    <p className="text-xs font-medium text-gray-500 uppercase">Values x Engagement</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
                     <p className="text-lg font-bold mt-1">{box2Label}</p>
                     <p className="text-sm text-visory-navy mt-2">{getBox2Action(box2Label)}</p>
                   </div>
