@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
 export async function GET() {
   const session = await auth();
@@ -9,15 +10,20 @@ export async function GET() {
   }
 
   const isAdmin = session.user.role === "ADMIN";
+  const userRole = session.user.role as Role;
 
   const resources = await prisma.resource.findMany({
-    where: isAdmin ? {} : { published: true },
-    orderBy: { updatedAt: "desc" },
+    where: isAdmin
+      ? {}
+      : { published: true, allowedRoles: { has: userRole } },
+    orderBy: { sortOrder: "asc" },
     select: {
       id: true,
       title: true,
       slug: true,
       published: true,
+      sortOrder: true,
+      allowedRoles: true,
       createdAt: true,
       updatedAt: true,
       createdBy: { select: { id: true, name: true } },
@@ -36,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { title, content, published } = await request.json();
+  const { title, content, published, allowedRoles } = await request.json();
   if (!title?.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
@@ -47,12 +53,18 @@ export async function POST(request: Request) {
     .replace(/^-|-$/g, "")
     + "-" + Date.now().toString(36);
 
+  // New resources go to the end
+  const maxOrder = await prisma.resource.aggregate({ _max: { sortOrder: true } });
+  const nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+
   const resource = await prisma.resource.create({
     data: {
       title: title.trim(),
       slug,
       content: content || "",
       published: published ?? false,
+      sortOrder: nextOrder,
+      allowedRoles: allowedRoles ?? ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"],
       createdById: session.user.id,
     },
   });

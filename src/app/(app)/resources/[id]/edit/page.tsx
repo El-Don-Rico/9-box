@@ -7,13 +7,17 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/resources/rich-text-editor";
+import { RoleSelector } from "@/components/resources/role-selector";
 import Link from "next/link";
+
+const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 
 interface Resource {
   id: string;
   title: string;
   content: string;
   published: boolean;
+  allowedRoles: string[];
 }
 
 export default function EditResourcePage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +27,7 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [published, setPublished] = useState(false);
+  const [allowedRoles, setAllowedRoles] = useState<string[]>(ALL_ROLES);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,6 +39,7 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
         setTitle(data.title);
         setContent(data.content);
         setPublished(data.published);
+        setAllowedRoles(data.allowedRoles || ALL_ROLES);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -52,13 +58,17 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
       setError("Title is required");
       return;
     }
+    if (allowedRoles.length === 0) {
+      setError("Select at least one role");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       const res = await fetch(`/api/resources/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, published }),
+        body: JSON.stringify({ title, content, published, allowedRoles }),
       });
       if (res.ok) {
         router.push(`/resources/${id}`);
@@ -110,9 +120,11 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
               className="rounded border-visory-border"
             />
             <label htmlFor="published" className="text-sm text-visory-navy">
-              Publish (visible to all team members)
+              Publish (visible to team members with matching roles)
             </label>
           </div>
+
+          <RoleSelector selected={allowedRoles} onChange={setAllowedRoles} />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

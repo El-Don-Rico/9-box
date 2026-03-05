@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@prisma/client";
 
 export async function GET(
   _request: Request,
@@ -21,7 +22,10 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!resource.published && session.user.role !== "ADMIN") {
+  const isAdmin = session.user.role === "ADMIN";
+  const userRole = session.user.role as Role;
+
+  if (!isAdmin && (!resource.published || !resource.allowedRoles.includes(userRole))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -41,19 +45,24 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { title, content, published } = await request.json();
+  const { title, content, published, allowedRoles } = await request.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
+  const data: Record<string, unknown> = {
+    title: title.trim(),
+    content: content ?? "",
+    published: published ?? false,
+  };
+  if (allowedRoles) {
+    data.allowedRoles = allowedRoles;
+  }
+
   const resource = await prisma.resource.update({
     where: { id },
-    data: {
-      title: title.trim(),
-      content: content ?? "",
-      published: published ?? false,
-    },
+    data,
   });
 
   return NextResponse.json(resource);
