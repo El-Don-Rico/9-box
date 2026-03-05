@@ -39,6 +39,8 @@ export async function POST(request: Request) {
           name: name || invitation.name,
           email: invitation.email,
           passwordHash,
+          jobTitle: invitation.jobTitle,
+          team: invitation.team,
           role: invitation.role,
           managerId: invitation.managerId,
         },

@@ -30,6 +30,8 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  jobTitle     String?
+  team         String?
   role         Role     @default(EMPLOYEE)
   managerId    String?
   manager      User?    @relation("ManagerReports", fields: [managerId], references: [id])
@@ -50,6 +52,8 @@ model Invitation {
   id        String   @id @default(cuid())
   email     String
   name      String
+  jobTitle  String?
+  team      String?
   role      Role     @default(EMPLOYEE)
   managerId String?
   token     String   @unique

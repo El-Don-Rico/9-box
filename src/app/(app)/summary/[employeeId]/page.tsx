@@ -16,7 +16,7 @@ import {
 } from "@/lib/nine-box";
 
 interface SummaryData {
-  employee: { id: string; name: string; email: string; role: string };
+  employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
   cycle: { id: string; month: number; year: number; status: string } | null;
   selfAssessment: {
     performance: number | null;
@@ -109,6 +109,11 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
+        {(employee.jobTitle || employee.team) && (
+          <p className="text-sm text-gray-500 mt-0.5">
+            {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
+          </p>
+        )}
         <p className="text-sm text-gray-600 mt-1">
           Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
         </p>

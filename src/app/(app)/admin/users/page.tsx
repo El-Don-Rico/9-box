@@ -13,6 +13,8 @@ interface UserData {
   id: string;
   email: string;
   name: string;
+  jobTitle: string | null;
+  team: string | null;
   role: string;
   isActive: boolean;
   managerId: string | null;
@@ -37,7 +39,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [invitations, setInvitations] = useState<InvitationData[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [newInvite, setNewInvite] = useState({ name: "", email: "", role: "EMPLOYEE", managerId: "" });
+  const [newInvite, setNewInvite] = useState({ name: "", email: "", jobTitle: "", team: "", role: "EMPLOYEE", managerId: "" });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function AdminUsersPage() {
     });
     if (res.ok) {
       setShowInviteForm(false);
-      setNewInvite({ name: "", email: "", role: "EMPLOYEE", managerId: "" });
+      setNewInvite({ name: "", email: "", jobTitle: "", team: "", role: "EMPLOYEE", managerId: "" });
       loadInvitations();
     } else {
       const data = await res.json();
@@ -137,6 +139,18 @@ export default function AdminUsersPage() {
                   value={newInvite.email}
                   onChange={(e) => setNewInvite((u) => ({ ...u, email: e.target.value }))}
                   required
+                />
+                <Input
+                  label="Job Title"
+                  value={newInvite.jobTitle}
+                  onChange={(e) => setNewInvite((u) => ({ ...u, jobTitle: e.target.value }))}
+                  placeholder="e.g. Senior Developer"
+                />
+                <Input
+                  label="Team"
+                  value={newInvite.team}
+                  onChange={(e) => setNewInvite((u) => ({ ...u, team: e.target.value }))}
+                  placeholder="e.g. Engineering"
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -220,11 +234,32 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500">{user.email}</p>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {user.jobTitle && (
+                      <span className="text-xs text-gray-500">{user.jobTitle}</span>
+                    )}
+                    {user.jobTitle && user.team && <span className="text-xs text-gray-400">&middot;</span>}
+                    {user.team && (
+                      <span className="text-xs text-gray-500">{user.team}</span>
+                    )}
+                  </div>
                   {user.manager && (
                     <p className="text-xs text-gray-400">Reports to: {user.manager.name}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    defaultValue={user.jobTitle || ""}
+                    onBlur={(e) => { if (e.target.value !== (user.jobTitle || "")) updateUser(user.id, { jobTitle: e.target.value }); }}
+                    placeholder="Job title"
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-visory"
+                  />
+                  <input
+                    defaultValue={user.team || ""}
+                    onBlur={(e) => { if (e.target.value !== (user.team || "")) updateUser(user.id, { team: e.target.value }); }}
+                    placeholder="Team"
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-visory"
+                  />
                   <select
                     value={user.role}
                     onChange={(e) => updateUser(user.id, { role: e.target.value })}

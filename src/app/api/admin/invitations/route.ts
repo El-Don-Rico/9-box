@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name, email, role, managerId } = await request.json();
+  const { name, email, role, managerId, jobTitle, team } = await request.json();
 
   if (!name || !email) {
     return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
@@ -47,6 +47,8 @@ export async function POST(request: Request) {
     data: {
       name,
       email,
+      jobTitle: jobTitle || null,
+      team: team || null,
       role: role || "EMPLOYEE",
       managerId: managerId || null,
       token,

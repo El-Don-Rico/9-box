@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const [employee, selfAssessment, managerAssessment, cycle] = await Promise.all([
     prisma.user.findUnique({
       where: { id: employeeId },
-      select: { id: true, name: true, email: true, role: true, managerId: true },
+      select: { id: true, name: true, email: true, jobTitle: true, team: true, role: true, managerId: true },
     }),
     prisma.selfAssessment.findUnique({
       where: { cycleId_employeeId: { cycleId, employeeId } },
