@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
@@ -28,44 +27,6 @@ export async function GET() {
   });
 
   return NextResponse.json(users);
-}
-
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!isAdmin(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { name, email, password, role, managerId } = await request.json();
-
-  if (!name || !email || !password) {
-    return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
-  }
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return NextResponse.json({ error: "Email already registered" }, { status: 409 });
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash,
-      role: role || "EMPLOYEE",
-      managerId: managerId || null,
-    },
-  });
-
-  return NextResponse.json(
-    { id: user.id, email: user.email, name: user.name, role: user.role },
-    { status: 201 }
-  );
 }
 
 export async function PUT(request: Request) {

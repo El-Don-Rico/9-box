@@ -18,6 +18,7 @@ export const authConfig: NextAuthConfig = {
         "/calibration",
         "/nine-box",
         "/admin",
+        "/summary",
       ];
       const isProtected = protectedPaths.some((path) =>
         nextUrl.pathname.startsWith(path)

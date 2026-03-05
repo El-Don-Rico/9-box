@@ -46,6 +46,20 @@ model User {
   @@index([role])
 }
 
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  name      String
+  role      Role     @default(EMPLOYEE)
+  managerId String?
+  token     String   @unique
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
 model AssessmentCycle {
   id        String      @id @default(cuid())
   month     Int

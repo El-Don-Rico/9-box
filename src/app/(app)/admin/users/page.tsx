@@ -19,16 +19,28 @@ interface UserData {
   manager: { id: string; name: string } | null;
 }
 
+interface InvitationData {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  token: string;
+  usedAt: string | null;
+  createdAt: string;
+}
+
 const ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<UserData[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "EMPLOYEE", managerId: "" });
+  const [invitations, setInvitations] = useState<InvitationData[]>([]);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [newInvite, setNewInvite] = useState({ name: "", email: "", role: "EMPLOYEE", managerId: "" });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -36,28 +48,33 @@ export default function AdminUsersPage() {
       return;
     }
     loadUsers();
+    loadInvitations();
   }, [session, router]);
 
   function loadUsers() {
     fetch("/api/admin/users").then((r) => r.json()).then(setUsers);
   }
 
-  async function createUser(e: React.FormEvent) {
+  function loadInvitations() {
+    fetch("/api/admin/invitations").then((r) => r.json()).then(setInvitations);
+  }
+
+  async function sendInvite(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
     setError("");
-    const res = await fetch("/api/admin/users", {
+    const res = await fetch("/api/admin/invitations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newUser),
+      body: JSON.stringify(newInvite),
     });
     if (res.ok) {
-      setShowAddForm(false);
-      setNewUser({ name: "", email: "", password: "", role: "EMPLOYEE", managerId: "" });
-      loadUsers();
+      setShowInviteForm(false);
+      setNewInvite({ name: "", email: "", role: "EMPLOYEE", managerId: "" });
+      loadInvitations();
     } else {
       const data = await res.json();
-      setError(data.error || "Failed to create user");
+      setError(data.error || "Failed to create invitation");
     }
     setCreating(false);
   }
@@ -71,57 +88,61 @@ export default function AdminUsersPage() {
     loadUsers();
   }
 
+  function getInviteUrl(token: string) {
+    return `${window.location.origin}/invite/${token}`;
+  }
+
+  function copyInviteLink(token: string) {
+    navigator.clipboard.writeText(getInviteUrl(token));
+    setCopiedToken(token);
+    setTimeout(() => setCopiedToken(null), 2000);
+  }
+
   const managers = users.filter((u) => ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(u.role));
+  const pendingInvitations = invitations.filter((i) => !i.usedAt);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Add users, assign roles and managers</p>
+          <p className="text-sm text-gray-600 mt-1">Invite users and manage roles</p>
         </div>
-        <Button onClick={() => setShowAddForm(!showAddForm)}>
-          {showAddForm ? "Cancel" : "Add User"}
+        <Button onClick={() => setShowInviteForm(!showInviteForm)}>
+          {showInviteForm ? "Cancel" : "Invite User"}
         </Button>
       </div>
 
-      {showAddForm && (
+      {showInviteForm && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Add New User</h2>
+            <h2 className="text-lg font-semibold">Invite New User</h2>
+            <p className="text-xs text-gray-500">They will receive a link to set their own password</p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={createUser} className="space-y-4">
+            <form onSubmit={sendInvite} className="space-y-4">
               {error && (
                 <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="Name"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser((u) => ({ ...u, name: e.target.value }))}
+                  value={newInvite.name}
+                  onChange={(e) => setNewInvite((u) => ({ ...u, name: e.target.value }))}
                   required
                 />
                 <Input
                   label="Email"
                   type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser((u) => ({ ...u, email: e.target.value }))}
+                  value={newInvite.email}
+                  onChange={(e) => setNewInvite((u) => ({ ...u, email: e.target.value }))}
                   required
-                />
-                <Input
-                  label="Password"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser((u) => ({ ...u, password: e.target.value }))}
-                  required
-                  minLength={8}
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                   <select
-                    value={newUser.role}
-                    onChange={(e) => setNewUser((u) => ({ ...u, role: e.target.value }))}
+                    value={newInvite.role}
+                    onChange={(e) => setNewInvite((u) => ({ ...u, role: e.target.value }))}
                     className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
                   >
                     {ROLES.map((r) => (
@@ -132,8 +153,8 @@ export default function AdminUsersPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
                   <select
-                    value={newUser.managerId}
-                    onChange={(e) => setNewUser((u) => ({ ...u, managerId: e.target.value }))}
+                    value={newInvite.managerId}
+                    onChange={(e) => setNewInvite((u) => ({ ...u, managerId: e.target.value }))}
                     className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
                   >
                     <option value="">No Manager</option>
@@ -144,14 +165,49 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <Button type="submit" disabled={creating}>
-                {creating ? "Creating..." : "Create User"}
+                {creating ? "Creating..." : "Create Invitation"}
               </Button>
             </form>
           </CardContent>
         </Card>
       )}
 
+      {/* Pending Invitations */}
+      {pendingInvitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Pending Invitations</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-gray-100">
+              {pendingInvitations.map((inv) => (
+                <div key={inv.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{inv.name}</p>
+                    <p className="text-xs text-gray-500">{inv.email}</p>
+                    <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-xs mt-1">
+                      {getRoleDisplayName(inv.role)}
+                    </Badge>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => copyInviteLink(inv.token)}
+                  >
+                    {copiedToken === inv.token ? "Copied!" : "Copy Invite Link"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing Users */}
       <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold">Active Users</h2>
+        </CardHeader>
         <CardContent>
           <div className="divide-y divide-gray-100">
             {users.map((user) => (
