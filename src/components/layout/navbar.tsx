@@ -20,6 +20,8 @@ function getNavLinks(role: string) {
     links.push({ href: "/calibration", label: "Analysis" });
   }
 
+  links.push({ href: "/resources", label: "Resources" });
+
   if (role === "ADMIN") {
     links.push({ href: "/admin", label: "Admin" });
   }

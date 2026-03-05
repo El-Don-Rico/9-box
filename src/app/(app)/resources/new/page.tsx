@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/resources/rich-text-editor";
+import Link from "next/link";
+
+export default function NewResourcePage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [published, setPublished] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  if (session?.user?.role !== "ADMIN") {
+    return <div className="text-center py-12 text-gray-500">Access denied.</div>;
+  }
+
+  async function handleSave() {
+    if (!title.trim()) {
+      setError("Title is required");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content, published }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/resources/${data.id}`);
+      } else {
+        const err = await res.json();
+        setError(err.error || "Failed to create resource");
+      }
+    } catch {
+      setError("Failed to create resource");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Link href="/resources" className="text-sm text-visory-link hover:underline">
+          &larr; Back to Resources
+        </Link>
+        <h1 className="text-2xl font-bold text-visory-navy mt-2">New Resource</h1>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold">Resource Details</h2>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-visory-navy mb-1">Title</label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Resource title..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-visory-navy mb-1">Content</label>
+            <RichTextEditor content={content} onChange={setContent} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="published"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+              className="rounded border-visory-border"
+            />
+            <label htmlFor="published" className="text-sm text-visory-navy">
+              Publish (visible to all team members)
+            </label>
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Create Resource"}
+            </Button>
+            <Link href="/resources">
+              <Button variant="secondary">Cancel</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

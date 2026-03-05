@@ -42,3 +42,71 @@ h1, h2, h3, h4 {
   color: var(--visory-navy);
   font-weight: 700;
 }
+
+/* Rich text / prose styles for resources */
+.prose h1 { font-size: 1.75rem; margin: 1.5rem 0 0.75rem; }
+.prose h2 { font-size: 1.375rem; margin: 1.25rem 0 0.5rem; }
+.prose h3 { font-size: 1.125rem; margin: 1rem 0 0.5rem; }
+.prose p { margin: 0.5rem 0; color: var(--visory-navy); }
+.prose a { color: var(--visory-link); text-decoration: underline; }
+.prose strong { color: var(--visory-navy); font-weight: 700; }
+.prose ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+.prose ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+.prose li { margin: 0.25rem 0; color: var(--visory-navy); }
+.prose blockquote {
+  border-left: 3px solid var(--visory-pink);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: var(--visory-mid-grey);
+  font-style: italic;
+}
+.prose pre {
+  background: var(--visory-light-grey);
+  border: 1px solid var(--visory-border-grey);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.prose code {
+  background: var(--visory-light-grey);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+.prose pre code { background: none; padding: 0; }
+.prose img { max-width: 100%; border-radius: 0.5rem; margin: 0.75rem 0; }
+.prose hr { border-color: var(--visory-border-grey); margin: 1.5rem 0; }
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+.prose th, .prose td {
+  border: 1px solid var(--visory-border-grey);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.prose th {
+  background: var(--visory-light-grey);
+  font-weight: 600;
+  color: var(--visory-navy);
+}
+
+/* TipTap editor styles */
+.tiptap { outline: none; }
+.tiptap table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+.tiptap th, .tiptap td {
+  border: 1px solid var(--visory-border-grey);
+  padding: 0.5rem 0.75rem;
+  min-width: 80px;
+}
+.tiptap th { background: var(--visory-light-grey); font-weight: 600; }
+.tiptap img { max-width: 100%; }
+.tiptap p.is-editor-empty:first-child::before {
+  content: "Start writing...";
+  color: var(--visory-mid-grey);
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
