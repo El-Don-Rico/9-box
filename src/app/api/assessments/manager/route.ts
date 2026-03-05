@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const assessments = await prisma.managerAssessment.findMany({
     where,
     include: {
-      employee: { select: { id: true, name: true, email: true } },
+      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true } },
       manager: { select: { id: true, name: true } },
       cycle: true,
     },

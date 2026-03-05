@@ -38,7 +38,7 @@ export interface ManagerAssessmentData {
   submittedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  employee?: { id: string; name: string; email: string };
+  employee?: { id: string; name: string; email: string; role: string; team: string | null; jobTitle: string | null };
   manager?: { id: string; name: string };
 }
 

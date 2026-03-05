@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -20,6 +21,8 @@ import {
 interface PlacedEmployee {
   id: string;
   name: string;
+  role: string;
+  team: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -34,6 +37,8 @@ export default function CalibrationPage() {
   const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles").then((r) => r.json()).then((data: CycleData[]) => {
@@ -59,6 +64,8 @@ export default function CalibrationPage() {
         return {
           id: a.employeeId,
           name: a.employee?.name || "Unknown",
+          role: a.employee?.role || "EMPLOYEE",
+          team: a.employee?.team || null,
           box1Label: getBox1Label(a.performance!, a.potential!),
           box2Label: getBox2Label(va, a.engagement!),
           performance: a.performance!,
@@ -69,12 +76,23 @@ export default function CalibrationPage() {
       });
   }, [assessments]);
 
+  const roleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => getRoleDisplayName(e.role)))].sort(), [placedEmployees]);
+  const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
+
+  const filteredEmployees = useMemo(() => {
+    return placedEmployees.filter((e) => {
+      if (selectedRoles.length > 0 && !selectedRoles.includes(getRoleDisplayName(e.role))) return false;
+      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      return true;
+    });
+  }, [placedEmployees, selectedRoles, selectedTeams]);
+
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
   const yLabel = activeGrid === "box1" ? "Potential" : "Engagement";
 
   function getEmployeesForCell(cell: GridCellConfig) {
-    return placedEmployees.filter((e) => {
+    return filteredEmployees.filter((e) => {
       if (activeGrid === "box1") {
         return e.performance === cell.x && e.potential === cell.y;
       }
@@ -89,7 +107,7 @@ export default function CalibrationPage() {
           <h1 className="text-2xl font-bold text-gray-900">Calibration</h1>
           <p className="text-sm text-gray-600 mt-1">9-box grid view for team calibration</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedCycleId}
             onChange={(e) => setSelectedCycleId(e.target.value)}
@@ -99,6 +117,8 @@ export default function CalibrationPage() {
               <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
             ))}
           </select>
+          <MultiSelect label="Roles" options={roleOptions} selected={selectedRoles} onChange={setSelectedRoles} />
+          <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
               onClick={() => setActiveGrid("box1")}
@@ -158,23 +178,23 @@ export default function CalibrationPage() {
             </div>
           </div>
 
-          {placedEmployees.length === 0 && (
+          {filteredEmployees.length === 0 && (
             <p className="mt-4 text-center text-sm text-gray-500">
-              No submitted assessments for this cycle yet.
+              {placedEmployees.length === 0 ? "No submitted assessments for this cycle yet." : "No employees match the selected filters."}
             </p>
           )}
         </CardContent>
       </Card>
 
       {/* Prescribed Actions Summary */}
-      {placedEmployees.length > 0 && (
+      {filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold">Prescribed Actions</h2>
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-gray-100">
-              {placedEmployees.map((emp) => {
+              {filteredEmployees.map((emp) => {
                 const label = activeGrid === "box1" ? emp.box1Label : emp.box2Label;
                 const action = activeGrid === "box1" ? getBox1Action(label) : getBox2Action(label);
                 return (

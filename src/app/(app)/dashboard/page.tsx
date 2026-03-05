@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod, getRatingLabel, getRatingColor } from "@/lib/utils";
+import { formatCyclePeriod, getRatingLabel, getRatingColor, getRoleDisplayName } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -103,6 +104,8 @@ function EmployeeDashboard() {
 interface PlacedEmployee {
   id: string;
   name: string;
+  role: string;
+  team: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -119,6 +122,8 @@ function ManagerDashboard() {
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -148,6 +153,8 @@ function ManagerDashboard() {
         return {
           id: a.employeeId,
           name: a.employee?.name || "Unknown",
+          role: a.employee?.role || "EMPLOYEE",
+          team: a.employee?.team || null,
           box1Label: getBox1Label(a.performance!, a.potential!),
           box2Label: getBox2Label(va, a.engagement!),
           performance: a.performance!,
@@ -158,12 +165,23 @@ function ManagerDashboard() {
       });
   }, [assessments]);
 
+  const roleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => getRoleDisplayName(e.role)))].sort(), [placedEmployees]);
+  const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
+
+  const filteredEmployees = useMemo(() => {
+    return placedEmployees.filter((e) => {
+      if (selectedRoles.length > 0 && !selectedRoles.includes(getRoleDisplayName(e.role))) return false;
+      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      return true;
+    });
+  }, [placedEmployees, selectedRoles, selectedTeams]);
+
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
   const yLabel = activeGrid === "box1" ? "Potential" : "Engagement";
 
   function getEmployeesForCell(cell: GridCellConfig) {
-    return placedEmployees.filter((e) => {
+    return filteredEmployees.filter((e) => {
       if (activeGrid === "box1") return e.performance === cell.x && e.potential === cell.y;
       return e.valuesAlignment === cell.x && e.engagement === cell.y;
     });
@@ -220,19 +238,23 @@ function ManagerDashboard() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold">9-Box Grid</h2>
-                  <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-                    <button
-                      onClick={() => setActiveGrid("box1")}
-                      className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                    >
-                      Perf x Potential
-                    </button>
-                    <button
-                      onClick={() => setActiveGrid("box2")}
-                      className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                    >
-                      Values x Engagement
-                    </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <MultiSelect label="Roles" options={roleOptions.map(getRoleDisplayName)} selected={selectedRoles} onChange={setSelectedRoles} />
+                    <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+                    <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                      <button
+                        onClick={() => setActiveGrid("box1")}
+                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                      >
+                        Perf x Potential
+                      </button>
+                      <button
+                        onClick={() => setActiveGrid("box2")}
+                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+                      >
+                        Values x Engagement
+                      </button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -276,14 +298,14 @@ function ManagerDashboard() {
           )}
 
           {/* Team Scores & Actions */}
-          {placedEmployees.length > 0 && (
+          {filteredEmployees.length > 0 && (
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold">Team Scores & Actions</h2>
               </CardHeader>
               <CardContent>
                 <div className="divide-y divide-gray-100">
-                  {placedEmployees.map((emp) => {
+                  {filteredEmployees.map((emp) => {
                     const box1Action = getBox1Action(emp.box1Label);
                     const box2Action = getBox2Action(emp.box2Label);
                     return (
