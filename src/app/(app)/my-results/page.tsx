@@ -144,12 +144,88 @@ export default function MyResultsPage() {
     );
   }
 
+  // Compute summary stats across all cycles with manager assessments
+  const completedSummaries = cyclesWithResults
+    .map((c) => {
+      const d = summaries.get(c.id)!;
+      const mgr = d.managerAssessment;
+      if (!mgr?.submittedAt || !mgr.performance) return null;
+      const va = mgr.valCustomerFirst && mgr.valStepIntoArena && mgr.valFlockToProblems && mgr.valGiveEnergy
+        ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
+        : null;
+      return {
+        month: c.month,
+        year: c.year,
+        performance: mgr.performance,
+        growthReadiness: mgr.growthReadiness,
+        engagement: mgr.engagement,
+        valuesAlignment: va,
+      };
+    })
+    .filter(Boolean) as { month: number; year: number; performance: number; growthReadiness: number | null; engagement: number | null; valuesAlignment: number | null }[];
+
+  const latest = completedSummaries[0] ?? null;
+  const avg = (arr: (number | null)[]) => {
+    const valid = arr.filter((v): v is number => v !== null);
+    return valid.length > 0 ? valid.reduce((s, v) => s + v, 0) / valid.length : null;
+  };
+  const avgPerf = avg(completedSummaries.map((s) => s.performance));
+  const avgGrowth = avg(completedSummaries.map((s) => s.growthReadiness));
+  const avgEng = avg(completedSummaries.map((s) => s.engagement));
+  const avgVA = avg(completedSummaries.map((s) => s.valuesAlignment));
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-visory-navy">Your Assessment Results</h1>
         <p className="text-sm text-gray-600 mt-1">Your scores, feedback, and prescribed actions</p>
       </div>
+
+      {/* Performance Summary */}
+      {latest && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Performance Summary</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Performance</p>
+                <p className="text-xl font-bold text-visory-navy">{latest.performance}</p>
+                {avgPerf !== null && completedSummaries.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgPerf.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Growth Readiness</p>
+                <p className="text-xl font-bold text-visory-navy">{latest.growthReadiness ?? "-"}</p>
+                {avgGrowth !== null && completedSummaries.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgGrowth.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Values Alignment</p>
+                <p className="text-xl font-bold text-visory-navy">{latest.valuesAlignment ?? "-"}</p>
+                {avgVA !== null && completedSummaries.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgVA.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Engagement</p>
+                <p className="text-xl font-bold text-visory-navy">{latest.engagement ?? "-"}</p>
+                {avgEng !== null && completedSummaries.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgEng.toFixed(1)}</p>
+                )}
+              </div>
+            </div>
+            {completedSummaries.length > 1 && (
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Latest: {formatCyclePeriod(latest.month, latest.year)} · Averages across {completedSummaries.length} cycles
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {cyclesWithResults.map((cycle) => {
         const data = summaries.get(cycle.id)!;
