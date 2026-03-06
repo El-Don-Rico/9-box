@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getTrendIcon } from "@/lib/utils";
+import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -27,7 +27,6 @@ interface ResultData {
   valuesEvidence: string | null;
   engagementEvidence: string | null;
   notes: string | null;
-  trend: string | null;
   submittedAt: string | null;
   cycle: { month: number; year: number };
 }
@@ -83,15 +82,6 @@ export default function MyResultsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold">{formatCyclePeriod(result.cycle.month, result.cycle.year)}</h2>
-                {result.trend && (
-                  <Badge className={
-                    result.trend === "IMPROVING" ? "bg-green-100 text-green-800 border-green-300" :
-                    result.trend === "DECLINING" ? "bg-red-100 text-red-800 border-red-300" :
-                    "bg-gray-100 text-gray-800 border-gray-300"
-                  }>
-                    {getTrendIcon(result.trend)} {result.trend === "IMPROVING" ? "Improving" : result.trend === "DECLINING" ? "Declining" : "Stable"}
-                  </Badge>
-                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
