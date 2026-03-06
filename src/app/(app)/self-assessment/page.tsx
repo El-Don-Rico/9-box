@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
 
 export default function SelfAssessmentPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const cycleId = searchParams.get("cycleId");
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
@@ -60,7 +61,12 @@ export default function SelfAssessmentPage() {
       });
       const data = await res.json();
       setAssessmentId(data.id);
-      if (submit) setIsSubmitted(true);
+      if (submit) {
+        setIsSubmitted(true);
+        if (data.bothComplete) {
+          router.push(`/summary/${data.employeeId}?cycleId=${cycleId}`);
+        }
+      }
     } finally {
       setSaving(false);
       setSubmitting(false);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -196,9 +197,11 @@ export default function CalibrationPage() {
                       <p className="text-xs font-semibold text-visory-navy mb-2">{cell.label}</p>
                       <div className="flex flex-wrap gap-1">
                         {emps.map((emp) => (
-                          <Badge key={emp.id} className="bg-white/80 text-gray-800 border-gray-300 text-xs">
-                            {emp.name}
-                          </Badge>
+                          <Link key={emp.id} href={`/summary/${emp.id}?cycleId=${selectedCycleId}`}>
+                            <Badge className="bg-white/80 text-gray-800 border-gray-300 text-xs cursor-pointer hover:bg-visory-light hover:border-visory/40 transition-colors">
+                              {emp.name}
+                            </Badge>
+                          </Link>
                         ))}
                       </div>
                     </div>
@@ -256,7 +259,9 @@ export default function CalibrationPage() {
                 return (
                   <div key={emp.id} className="py-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-visory-navy">{emp.name}</span>
+                      <Link href={`/summary/${emp.id}?cycleId=${selectedCycleId}`} className="text-sm font-medium text-visory-navy hover:text-visory underline-offset-2 hover:underline transition-colors">
+                        {emp.name}
+                      </Link>
                       <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{label}</Badge>
                     </div>
                     <p className="text-sm text-gray-600">{action}</p>

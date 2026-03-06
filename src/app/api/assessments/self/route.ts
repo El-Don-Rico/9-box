@@ -59,5 +59,14 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json(assessment);
+  // Check if both assessments are now complete
+  let bothComplete = false;
+  if (assessment.submittedAt) {
+    const managerAssessment = await prisma.managerAssessment.findFirst({
+      where: { cycleId, employeeId: session.user.id, submittedAt: { not: null } },
+    });
+    bothComplete = !!managerAssessment;
+  }
+
+  return NextResponse.json({ ...assessment, bothComplete });
 }

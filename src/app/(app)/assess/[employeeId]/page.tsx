@@ -62,7 +62,12 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       });
       const data = await res.json();
       setAssessmentId(data.id);
-      if (submit) setIsSubmitted(true);
+      if (submit) {
+        setIsSubmitted(true);
+        if (data.bothComplete) {
+          router.push(`/summary/${employeeId}?cycleId=${cycleId}`);
+        }
+      }
     } finally {
       setSaving(false);
       setSubmitting(false);
