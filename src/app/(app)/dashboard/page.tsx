@@ -29,28 +29,91 @@ export default function DashboardPage() {
   return <ManagerDashboard />;
 }
 
+interface EmployeeSummary {
+  cycleId: string;
+  month: number;
+  year: number;
+  selfPerformance: number | null;
+  mgrPerformance: number | null;
+  mgrGrowthReadiness: number | null;
+  selfEngagement: number | null;
+  mgrEngagement: number | null;
+  mgrValuesAlignment: number | null;
+  selfSubmitted: boolean;
+  mgrSubmitted: boolean;
+  resultsSent: boolean;
+}
+
 function EmployeeDashboard() {
+  const { data: session } = useSession();
   const router = useRouter();
-  const [cycle, setCycle] = useState<CycleData | null>(null);
-  const [selfStatus, setSelfStatus] = useState<"not_started" | "draft" | "submitted">("not_started");
+  const [cycles, setCycles] = useState<CycleData[]>([]);
+  const [cycleSummaries, setCycleSummaries] = useState<EmployeeSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!session?.user?.id) return;
+
     fetch("/api/cycles")
       .then((r) => r.json())
-      .then((cycles: CycleData[]) => {
-        const recent = cycles[0];
-        if (recent) {
-          setCycle(recent);
-          fetch(`/api/assessments/self?cycleId=${recent.id}`)
-            .then((r) => r.json())
-            .then((assessments) => {
-              if (assessments.length > 0) {
-                setSelfStatus(assessments[0].submittedAt ? "submitted" : "draft");
-              }
-            });
-        }
-      });
-  }, []);
+      .then(async (cycleData: CycleData[]) => {
+        setCycles(cycleData);
+        const summaries: EmployeeSummary[] = [];
+        await Promise.all(
+          cycleData.map(async (cycle) => {
+            try {
+              const res = await fetch(`/api/assessments/summary?employeeId=${session.user.id}&cycleId=${cycle.id}`);
+              if (!res.ok) return;
+              const data = await res.json();
+              const self = data.selfAssessment;
+              const mgr = data.managerAssessment;
+              const mgrVA = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
+                ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
+                : null;
+              summaries.push({
+                cycleId: cycle.id,
+                month: cycle.month,
+                year: cycle.year,
+                selfPerformance: self?.performance ?? null,
+                mgrPerformance: mgr?.performance ?? null,
+                mgrGrowthReadiness: mgr?.growthReadiness ?? null,
+                selfEngagement: self?.engagement ?? null,
+                mgrEngagement: mgr?.engagement ?? null,
+                mgrValuesAlignment: mgrVA,
+                selfSubmitted: !!self?.submittedAt,
+                mgrSubmitted: !!mgr?.submittedAt,
+                resultsSent: !!mgr?.resultsSentAt,
+              });
+            } catch { /* skip */ }
+          })
+        );
+        // Sort by year desc, month desc
+        summaries.sort((a, b) => b.year - a.year || b.month - a.month);
+        setCycleSummaries(summaries);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [session?.user?.id]);
+
+  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
+
+  const openCycle = cycles.find((c) => c.status === "OPEN");
+  const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
+
+  // Compute averages from cycles that have manager assessments
+  const completedCycles = cycleSummaries.filter((s) => s.mgrSubmitted);
+  const avgPerformance = completedCycles.length > 0
+    ? completedCycles.reduce((sum, s) => sum + (s.mgrPerformance || 0), 0) / completedCycles.length
+    : null;
+  const avgGrowthReadiness = completedCycles.length > 0
+    ? completedCycles.reduce((sum, s) => sum + (s.mgrGrowthReadiness || 0), 0) / completedCycles.length
+    : null;
+  const avgEngagement = completedCycles.length > 0
+    ? completedCycles.reduce((sum, s) => sum + (s.mgrEngagement || 0), 0) / completedCycles.length
+    : null;
+  const avgValues = completedCycles.length > 0
+    ? completedCycles.reduce((sum, s) => sum + (s.mgrValuesAlignment || 0), 0) / completedCycles.length
+    : null;
 
   return (
     <div className="space-y-6">
@@ -59,38 +122,131 @@ function EmployeeDashboard() {
         <p className="text-sm text-gray-600 mt-1">Your performance cycle status</p>
       </div>
 
-      {cycle ? (
+      {/* Summary Card - averages & latest */}
+      {latestWithResults && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Your Performance Summary</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Performance</p>
+                <p className="text-xl font-bold text-visory-navy">
+                  {latestWithResults.mgrPerformance ?? "-"}
+                </p>
+                {avgPerformance !== null && completedCycles.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgPerformance.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Growth Readiness</p>
+                <p className="text-xl font-bold text-visory-navy">
+                  {latestWithResults.mgrGrowthReadiness ?? "-"}
+                </p>
+                {avgGrowthReadiness !== null && completedCycles.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgGrowthReadiness.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Values Alignment</p>
+                <p className="text-xl font-bold text-visory-navy">
+                  {latestWithResults.mgrValuesAlignment ?? "-"}
+                </p>
+                {avgValues !== null && completedCycles.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgValues.toFixed(1)}</p>
+                )}
+              </div>
+              <div className="text-center p-3 rounded-lg bg-visory-grey">
+                <p className="text-xs text-gray-500 mb-1">Engagement</p>
+                <p className="text-xl font-bold text-visory-navy">
+                  {latestWithResults.mgrEngagement ?? "-"}
+                </p>
+                {avgEngagement !== null && completedCycles.length > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">Avg: {avgEngagement.toFixed(1)}</p>
+                )}
+              </div>
+            </div>
+            {completedCycles.length > 1 && (
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Latest: {formatCyclePeriod(latestWithResults.month, latestWithResults.year)} · Averages across {completedCycles.length} cycles
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cycle Cards */}
+      {cycleSummaries.length > 0 ? (
+        cycleSummaries.map((summary) => {
+          const cycle = cycles.find((c) => c.id === summary.cycleId);
+          const isOpen = cycle?.status === "OPEN";
+          return (
+            <Card key={summary.cycleId}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">{formatCyclePeriod(summary.month, summary.year)}</h2>
+                  {isOpen && (
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
+                  )}
+                  {summary.resultsSent && (
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Self-Assessment</span>
+                  <Badge
+                    className={
+                      summary.selfSubmitted
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : "bg-gray-100 text-gray-800 border-gray-300"
+                    }
+                  >
+                    {summary.selfSubmitted ? "Submitted" : "Pending"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Manager Assessment</span>
+                  <Badge
+                    className={
+                      summary.mgrSubmitted
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : "bg-gray-100 text-gray-800 border-gray-300"
+                    }
+                  >
+                    {summary.mgrSubmitted ? "Submitted" : "Pending"}
+                  </Badge>
+                </div>
+                <div className="flex gap-2">
+                  {!summary.selfSubmitted && isOpen && (
+                    <Button onClick={() => router.push(`/self-assessment?cycleId=${summary.cycleId}`)}>
+                      {summary.selfPerformance !== null ? "Continue Self-Assessment" : "Start Self-Assessment"}
+                    </Button>
+                  )}
+                  {(summary.selfSubmitted || summary.mgrSubmitted) && (
+                    <Button variant="secondary" onClick={() => router.push("/my-results")}>
+                      View Results
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })
+      ) : openCycle ? (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">
-                {formatCyclePeriod(cycle.month, cycle.year)}
-              </h2>
-              <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
-                {cycle.status === "OPEN" ? "Open" : "Closed"}
-              </Badge>
+              <h2 className="text-lg font-semibold">{formatCyclePeriod(openCycle.month, openCycle.year)}</h2>
+              <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Self-Assessment</span>
-              <Badge
-                className={
-                  selfStatus === "submitted"
-                    ? "bg-green-100 text-green-800 border-green-300"
-                    : selfStatus === "draft"
-                      ? "bg-amber-100 text-amber-800 border-amber-300"
-                      : "bg-gray-100 text-gray-800 border-gray-300"
-                }
-              >
-                {selfStatus === "submitted" ? "Submitted" : selfStatus === "draft" ? "In Progress" : "Not Started"}
-              </Badge>
-            </div>
-            {selfStatus !== "submitted" && cycle.status === "OPEN" && (
-              <Button onClick={() => router.push(`/self-assessment?cycleId=${cycle.id}`)}>
-                {selfStatus === "draft" ? "Continue Self-Assessment" : "Start Self-Assessment"}
-              </Button>
-            )}
+          <CardContent>
+            <Button onClick={() => router.push(`/self-assessment?cycleId=${openCycle.id}`)}>
+              Start Self-Assessment
+            </Button>
           </CardContent>
         </Card>
       ) : (
