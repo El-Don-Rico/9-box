@@ -8,13 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod, getRatingLabel, getRatingColor, getGrowthReadinessLabel } from "@/lib/utils";
+import { formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
   getValuesAlignment,
-  getBox1Action,
-  getBox2Action,
   BOX1_GRID,
   BOX2_GRID,
   type GridCellConfig,
@@ -504,69 +502,6 @@ function ManagerDashboard() {
                       <span className="text-xs font-medium text-gray-500">High</span>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Team Scores & Actions */}
-          {filteredEmployees.length > 0 && (
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold">Team Scores & Actions</h2>
-              </CardHeader>
-              <CardContent>
-                <div className="divide-y divide-gray-100">
-                  {filteredEmployees.map((emp) => {
-                    const box1Action = getBox1Action(emp.box1Label);
-                    const box2Action = getBox2Action(emp.box2Label);
-                    return (
-                      <div key={emp.id} className="py-4 space-y-2">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-visory-navy">{emp.name}</span>
-                          <div className="flex flex-wrap gap-2">
-                            <div className="text-center">
-                              <Badge className={getRatingColor(emp.performance)}>{getRatingLabel(emp.performance)}</Badge>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Perf</p>
-                            </div>
-                            <div className="text-center">
-                              <Badge className={getRatingColor(emp.growthReadiness)}>{getGrowthReadinessLabel(emp.growthReadiness)}</Badge>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Growth</p>
-                            </div>
-                            <div className="text-center">
-                              <Badge className={getRatingColor(emp.valuesAlignment)}>{getRatingLabel(emp.valuesAlignment)}</Badge>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Values</p>
-                            </div>
-                            <div className="text-center">
-                              <Badge className={getRatingColor(emp.engagement)}>{getRatingLabel(emp.engagement)}</Badge>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Engage</p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => router.push(`/summary/${emp.id}?cycleId=${cycle.id}`)}
-                            >
-                              Summary
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="bg-gray-50 rounded-lg p-2">
-                            <div className="flex items-center gap-1 mb-1">
-                              <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{emp.box1Label}</Badge>
-                            </div>
-                            <p className="text-xs text-gray-600">{box1Action}</p>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg p-2">
-                            <div className="flex items-center gap-1 mb-1">
-                              <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{emp.box2Label}</Badge>
-                            </div>
-                            <p className="text-xs text-gray-600">{box2Action}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </CardContent>
             </Card>
