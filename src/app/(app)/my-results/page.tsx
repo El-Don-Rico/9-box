@@ -11,36 +11,119 @@ import {
   getValuesAlignment,
   getBox1Action,
   getBox2Action,
+  getBox1Color,
+  getBox2Color,
 } from "@/lib/nine-box";
 
-interface ResultData {
-  id: string;
+interface SelfAssessmentData {
   performance: number | null;
-  growthReadiness: number | null;
+  performanceJustification: string | null;
+  achievements: string | null;
+  blockers: string | null;
+  learning: string | null;
   valCustomerFirst: number | null;
   valStepIntoArena: number | null;
   valFlockToProblems: number | null;
   valGiveEnergy: number | null;
+  valuesReflection: string | null;
   engagement: number | null;
+  engagementDriver: string | null;
+  supportNeeded: string | null;
+  goalsNextMonth: string | null;
+  submittedAt: string | null;
+}
+
+interface ManagerAssessmentData {
+  performance: number | null;
   performanceEvidence: string | null;
+  growthReadiness: number | null;
   growthReadinessEvidence: string | null;
+  valCustomerFirst: number | null;
+  valStepIntoArena: number | null;
+  valFlockToProblems: number | null;
+  valGiveEnergy: number | null;
   valuesEvidence: string | null;
+  engagement: number | null;
   engagementEvidence: string | null;
   notes: string | null;
   submittedAt: string | null;
-  cycle: { month: number; year: number };
+  resultsSentAt: string | null;
+  manager: { id: string; name: string };
+}
+
+interface SummaryData {
+  employee: { id: string; name: string };
+  cycle: { id: string; month: number; year: number; status: string } | null;
+  selfAssessment: SelfAssessmentData | null;
+  managerAssessment: ManagerAssessmentData | null;
+}
+
+interface CycleData {
+  id: string;
+  month: number;
+  year: number;
+  status: string;
+}
+
+function RatingComparison({ label, selfRating, managerRating, labelFn = getRatingLabel }: {
+  label: string;
+  selfRating: number | null;
+  managerRating: number | null;
+  labelFn?: (r: number) => string;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm font-medium text-visory-navy">{label}</span>
+      <div className="flex items-center gap-3">
+        <div className="text-center">
+          <p className="text-xs text-gray-500 mb-1">Self</p>
+          {selfRating ? (
+            <Badge className={getRatingColor(selfRating)}>{labelFn(selfRating)}</Badge>
+          ) : (
+            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
+          )}
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-500 mb-1">Manager</p>
+          {managerRating ? (
+            <Badge className={getRatingColor(managerRating)}>{labelFn(managerRating)}</Badge>
+          ) : (
+            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function MyResultsPage() {
   const { data: session } = useSession();
-  const [results, setResults] = useState<ResultData[]>([]);
+  const [cycles, setCycles] = useState<CycleData[]>([]);
+  const [summaries, setSummaries] = useState<Map<string, SummaryData>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/assessments/manager?employeeId=" + session?.user?.id)
+    if (!session?.user?.id) return;
+
+    fetch("/api/cycles")
       .then((r) => r.json())
-      .then((data) => {
-        setResults(data.filter((a: ResultData) => a.submittedAt));
+      .then(async (cycleData: CycleData[]) => {
+        setCycles(cycleData);
+        const results = new Map<string, SummaryData>();
+        await Promise.all(
+          cycleData.map(async (cycle) => {
+            try {
+              const res = await fetch(`/api/assessments/summary?employeeId=${session.user.id}&cycleId=${cycle.id}`);
+              if (res.ok) {
+                const data: SummaryData = await res.json();
+                if (data.selfAssessment?.submittedAt || data.managerAssessment?.submittedAt) {
+                  results.set(cycle.id, data);
+                }
+              }
+            } catch { /* skip failed fetches */ }
+          })
+        );
+        setSummaries(results);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -50,11 +133,13 @@ export default function MyResultsPage() {
     return <div className="text-center py-12 text-gray-500">Loading...</div>;
   }
 
-  if (results.length === 0) {
+  const cyclesWithResults = cycles.filter((c) => summaries.has(c.id));
+
+  if (cyclesWithResults.length === 0) {
     return (
       <div className="text-center py-12">
         <h1 className="text-2xl font-bold text-visory-navy mb-2">Your Assessment Results</h1>
-        <p className="text-gray-500">No results available yet. Results appear after your manager submits your assessment.</p>
+        <p className="text-gray-500">No results available yet. Results appear after assessments are submitted.</p>
       </div>
     );
   }
@@ -66,136 +151,154 @@ export default function MyResultsPage() {
         <p className="text-sm text-gray-600 mt-1">Your scores, feedback, and prescribed actions</p>
       </div>
 
-      {results.map((result) => {
-        const valuesAlignment =
-          result.valCustomerFirst && result.valStepIntoArena && result.valFlockToProblems && result.valGiveEnergy
-            ? getValuesAlignment(result.valCustomerFirst, result.valStepIntoArena, result.valFlockToProblems, result.valGiveEnergy)
-            : null;
+      {cyclesWithResults.map((cycle) => {
+        const data = summaries.get(cycle.id)!;
+        const { selfAssessment: self, managerAssessment: mgr } = data;
 
-        const box1Label = result.performance && result.growthReadiness ? getBox1Label(result.performance, result.growthReadiness) : null;
-        const box2Label = valuesAlignment && result.engagement ? getBox2Label(valuesAlignment, result.engagement) : null;
-        const box1Action = box1Label ? getBox1Action(box1Label) : null;
-        const box2Action = box2Label ? getBox2Action(box2Label) : null;
+        const mgrValuesAlignment = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
+          ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
+          : null;
+        const box1Label = mgr?.performance && mgr?.growthReadiness ? getBox1Label(mgr.performance, mgr.growthReadiness) : null;
+        const box2Label = mgrValuesAlignment && mgr?.engagement ? getBox2Label(mgrValuesAlignment, mgr.engagement) : null;
 
         return (
-          <Card key={result.id}>
+          <Card key={cycle.id}>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{formatCyclePeriod(result.cycle.month, result.cycle.year)}</h2>
+                <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle.month, cycle.year)}</h2>
+                {mgr?.resultsSentAt && (
+                  <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Performance & Growth Readiness */}
-              {(result.performance || result.growthReadiness) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Performance & Growth</h3>
-                  <div className="space-y-2">
-                    {result.performance && (
-                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-visory-grey">
-                        <span className="text-sm text-gray-700">Performance</span>
-                        <Badge className={getRatingColor(result.performance)}>
-                          {getRatingLabel(result.performance)} ({result.performance})
-                        </Badge>
-                      </div>
-                    )}
-                    {result.growthReadiness && (
-                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-visory-grey">
-                        <span className="text-sm text-gray-700">Growth Readiness</span>
-                        <Badge className={getRatingColor(result.growthReadiness)}>
-                          {getGrowthReadinessLabel(result.growthReadiness)} ({result.growthReadiness})
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  {box1Action && (
-                    <div className="mt-3 p-3 rounded-lg border border-visory/20 bg-visory-light">
-                      <p className="text-xs font-medium text-gray-500 uppercase mb-1">Your Action</p>
-                      <p className="text-sm text-visory-navy">{box1Action}</p>
+              {/* Talent Density & Cultural Momentum */}
+              {(box1Label || box2Label) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {box1Label && (
+                    <div className={`rounded-lg border-2 p-3 ${getBox1Color(box1Label)}`}>
+                      <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
+                      <p className="text-base font-bold mt-1">{box1Label}</p>
+                      <p className="text-sm text-visory-navy mt-1">{getBox1Action(box1Label)}</p>
+                    </div>
+                  )}
+                  {box2Label && (
+                    <div className={`rounded-lg border-2 p-3 ${getBox2Color(box2Label)}`}>
+                      <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
+                      <p className="text-base font-bold mt-1">{box2Label}</p>
+                      <p className="text-sm text-visory-navy mt-1">{getBox2Action(box2Label)}</p>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Values & Engagement */}
-              {(valuesAlignment || result.engagement) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Values & Engagement</h3>
-                  <div className="space-y-2">
-                    {valuesAlignment && (
-                      <>
-                        <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-visory-grey">
-                          <span className="text-sm text-gray-700">Values Alignment</span>
-                          <Badge className={getRatingColor(valuesAlignment)}>
-                            {getRatingLabel(valuesAlignment)} ({valuesAlignment})
-                          </Badge>
-                        </div>
-                        <div className="pl-4 space-y-1">
-                          {result.valCustomerFirst && (
-                            <div className="flex items-center justify-between text-xs text-gray-600 py-1">
-                              <span>Think Customer First</span>
-                              <span className="font-medium">{result.valCustomerFirst}</span>
-                            </div>
-                          )}
-                          {result.valStepIntoArena && (
-                            <div className="flex items-center justify-between text-xs text-gray-600 py-1">
-                              <span>Step into the Arena</span>
-                              <span className="font-medium">{result.valStepIntoArena}</span>
-                            </div>
-                          )}
-                          {result.valFlockToProblems && (
-                            <div className="flex items-center justify-between text-xs text-gray-600 py-1">
-                              <span>Flock to Problems</span>
-                              <span className="font-medium">{result.valFlockToProblems}</span>
-                            </div>
-                          )}
-                          {result.valGiveEnergy && (
-                            <div className="flex items-center justify-between text-xs text-gray-600 py-1">
-                              <span>Give Energy</span>
-                              <span className="font-medium">{result.valGiveEnergy}</span>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                    {result.engagement && (
-                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-visory-grey">
-                        <span className="text-sm text-gray-700">Engagement</span>
-                        <Badge className={getRatingColor(result.engagement)}>
-                          {getRatingLabel(result.engagement)} ({result.engagement})
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                  {box2Action && (
-                    <div className="mt-3 p-3 rounded-lg border border-visory/20 bg-visory-light">
-                      <p className="text-xs font-medium text-gray-500 uppercase mb-1">Your Action</p>
-                      <p className="text-sm text-visory-navy">{box2Action}</p>
-                    </div>
-                  )}
+              {/* Ratings Comparison */}
+              <div>
+                <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Ratings Comparison</h3>
+                <div className="divide-y divide-gray-100">
+                  <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
+                  <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
+                  <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
+                  <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
+                  <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
+                  <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={mgr?.valGiveEnergy ?? null} />
+                  <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={mgr?.engagement ?? null} />
                 </div>
-              )}
+              </div>
 
-              {/* Feedback */}
-              {(result.performanceEvidence || result.growthReadinessEvidence || result.notes) && (
+              {/* Self-Assessment Details */}
+              {self?.submittedAt && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Feedback</h3>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Your Self-Assessment</h3>
                   <div className="space-y-3">
-                    {result.performanceEvidence && (
+                    {self.performanceJustification && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance</p>
-                        <p className="text-sm text-visory-navy">{result.performanceEvidence}</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Justification</p>
+                        <p className="text-sm text-visory-navy">{self.performanceJustification}</p>
                       </div>
                     )}
-                    {result.growthReadinessEvidence && (
+                    {self.achievements && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Growth Readiness</p>
-                        <p className="text-sm text-visory-navy">{result.growthReadinessEvidence}</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Key Achievements</p>
+                        <p className="text-sm text-visory-navy">{self.achievements}</p>
                       </div>
                     )}
-                    {result.notes && (
+                    {self.blockers && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Blockers / Challenges</p>
+                        <p className="text-sm text-visory-navy">{self.blockers}</p>
+                      </div>
+                    )}
+                    {self.learning && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
+                        <p className="text-sm text-visory-navy">{self.learning}</p>
+                      </div>
+                    )}
+                    {self.valuesReflection && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Reflection</p>
+                        <p className="text-sm text-visory-navy">{self.valuesReflection}</p>
+                      </div>
+                    )}
+                    {self.engagementDriver && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Driver</p>
+                        <p className="text-sm text-visory-navy">{self.engagementDriver}</p>
+                      </div>
+                    )}
+                    {self.supportNeeded && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Support Needed</p>
+                        <p className="text-sm text-visory-navy">{self.supportNeeded}</p>
+                      </div>
+                    )}
+                    {self.goalsNextMonth && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                        <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Manager Assessment Details */}
+              {mgr?.submittedAt && (
+                <div>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                    Manager Feedback
+                    <span className="text-xs font-normal text-gray-500 ml-2">by {mgr.manager.name}</span>
+                  </h3>
+                  <div className="space-y-3">
+                    {mgr.performanceEvidence && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Evidence</p>
+                        <p className="text-sm text-visory-navy">{mgr.performanceEvidence}</p>
+                      </div>
+                    )}
+                    {mgr.growthReadinessEvidence && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Growth Readiness Evidence</p>
+                        <p className="text-sm text-visory-navy">{mgr.growthReadinessEvidence}</p>
+                      </div>
+                    )}
+                    {mgr.valuesEvidence && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Evidence</p>
+                        <p className="text-sm text-visory-navy">{mgr.valuesEvidence}</p>
+                      </div>
+                    )}
+                    {mgr.engagementEvidence && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Evidence</p>
+                        <p className="text-sm text-visory-navy">{mgr.engagementEvidence}</p>
+                      </div>
+                    )}
+                    {mgr.notes && (
                       <div>
                         <p className="text-xs font-medium text-gray-500 uppercase mb-1">Additional Notes</p>
-                        <p className="text-sm text-visory-navy">{result.notes}</p>
+                        <p className="text-sm text-visory-navy">{mgr.notes}</p>
                       </div>
                     )}
                   </div>
