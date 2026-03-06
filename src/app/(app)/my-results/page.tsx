@@ -144,12 +144,12 @@ export default function MyResultsPage() {
     );
   }
 
-  // Compute summary stats across all cycles with manager assessments
+  // Compute summary stats across cycles where results have been sent
   const completedSummaries = cyclesWithResults
     .map((c) => {
       const d = summaries.get(c.id)!;
       const mgr = d.managerAssessment;
-      if (!mgr?.submittedAt || !mgr.performance) return null;
+      if (!mgr?.resultsSentAt || !mgr.performance) return null;
       const va = mgr.valCustomerFirst && mgr.valStepIntoArena && mgr.valFlockToProblems && mgr.valGiveEnergy
         ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
         : null;
@@ -240,16 +240,23 @@ export default function MyResultsPage() {
         return (
           <Card key={cycle.id}>
             <CardHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle.month, cycle.year)}</h2>
-                {mgr?.resultsSentAt && (
-                  <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {self?.submittedAt && (
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Self-Assessment Submitted</Badge>
+                  )}
+                  {mgr?.resultsSentAt ? (
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending Manager Review</Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Talent Density & Cultural Momentum */}
-              {(box1Label || box2Label) && (
+              {/* Talent Density & Cultural Momentum - only show when results sent */}
+              {mgr?.resultsSentAt && (box1Label || box2Label) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {box1Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox1Color(box1Label)}`}>
@@ -268,19 +275,33 @@ export default function MyResultsPage() {
                 </div>
               )}
 
-              {/* Ratings Comparison */}
-              <div>
-                <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Ratings Comparison</h3>
-                <div className="divide-y divide-gray-100">
-                  <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
-                  <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
-                  <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
-                  <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
-                  <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
-                  <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={mgr?.valGiveEnergy ?? null} />
-                  <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={mgr?.engagement ?? null} />
+              {/* Ratings Comparison - only show manager ratings when results sent */}
+              {mgr?.resultsSentAt ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Ratings Comparison</h3>
+                  <div className="divide-y divide-gray-100">
+                    <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
+                    <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
+                    <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
+                    <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
+                    <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
+                    <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={mgr?.valGiveEnergy ?? null} />
+                    <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={mgr?.engagement ?? null} />
+                  </div>
                 </div>
-              </div>
+              ) : self?.submittedAt ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Your Ratings</h3>
+                  <div className="divide-y divide-gray-100">
+                    <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={null} />
+                    <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={null} />
+                    <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={null} />
+                    <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={null} />
+                    <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={null} />
+                    <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={null} />
+                  </div>
+                </div>
+              ) : null}
 
               {/* Self-Assessment Details */}
               {self?.submittedAt && (
@@ -339,8 +360,8 @@ export default function MyResultsPage() {
                 </div>
               )}
 
-              {/* Manager Assessment Details */}
-              {mgr?.submittedAt && (
+              {/* Manager Assessment Details - only visible after results sent */}
+              {mgr?.resultsSentAt && (
                 <div>
                   <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
                     Manager Feedback
