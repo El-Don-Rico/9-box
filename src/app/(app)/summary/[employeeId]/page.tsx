@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
+import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -16,6 +16,7 @@ import {
   getBox1Color,
   getBox2Color,
 } from "@/lib/nine-box";
+import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
@@ -53,34 +54,11 @@ interface SummaryData {
     notes: string | null;
     submittedAt: string | null;
     resultsSentAt: string | null;
+    oneOnOneComplete: boolean;
+    oneOnOneNotes: string | null;
+    oneOnOneCompletedAt: string | null;
     manager: { id: string; name: string };
   } | null;
-}
-
-function RatingComparison({ label, selfRating, managerRating, labelFn = getRatingLabel }: { label: string; selfRating: number | null; managerRating: number | null; labelFn?: (r: number) => string }) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium text-visory-navy">{label}</span>
-      <div className="flex items-center gap-3">
-        <div className="text-center">
-          <p className="text-xs text-gray-500 mb-1">Self</p>
-          {selfRating ? (
-            <Badge className={getRatingColor(selfRating)}>{labelFn(selfRating)}</Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
-          )}
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-gray-500 mb-1">Manager</p>
-          {managerRating ? (
-            <Badge className={getRatingColor(managerRating)}>{labelFn(managerRating)}</Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function SummaryPage({ params }: { params: Promise<{ employeeId: string }> }) {
@@ -92,12 +70,21 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
   const [loading, setLoading] = useState(true);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [sendingResults, setSendingResults] = useState(false);
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     if (!cycleId) return;
     fetch(`/api/assessments/summary?employeeId=${employeeId}&cycleId=${cycleId}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
+      .then((d) => {
+        setData(d);
+        if (d.managerAssessment?.oneOnOneNotes) {
+          setMeetingNotes(d.managerAssessment.oneOnOneNotes);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [employeeId, cycleId]);
 
@@ -122,18 +109,120 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     }
   }
 
+  async function handleSaveMeetingNotes() {
+    if (!data?.managerAssessment?.id) return;
+    setSavingNotes(true);
+    try {
+      const res = await fetch("/api/assessments/manager/meeting-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId: data.managerAssessment.id, notes: meetingNotes }),
+      });
+      if (res.ok) {
+        setData((prev) => prev ? {
+          ...prev,
+          managerAssessment: prev.managerAssessment ? {
+            ...prev.managerAssessment,
+            oneOnOneComplete: true,
+            oneOnOneNotes: meetingNotes,
+            oneOnOneCompletedAt: new Date().toISOString(),
+          } : null,
+        } : null);
+        setEditingNotes(false);
+      }
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
   if (!data || !data.employee) return <div className="text-center py-12 text-gray-500">Summary not found.</div>;
 
   const { employee, cycle, selfAssessment: self, managerAssessment: mgr } = data;
-  const isManager = mgr?.manager?.id === session?.user?.id;
-  const canSendResults = isManager && mgr?.submittedAt && self?.submittedAt && !mgr?.resultsSentAt;
+  const isManagerView = mgr?.manager?.id === session?.user?.id;
+  const canSendResults = isManagerView && mgr?.submittedAt && self?.submittedAt && !mgr?.resultsSentAt;
 
   const mgrValuesAlignment = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
     ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
     : null;
   const box1Label = mgr?.performance && mgr?.growthReadiness ? getBox1Label(mgr.performance, mgr.growthReadiness) : null;
   const box2Label = mgrValuesAlignment && mgr?.engagement ? getBox2Label(mgrValuesAlignment, mgr.engagement) : null;
+
+  const comparisonSections = [
+    {
+      id: "performance",
+      label: "Performance",
+      selfRating: self?.performance ?? null,
+      managerRating: mgr?.performance ?? null,
+      selfText: [
+        { label: "Justification", value: self?.performanceJustification ?? null },
+        { label: "Achievements", value: self?.achievements ?? null },
+        { label: "Blockers", value: self?.blockers ?? null },
+      ],
+      managerText: [
+        { label: "Evidence", value: mgr?.performanceEvidence ?? null },
+      ],
+    },
+    {
+      id: "growthReadiness",
+      label: "Growth Readiness",
+      selfRating: null,
+      managerRating: mgr?.growthReadiness ?? null,
+      labelFn: getGrowthReadinessLabel,
+      managerText: [
+        { label: "Evidence", value: mgr?.growthReadinessEvidence ?? null },
+      ],
+    },
+    {
+      id: "valCustomerFirst",
+      label: "Customer First",
+      selfRating: self?.valCustomerFirst ?? null,
+      managerRating: mgr?.valCustomerFirst ?? null,
+    },
+    {
+      id: "valStepIntoArena",
+      label: "Step Into the Arena",
+      selfRating: self?.valStepIntoArena ?? null,
+      managerRating: mgr?.valStepIntoArena ?? null,
+    },
+    {
+      id: "valFlockToProblems",
+      label: "Flock to Problems",
+      selfRating: self?.valFlockToProblems ?? null,
+      managerRating: mgr?.valFlockToProblems ?? null,
+    },
+    {
+      id: "valGiveEnergy",
+      label: "Give Energy",
+      selfRating: self?.valGiveEnergy ?? null,
+      managerRating: mgr?.valGiveEnergy ?? null,
+    },
+    {
+      id: "values",
+      label: "Values Reflection",
+      selfRating: null,
+      managerRating: null,
+      selfText: [
+        { label: "Reflection", value: self?.valuesReflection ?? null },
+      ],
+      managerText: [
+        { label: "Evidence", value: mgr?.valuesEvidence ?? null },
+      ],
+    },
+    {
+      id: "engagement",
+      label: "Engagement",
+      selfRating: self?.engagement ?? null,
+      managerRating: mgr?.engagement ?? null,
+      selfText: [
+        { label: "Driver", value: self?.engagementDriver ?? null },
+        { label: "Support Needed", value: self?.supportNeeded ?? null },
+      ],
+      managerText: [
+        { label: "Evidence", value: mgr?.engagementEvidence ?? null },
+      ],
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -207,71 +296,28 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </div>
       )}
 
-      {/* Rating Comparison */}
+      {/* Side-by-side Comparison */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Ratings Comparison</h2>
+          <h2 className="text-lg font-semibold">Assessment Comparison</h2>
+          <p className="text-xs text-gray-500">Click a dimension to expand and compare notes</p>
         </CardHeader>
         <CardContent>
-          <div className="divide-y divide-gray-100">
-            <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
-            <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
-            <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
-            <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
-            <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
-            <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={mgr?.valGiveEnergy ?? null} />
-            <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={mgr?.engagement ?? null} />
-          </div>
+          <DimensionComparison sections={comparisonSections} />
         </CardContent>
       </Card>
 
-      {/* Self-Assessment Details */}
-      {self?.submittedAt && (
+      {/* Additional Self-Assessment Context */}
+      {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Self-Assessment</h2>
+            <h2 className="text-lg font-semibold">Additional Context</h2>
           </CardHeader>
           <CardContent className="space-y-4">
-            {self.performanceJustification && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Justification</p>
-                <p className="text-sm text-visory-navy">{self.performanceJustification}</p>
-              </div>
-            )}
-            {self.achievements && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Key Achievements</p>
-                <p className="text-sm text-visory-navy">{self.achievements}</p>
-              </div>
-            )}
-            {self.blockers && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Blockers / Challenges</p>
-                <p className="text-sm text-visory-navy">{self.blockers}</p>
-              </div>
-            )}
             {self.learning && (
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
                 <p className="text-sm text-visory-navy">{self.learning}</p>
-              </div>
-            )}
-            {self.valuesReflection && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Reflection</p>
-                <p className="text-sm text-visory-navy">{self.valuesReflection}</p>
-              </div>
-            )}
-            {self.engagementDriver && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Driver</p>
-                <p className="text-sm text-visory-navy">{self.engagementDriver}</p>
-              </div>
-            )}
-            {self.supportNeeded && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Support Needed</p>
-                <p className="text-sm text-visory-navy">{self.supportNeeded}</p>
               </div>
             )}
             {self.goalsNextMonth && (
@@ -284,42 +330,70 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
-      {/* Manager Assessment Details */}
-      {mgr?.submittedAt && (
+      {/* Manager Additional Notes */}
+      {mgr?.submittedAt && mgr.notes && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Manager Assessment</h2>
+            <h2 className="text-lg font-semibold">Manager Notes</h2>
             <p className="text-xs text-gray-500">Assessed by {mgr.manager.name}</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {mgr.performanceEvidence && (
+          <CardContent>
+            <p className="text-sm text-visory-navy">{mgr.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 1:1 Meeting Notes (manager-only) */}
+      {isManagerView && mgr?.submittedAt && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Evidence</p>
-                <p className="text-sm text-visory-navy">{mgr.performanceEvidence}</p>
+                <h2 className="text-lg font-semibold">1:1 Meeting Notes</h2>
+                {mgr.oneOnOneCompletedAt && (
+                  <p className="text-xs text-gray-500">
+                    Completed {new Date(mgr.oneOnOneCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                )}
               </div>
-            )}
-            {mgr.growthReadinessEvidence && (
+              {mgr.oneOnOneComplete && !editingNotes && (
+                <Button variant="ghost" size="sm" onClick={() => setEditingNotes(true)}>
+                  Edit
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {mgr.oneOnOneComplete && !editingNotes ? (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Growth Readiness Evidence</p>
-                <p className="text-sm text-visory-navy">{mgr.growthReadinessEvidence}</p>
+                {mgr.oneOnOneNotes ? (
+                  <p className="text-sm text-visory-navy whitespace-pre-wrap">{mgr.oneOnOneNotes}</p>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No notes recorded.</p>
+                )}
               </div>
-            )}
-            {mgr.valuesEvidence && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Evidence</p>
-                <p className="text-sm text-visory-navy">{mgr.valuesEvidence}</p>
-              </div>
-            )}
-            {mgr.engagementEvidence && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Evidence</p>
-                <p className="text-sm text-visory-navy">{mgr.engagementEvidence}</p>
-              </div>
-            )}
-            {mgr.notes && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Additional Notes</p>
-                <p className="text-sm text-visory-navy">{mgr.notes}</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Record any context from your 1:1 meeting. Scores will not be changed.
+                </p>
+                <textarea
+                  value={meetingNotes}
+                  onChange={(e) => setMeetingNotes(e.target.value)}
+                  placeholder="Key takeaways, context shared, actions agreed..."
+                  rows={4}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveMeetingNotes} disabled={savingNotes}>
+                    {savingNotes ? "Saving..." : "Save Meeting Notes"}
+                  </Button>
+                  {editingNotes && (
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingNotes(false); setMeetingNotes(mgr.oneOnOneNotes || ""); }}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>
@@ -340,12 +414,14 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-              <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
-              <p className="text-sm text-amber-700">
-                Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
-              </p>
-            </div>
+            {!mgr?.oneOnOneComplete && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
+                <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
+                <p className="text-sm text-amber-700">
+                  Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+                </p>
+              </div>
+            )}
             <p className="text-sm text-gray-600 mb-4">
               This will make your assessment visible to {employee.name}. This action cannot be undone.
             </p>

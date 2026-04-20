@@ -2,9 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { assessmentPrompts } from "@/lib/assessment-prompts";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
 
 export default function SelfAssessmentPage() {
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
   const cycleId = searchParams.get("cycleId");
@@ -13,32 +17,35 @@ export default function SelfAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
     if (!cycleId) return;
-    fetch(`/api/assessments/self?cycleId=${cycleId}`)
+    fetch(`/api/assessments/self?cycleId=${cycleId}&prefill=true`)
       .then((r) => r.json())
       .then((data) => {
         if (data.length > 0) {
           const a = data[0];
           setAssessmentId(a.id);
           setIsSubmitted(!!a.submittedAt);
+          const prev = a._prefilled;
           setValues({
             performance: a.performance,
-            performanceJustification: a.performanceJustification || "",
-            achievements: a.achievements || "",
-            blockers: a.blockers || "",
-            learning: a.learning || "",
+            performanceJustification: a.performanceJustification || prev?.performanceJustification || "",
+            achievements: a.achievements || prev?.achievements || "",
+            blockers: a.blockers || prev?.blockers || "",
+            learning: a.learning || prev?.learning || "",
             valCustomerFirst: a.valCustomerFirst,
             valStepIntoArena: a.valStepIntoArena,
             valFlockToProblems: a.valFlockToProblems,
             valGiveEnergy: a.valGiveEnergy,
-            valuesReflection: a.valuesReflection || "",
+            valuesReflection: a.valuesReflection || prev?.valuesReflection || "",
             engagement: a.engagement,
-            engagementDriver: a.engagementDriver || "",
-            supportNeeded: a.supportNeeded || "",
-            goalsNextMonth: a.goalsNextMonth || "",
+            engagementDriver: a.engagementDriver || prev?.engagementDriver || "",
+            supportNeeded: a.supportNeeded || prev?.supportNeeded || "",
+            goalsNextMonth: a.goalsNextMonth || prev?.goalsNextMonth || "",
           });
+          if (prev) setPrefilled(true);
         }
       });
   }, [cycleId]);
@@ -78,7 +85,7 @@ export default function SelfAssessmentPage() {
       id: "performance",
       title: "How would you rate your performance this month?",
       description: "Consider your output, quality of work, and meeting of objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
     },
     {
       id: "performanceJustification",
@@ -104,25 +111,25 @@ export default function SelfAssessmentPage() {
       id: "valCustomerFirst",
       title: "Customer First",
       description: "How well did you embody the 'Customer First' value?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.self} />,
     },
     {
       id: "valStepIntoArena",
       title: "Step Into the Arena",
       description: "How well did you step up and take initiative?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.self} />,
     },
     {
       id: "valFlockToProblems",
       title: "Flock to Problems",
       description: "How well did you seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.self} />,
     },
     {
       id: "valGiveEnergy",
       title: "Give Energy",
       description: "How well did you energise and support those around you?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.self} />,
     },
     {
       id: "valuesReflection",
@@ -134,7 +141,7 @@ export default function SelfAssessmentPage() {
       id: "engagement",
       title: "How engaged do you feel at work?",
       description: "Consider your motivation, energy, and connection to the team.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.self} />,
     },
     {
       id: "engagementDriver",
@@ -169,6 +176,14 @@ export default function SelfAssessmentPage() {
           Take your time. Your responses auto-save as drafts.
         </p>
       </div>
+      {prefilled && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-6 max-w-2xl mx-auto">
+          <p className="text-sm text-blue-800">
+            Text responses have been pre-filled from last month. Review and update as needed.
+          </p>
+        </div>
+      )}
+      {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
       <StepForm
         steps={steps}
         values={values}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
+import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -14,6 +14,7 @@ import {
   getBox1Color,
   getBox2Color,
 } from "@/lib/nine-box";
+import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 
 interface SelfAssessmentData {
   performance: number | null;
@@ -65,37 +66,6 @@ interface CycleData {
   status: string;
 }
 
-function RatingComparison({ label, selfRating, managerRating, labelFn = getRatingLabel }: {
-  label: string;
-  selfRating: number | null;
-  managerRating: number | null;
-  labelFn?: (r: number) => string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium text-visory-navy">{label}</span>
-      <div className="flex items-center gap-3">
-        <div className="text-center">
-          <p className="text-xs text-gray-500 mb-1">Self</p>
-          {selfRating ? (
-            <Badge className={getRatingColor(selfRating)}>{labelFn(selfRating)}</Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
-          )}
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-gray-500 mb-1">Manager</p>
-          {managerRating ? (
-            <Badge className={getRatingColor(managerRating)}>{labelFn(managerRating)}</Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-400 border-gray-200">-</Badge>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function MyResultsPage() {
   const { data: session } = useSession();
   const [cycles, setCycles] = useState<CycleData[]>([]);
@@ -144,7 +114,6 @@ export default function MyResultsPage() {
     );
   }
 
-  // Compute summary stats across cycles where results have been sent
   const completedSummaries = cyclesWithResults
     .map((c) => {
       const d = summaries.get(c.id)!;
@@ -181,7 +150,6 @@ export default function MyResultsPage() {
         <p className="text-sm text-gray-600 mt-1">Your scores, feedback, and prescribed actions</p>
       </div>
 
-      {/* Performance Summary */}
       {latest && (
         <Card>
           <CardHeader>
@@ -237,6 +205,84 @@ export default function MyResultsPage() {
         const box1Label = mgr?.performance && mgr?.growthReadiness ? getBox1Label(mgr.performance, mgr.growthReadiness) : null;
         const box2Label = mgrValuesAlignment && mgr?.engagement ? getBox2Label(mgrValuesAlignment, mgr.engagement) : null;
 
+        const showManager = !!mgr?.resultsSentAt;
+
+        const sections = [
+          {
+            id: "performance",
+            label: "Performance",
+            selfRating: self?.performance ?? null,
+            managerRating: showManager ? (mgr?.performance ?? null) : null,
+            selfText: [
+              { label: "Justification", value: self?.performanceJustification ?? null },
+              { label: "Achievements", value: self?.achievements ?? null },
+              { label: "Blockers", value: self?.blockers ?? null },
+            ],
+            managerText: showManager ? [
+              { label: "Evidence", value: mgr?.performanceEvidence ?? null },
+            ] : undefined,
+          },
+          ...(showManager ? [{
+            id: "growthReadiness",
+            label: "Growth Readiness",
+            selfRating: null,
+            managerRating: mgr?.growthReadiness ?? null,
+            labelFn: getGrowthReadinessLabel,
+            managerText: [
+              { label: "Evidence", value: mgr?.growthReadinessEvidence ?? null },
+            ],
+          }] : []),
+          {
+            id: "valCustomerFirst",
+            label: "Customer First",
+            selfRating: self?.valCustomerFirst ?? null,
+            managerRating: showManager ? (mgr?.valCustomerFirst ?? null) : null,
+          },
+          {
+            id: "valStepIntoArena",
+            label: "Step Into the Arena",
+            selfRating: self?.valStepIntoArena ?? null,
+            managerRating: showManager ? (mgr?.valStepIntoArena ?? null) : null,
+          },
+          {
+            id: "valFlockToProblems",
+            label: "Flock to Problems",
+            selfRating: self?.valFlockToProblems ?? null,
+            managerRating: showManager ? (mgr?.valFlockToProblems ?? null) : null,
+          },
+          {
+            id: "valGiveEnergy",
+            label: "Give Energy",
+            selfRating: self?.valGiveEnergy ?? null,
+            managerRating: showManager ? (mgr?.valGiveEnergy ?? null) : null,
+          },
+          {
+            id: "values",
+            label: "Values Reflection",
+            selfRating: null,
+            managerRating: null,
+            selfText: [
+              { label: "Reflection", value: self?.valuesReflection ?? null },
+            ],
+            managerText: showManager ? [
+              { label: "Evidence", value: mgr?.valuesEvidence ?? null },
+            ] : undefined,
+          },
+          {
+            id: "engagement",
+            label: "Engagement",
+            selfRating: self?.engagement ?? null,
+            managerRating: showManager ? (mgr?.engagement ?? null) : null,
+            selfText: [
+              { label: "Driver", value: self?.engagementDriver ?? null },
+              { label: "Support Needed", value: self?.supportNeeded ?? null },
+            ],
+            managerText: showManager ? [
+              { label: "Evidence", value: mgr?.engagementEvidence ?? null },
+            ] : undefined,
+          },
+        ];
+
         return (
           <Card key={cycle.id}>
             <CardHeader>
@@ -255,8 +301,7 @@ export default function MyResultsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Talent Density & Cultural Momentum - only show when results sent */}
-              {mgr?.resultsSentAt && (box1Label || box2Label) && (
+              {showManager && (box1Label || box2Label) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {box1Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox1Color(box1Label)}`}>
@@ -275,79 +320,24 @@ export default function MyResultsPage() {
                 </div>
               )}
 
-              {/* Ratings Comparison - only show manager ratings when results sent */}
-              {mgr?.resultsSentAt ? (
+              {(self?.submittedAt || showManager) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Ratings Comparison</h3>
-                  <div className="divide-y divide-gray-100">
-                    <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={mgr?.performance ?? null} />
-                    <RatingComparison label="Growth Readiness" selfRating={null} managerRating={mgr?.growthReadiness ?? null} labelFn={getGrowthReadinessLabel} />
-                    <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={mgr?.valCustomerFirst ?? null} />
-                    <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={mgr?.valStepIntoArena ?? null} />
-                    <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={mgr?.valFlockToProblems ?? null} />
-                    <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={mgr?.valGiveEnergy ?? null} />
-                    <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={mgr?.engagement ?? null} />
-                  </div>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                    {showManager ? "Assessment Comparison" : "Your Ratings"}
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-2">Click a dimension to expand and compare notes</p>
+                  <DimensionComparison sections={sections} showManagerColumn={showManager} />
                 </div>
-              ) : self?.submittedAt ? (
-                <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Your Ratings</h3>
-                  <div className="divide-y divide-gray-100">
-                    <RatingComparison label="Performance" selfRating={self?.performance ?? null} managerRating={null} />
-                    <RatingComparison label="Customer First" selfRating={self?.valCustomerFirst ?? null} managerRating={null} />
-                    <RatingComparison label="Step Into the Arena" selfRating={self?.valStepIntoArena ?? null} managerRating={null} />
-                    <RatingComparison label="Flock to Problems" selfRating={self?.valFlockToProblems ?? null} managerRating={null} />
-                    <RatingComparison label="Give Energy" selfRating={self?.valGiveEnergy ?? null} managerRating={null} />
-                    <RatingComparison label="Engagement" selfRating={self?.engagement ?? null} managerRating={null} />
-                  </div>
-                </div>
-              ) : null}
+              )}
 
-              {/* Self-Assessment Details */}
-              {self?.submittedAt && (
+              {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Your Self-Assessment</h3>
+                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Additional Context</h3>
                   <div className="space-y-3">
-                    {self.performanceJustification && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Justification</p>
-                        <p className="text-sm text-visory-navy">{self.performanceJustification}</p>
-                      </div>
-                    )}
-                    {self.achievements && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Key Achievements</p>
-                        <p className="text-sm text-visory-navy">{self.achievements}</p>
-                      </div>
-                    )}
-                    {self.blockers && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Blockers / Challenges</p>
-                        <p className="text-sm text-visory-navy">{self.blockers}</p>
-                      </div>
-                    )}
                     {self.learning && (
                       <div>
                         <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
                         <p className="text-sm text-visory-navy">{self.learning}</p>
-                      </div>
-                    )}
-                    {self.valuesReflection && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Reflection</p>
-                        <p className="text-sm text-visory-navy">{self.valuesReflection}</p>
-                      </div>
-                    )}
-                    {self.engagementDriver && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Driver</p>
-                        <p className="text-sm text-visory-navy">{self.engagementDriver}</p>
-                      </div>
-                    )}
-                    {self.supportNeeded && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Support Needed</p>
-                        <p className="text-sm text-visory-navy">{self.supportNeeded}</p>
                       </div>
                     )}
                     {self.goalsNextMonth && (
@@ -360,45 +350,13 @@ export default function MyResultsPage() {
                 </div>
               )}
 
-              {/* Manager Assessment Details - only visible after results sent */}
-              {mgr?.resultsSentAt && (
+              {showManager && mgr?.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
-                    Manager Feedback
+                    Manager Notes
                     <span className="text-xs font-normal text-gray-500 ml-2">by {mgr.manager.name}</span>
                   </h3>
-                  <div className="space-y-3">
-                    {mgr.performanceEvidence && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Performance Evidence</p>
-                        <p className="text-sm text-visory-navy">{mgr.performanceEvidence}</p>
-                      </div>
-                    )}
-                    {mgr.growthReadinessEvidence && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Growth Readiness Evidence</p>
-                        <p className="text-sm text-visory-navy">{mgr.growthReadinessEvidence}</p>
-                      </div>
-                    )}
-                    {mgr.valuesEvidence && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Values Evidence</p>
-                        <p className="text-sm text-visory-navy">{mgr.valuesEvidence}</p>
-                      </div>
-                    )}
-                    {mgr.engagementEvidence && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Engagement Evidence</p>
-                        <p className="text-sm text-visory-navy">{mgr.engagementEvidence}</p>
-                      </div>
-                    )}
-                    {mgr.notes && (
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Additional Notes</p>
-                        <p className="text-sm text-visory-navy">{mgr.notes}</p>
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-sm text-visory-navy">{mgr.notes}</p>
                 </div>
               )}
             </CardContent>

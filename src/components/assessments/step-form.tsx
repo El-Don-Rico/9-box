@@ -99,9 +99,10 @@ interface RatingStepProps {
   value: number | null;
   onChange: (val: number) => void;
   labels?: Record<number, string>;
+  prompts?: string[];
 }
 
-export function RatingStep({ value, onChange, labels }: RatingStepProps) {
+export function RatingStep({ value, onChange, labels, prompts }: RatingStepProps) {
   const defaultLabels: Record<number, string> = {
     1: "Below",
     2: "Meeting",
@@ -110,23 +111,38 @@ export function RatingStep({ value, onChange, labels }: RatingStepProps) {
   const displayLabels = labels || defaultLabels;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      {[1, 2, 3].map((rating) => (
-        <button
-          key={rating}
-          type="button"
-          onClick={() => onChange(rating)}
-          className={cn(
-            "flex-1 p-4 rounded-lg border-2 text-center transition-all",
-            value === rating
-              ? "border-visory bg-visory-light text-visory-dark font-semibold"
-              : "border-gray-200 hover:border-gray-300 text-visory-navy"
-          )}
-        >
-          <span className="text-2xl font-bold block">{rating}</span>
-          <span className="text-sm">{displayLabels[rating]}</span>
-        </button>
-      ))}
+    <div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        {[1, 2, 3].map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            onClick={() => onChange(rating)}
+            className={cn(
+              "flex-1 p-4 rounded-lg border-2 text-center transition-all",
+              value === rating
+                ? "border-visory bg-visory-light text-visory-dark font-semibold"
+                : "border-gray-200 hover:border-gray-300 text-visory-navy"
+            )}
+          >
+            <span className="text-2xl font-bold block">{rating}</span>
+            <span className="text-sm">{displayLabels[rating]}</span>
+          </button>
+        ))}
+      </div>
+      {prompts && prompts.length > 0 && (
+        <div className="mt-4 rounded-lg bg-gray-50 border border-gray-200 p-3">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-2">Consider</p>
+          <ul className="space-y-1">
+            {prompts.map((p, i) => (
+              <li key={i} className="text-sm text-gray-600 flex gap-2">
+                <span className="text-gray-400 shrink-0">&#8226;</span>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,6 +25,12 @@ enum TrendDirection {
   DECLINING
 }
 
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -44,6 +50,10 @@ model User {
   managerAssessmentsReceived ManagerAssessment[] @relation("AssessmentForEmployee")
   selfAssessments            SelfAssessment[]
   resources                  Resource[]
+  goals                      Goal[]             @relation("EmployeeGoals")
+  goalsCreated               Goal[]             @relation("GoalCreator")
+  keyMetrics                 KeyMetric[]        @relation("EmployeeKeyMetrics")
+  keyMetricsCreated          KeyMetric[]        @relation("KeyMetricCreator")
 
   @@index([managerId])
   @@index([role])
@@ -103,6 +113,7 @@ model ManagerAssessment {
   resultsSentAt       DateTime?
   oneOnOneComplete    Boolean   @default(false)
   oneOnOneCompletedAt DateTime?
+  oneOnOneNotes       String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -156,4 +167,37 @@ model Resource {
 
   @@index([slug])
   @@index([published])
+}
+
+model Goal {
+  id          String     @id @default(cuid())
+  employeeId  String
+  employee    User       @relation("EmployeeGoals", fields: [employeeId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User       @relation("GoalCreator", fields: [createdById], references: [id])
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      GoalStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([employeeId])
+  @@index([createdById])
+}
+
+model KeyMetric {
+  id          String  @id @default(cuid())
+  employeeId  String
+  employee    User    @relation("EmployeeKeyMetrics", fields: [employeeId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User    @relation("KeyMetricCreator", fields: [createdById], references: [id])
+  name        String
+  target      String
+  unit        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([createdById])
 }

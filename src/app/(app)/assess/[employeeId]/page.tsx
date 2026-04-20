@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { assessmentPrompts } from "@/lib/assessment-prompts";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
@@ -79,7 +81,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "performance",
       title: `Performance Rating${employeeName ? ` for ${employeeName}` : ""}`,
       description: "Rate this employee's performance against objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.manager} />,
     },
     {
       id: "performanceEvidence",
@@ -91,7 +93,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "growthReadiness",
       title: "Growth Readiness Rating",
       description: "Rate this employee's readiness for growth and advancement.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }} prompts={assessmentPrompts.growthReadiness?.manager} />,
     },
     {
       id: "growthReadinessEvidence",
@@ -103,25 +105,25 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "valCustomerFirst",
       title: "Customer First",
       description: "How well does this employee embody 'Customer First'?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.manager} />,
     },
     {
       id: "valStepIntoArena",
       title: "Step Into the Arena",
       description: "How well does this employee take initiative and show courage?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.manager} />,
     },
     {
       id: "valFlockToProblems",
       title: "Flock to Problems",
       description: "How well does this employee seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.manager} />,
     },
     {
       id: "valGiveEnergy",
       title: "Give Energy",
       description: "How well does this employee energise and uplift the team?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.manager} />,
     },
     {
       id: "valuesEvidence",
@@ -133,7 +135,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "engagement",
       title: "Engagement Rating",
       description: "How engaged does this employee appear?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} />,
+      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.manager} />,
     },
     {
       id: "engagementEvidence",
@@ -165,6 +167,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
         </div>
       </div>
+      <GoalsPanel employeeId={employeeId} />
       <StepForm
         steps={steps}
         values={values}

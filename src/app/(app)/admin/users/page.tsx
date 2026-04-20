@@ -43,6 +43,9 @@ export default function AdminUsersPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; results: { email: string; status: string }[] } | null>(null);
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -100,6 +103,36 @@ export default function AdminUsersPage() {
     setTimeout(() => setCopiedToken(null), 2000);
   }
 
+  async function handleCsvImport(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = fileInput?.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/admin/import", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImportResult(data);
+        loadInvitations();
+        fileInput.value = "";
+      } else {
+        setError(data.error || "Import failed");
+      }
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const managers = users.filter((u) => ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(u.role));
   const pendingInvitations = invitations.filter((i) => !i.usedAt);
 
@@ -110,9 +143,14 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-visory-navy">User Management</h1>
           <p className="text-sm text-gray-600 mt-1">Invite users and manage roles</p>
         </div>
-        <Button onClick={() => setShowInviteForm(!showInviteForm)}>
-          {showInviteForm ? "Cancel" : "Invite User"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => { setShowImport(!showImport); setShowInviteForm(false); }}>
+            {showImport ? "Cancel" : "Bulk Import"}
+          </Button>
+          <Button onClick={() => { setShowInviteForm(!showInviteForm); setShowImport(false); }}>
+            {showInviteForm ? "Cancel" : "Invite User"}
+          </Button>
+        </div>
       </div>
 
       {showInviteForm && (
@@ -182,6 +220,65 @@ export default function AdminUsersPage() {
                 {creating ? "Creating..." : "Create Invitation"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {showImport && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Bulk Import Users</h2>
+            <p className="text-xs text-gray-500">Upload a CSV file to create multiple invitations at once</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+              <p className="text-xs font-medium text-gray-600 mb-1">CSV Format</p>
+              <p className="text-xs text-gray-500 mb-2">Required columns: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code></p>
+              <p className="text-xs text-gray-500 mb-2">Optional columns: <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">team</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
+              <p className="text-xs text-gray-400 font-mono">name,email,role,jobTitle,team,managerEmail</p>
+              <p className="text-xs text-gray-400 font-mono">Jane Smith,jane@company.com,EMPLOYEE,Accountant,BPP Team 1,manager@company.com</p>
+            </div>
+            <form onSubmit={handleCsvImport} className="flex items-center gap-3">
+              <input
+                type="file"
+                accept=".csv"
+                required
+                className="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-visory file:text-white hover:file:opacity-90 file:cursor-pointer"
+              />
+              <Button type="submit" disabled={importing}>
+                {importing ? "Importing..." : "Import"}
+              </Button>
+            </form>
+            {importResult && (
+              <div className="rounded-lg border border-gray-200 p-3">
+                <div className="flex gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-visory">{importResult.invited}</p>
+                    <p className="text-xs text-gray-500">Invited</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-gray-400">{importResult.skipped}</p>
+                    <p className="text-xs text-gray-500">Skipped</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-visory-navy">{importResult.total}</p>
+                    <p className="text-xs text-gray-500">Total</p>
+                  </div>
+                </div>
+                {importResult.results.some((r) => r.status !== "invited") && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Skipped rows:</p>
+                    <div className="space-y-1">
+                      {importResult.results.filter((r) => r.status !== "invited").map((r, i) => (
+                        <p key={i} className="text-xs text-gray-500">
+                          {r.email} — {r.status === "skipped_existing_user" ? "already registered" : "invitation already pending"}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

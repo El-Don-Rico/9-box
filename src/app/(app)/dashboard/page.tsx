@@ -487,9 +487,15 @@ function ManagerDashboard() {
                             <p className="text-xs font-semibold text-visory-navy mb-1">{cell.label}</p>
                             <div className="flex flex-wrap gap-1">
                               {emps.map((emp) => (
-                                <Badge key={emp.id} className="bg-white/80 text-gray-800 border-gray-300 text-xs">
-                                  {emp.name}
-                                </Badge>
+                                <span
+                                  key={emp.id}
+                                  onClick={() => router.push(`/team/${emp.id}`)}
+                                  className="cursor-pointer"
+                                >
+                                  <Badge className="bg-white/80 text-gray-800 border-gray-300 text-xs hover:bg-white">
+                                    {emp.name}
+                                  </Badge>
+                                </span>
                               ))}
                             </div>
                           </div>
@@ -516,8 +522,11 @@ function ManagerDashboard() {
               <div className="divide-y divide-gray-100">
                 {team.map((member) => (
                   <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-visory-navy">{member.name}</p>
+                    <div
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={() => router.push(`/team/${member.id}`)}
+                    >
+                      <p className="text-sm font-medium text-visory-navy hover:underline">{member.name}</p>
                       <p className="text-xs text-gray-500">{member.email}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

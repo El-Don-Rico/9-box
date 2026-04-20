@@ -50,10 +50,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const isRequesterManager = managerAssessment?.managerId === session.user.id;
+  const mgrData = managerAssessment ? {
+    ...managerAssessment,
+    oneOnOneNotes: isRequesterManager ? managerAssessment.oneOnOneNotes : null,
+  } : null;
+
   return NextResponse.json({
     employee,
     cycle,
     selfAssessment,
-    managerAssessment,
+    managerAssessment: mgrData,
   });
 }

@@ -22,6 +22,42 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
+  const prefill = searchParams.get("prefill") === "true";
+  if (prefill && cycleId && assessments.length > 0 && !assessments[0].submittedAt && !assessments[0].performance) {
+    const currentCycle = assessments[0].cycle;
+    const previousCycle = await prisma.assessmentCycle.findFirst({
+      where: {
+        id: { not: cycleId },
+        OR: [
+          { year: { lt: currentCycle.year } },
+          { year: currentCycle.year, month: { lt: currentCycle.month } },
+        ],
+      },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+    });
+
+    if (previousCycle) {
+      const prev = await prisma.selfAssessment.findUnique({
+        where: { cycleId_employeeId: { cycleId: previousCycle.id, employeeId: session.user.id } },
+      });
+      if (prev?.submittedAt) {
+        return NextResponse.json([{
+          ...assessments[0],
+          _prefilled: {
+            performanceJustification: prev.performanceJustification,
+            achievements: prev.achievements,
+            blockers: prev.blockers,
+            learning: prev.learning,
+            valuesReflection: prev.valuesReflection,
+            engagementDriver: prev.engagementDriver,
+            supportNeeded: prev.supportNeeded,
+            goalsNextMonth: prev.goalsNextMonth,
+          },
+        }]);
+      }
+    }
+  }
+
   return NextResponse.json(assessments);
 }
 
