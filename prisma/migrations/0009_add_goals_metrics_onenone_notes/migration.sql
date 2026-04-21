@@ -27,6 +27,7 @@ CREATE TABLE "KeyMetric" (
     "name" TEXT NOT NULL,
     "target" TEXT NOT NULL,
     "unit" TEXT,
+    "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

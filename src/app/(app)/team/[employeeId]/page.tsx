@@ -50,6 +50,7 @@ interface KeyMetricData {
   name: string;
   target: string;
   unit: string | null;
+  notes: string | null;
   createdBy: { id: string; name: string };
 }
 
@@ -73,8 +74,11 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [newMetricName, setNewMetricName] = useState("");
   const [newMetricTarget, setNewMetricTarget] = useState("");
   const [newMetricUnit, setNewMetricUnit] = useState("");
+  const [newMetricNotes, setNewMetricNotes] = useState("");
   const [showMetricForm, setShowMetricForm] = useState(false);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [editNotesValue, setEditNotesValue] = useState("");
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
@@ -157,6 +161,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           name: newMetricName.trim(),
           target: newMetricTarget.trim(),
           unit: newMetricUnit.trim() || null,
+          notes: newMetricNotes.trim() || null,
         }),
       });
       if (res.ok) {
@@ -165,6 +170,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewMetricName("");
         setNewMetricTarget("");
         setNewMetricUnit("");
+        setNewMetricNotes("");
         setShowMetricForm(false);
       }
     } finally {
@@ -177,6 +183,19 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     if (res.ok) {
       setMetrics((prev) => prev.filter((m) => m.id !== metricId));
     }
+  }
+
+  async function handleSaveNotes(metricId: string) {
+    const res = await fetch("/api/key-metrics", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ metricId, notes: editNotesValue }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setMetrics((prev) => prev.map((m) => (m.id === metricId ? updated : m)));
+    }
+    setEditingNotes(null);
   }
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
@@ -241,6 +260,13 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
                 />
               </div>
+              <textarea
+                value={newMetricNotes}
+                onChange={(e) => setNewMetricNotes(e.target.value)}
+                placeholder="Notes (optional — visible to employee and manager)"
+                rows={2}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleAddMetric} disabled={savingMetric || !newMetricName.trim() || !newMetricTarget.trim()}>
                   {savingMetric ? "Saving..." : "Save Metric"}
@@ -252,18 +278,51 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           {metrics.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {metrics.map((metric) => (
-                <div key={metric.id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-visory-navy">{metric.name}</p>
-                    <p className="text-xs text-gray-500">
-                      Target: <span className="font-medium">{metric.target}</span>
-                      {metric.unit && <span> {metric.unit}</span>}
-                    </p>
+                <div key={metric.id} className="py-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-visory-navy">{metric.name}</p>
+                      <p className="text-xs text-gray-500">
+                        Target: <span className="font-medium">{metric.target}</span>
+                        {metric.unit && <span> {metric.unit}</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {!metric.notes && editingNotes !== metric.id && (
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingNotes(metric.id); setEditNotesValue(""); }}>
+                          Add Note
+                        </Button>
+                      )}
+                      {canEdit && (
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteMetric(metric.id)}>
+                          Remove
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {canEdit && (
-                    <Button size="sm" variant="ghost" onClick={() => handleDeleteMetric(metric.id)}>
-                      Remove
-                    </Button>
+                  {metric.notes && editingNotes !== metric.id && (
+                    <div
+                      className="mt-2 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100"
+                      onClick={() => { setEditingNotes(metric.id); setEditNotesValue(metric.notes || ""); }}
+                    >
+                      {metric.notes}
+                    </div>
+                  )}
+                  {editingNotes === metric.id && (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        value={editNotesValue}
+                        onChange={(e) => setEditNotesValue(e.target.value)}
+                        placeholder="Add a note (visible to employee and manager)..."
+                        rows={2}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleSaveNotes(metric.id)}>Save</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingNotes(null)}>Cancel</Button>
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}

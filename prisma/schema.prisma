@@ -195,6 +195,7 @@ model KeyMetric {
   name        String
   target      String
   unit        String?
+  notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

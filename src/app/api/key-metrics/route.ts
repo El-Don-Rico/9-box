@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { employeeId, name, target, unit } = await request.json();
+  const { employeeId, name, target, unit, notes } = await request.json();
 
   if (!employeeId || !name || !target) {
     return NextResponse.json({ error: "employeeId, name, and target are required" }, { status: 400 });
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       name,
       target,
       unit: unit || null,
+      notes: notes || null,
     },
     include: { createdBy: { select: { id: true, name: true } } },
   });
@@ -65,7 +66,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { metricId, name, target, unit } = await request.json();
+  const { metricId, name, target, unit, notes } = await request.json();
   if (!metricId) {
     return NextResponse.json({ error: "metricId is required" }, { status: 400 });
   }
@@ -75,9 +76,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Metric not found" }, { status: 404 });
   }
 
+  const isOwner = metric.employeeId === session.user.id;
   const isCreator = metric.createdById === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  if (!isOwner && !isCreator && !isAdmin && !isManager(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -85,6 +87,7 @@ export async function PATCH(request: Request) {
   if (name !== undefined) data.name = name;
   if (target !== undefined) data.target = target;
   if (unit !== undefined) data.unit = unit || null;
+  if (notes !== undefined) data.notes = notes || null;
 
   const updated = await prisma.keyMetric.update({
     where: { id: metricId },
