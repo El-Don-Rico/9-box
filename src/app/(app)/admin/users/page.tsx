@@ -43,6 +43,8 @@ export default function AdminUsersPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; results: { email: string; status: string }[] } | null>(null);
@@ -131,6 +133,20 @@ export default function AdminUsersPage() {
     } finally {
       setImporting(false);
     }
+  }
+
+  async function deleteUser(userId: string) {
+    setDeleting(true);
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      setConfirmDeleteId(null);
+      loadUsers();
+    }
+    setDeleting(false);
   }
 
   const managers = users.filter((u) => ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(u.role));
@@ -385,7 +401,31 @@ export default function AdminUsersPage() {
                   >
                     {user.isActive ? "Deactivate" : "Activate"}
                   </Button>
+                  {user.id !== session?.user?.id && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setConfirmDeleteId(user.id)}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
+                {confirmDeleteId === user.id && (
+                  <div className="mt-2 rounded-lg bg-red-50 border border-red-200 p-3 flex items-center justify-between gap-3">
+                    <p className="text-sm text-red-700">
+                      Permanently delete <strong>{user.name}</strong> and all their assessment history?
+                    </p>
+                    <div className="flex gap-2 shrink-0">
+                      <Button size="sm" variant="danger" onClick={() => deleteUser(user.id)} disabled={deleting}>
+                        {deleting ? "Deleting..." : "Confirm Delete"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
