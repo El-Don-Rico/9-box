@@ -92,16 +92,19 @@ export default function MyTeamPage() {
               <Card key={member.id}>
                 <CardContent className="py-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => router.push(`/team/${member.id}`)}
-                    >
-                      <p className="text-sm font-medium text-visory-navy hover:underline">{member.name}</p>
+                    <div>
+                      <p className="text-sm font-medium text-visory-navy">{member.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {member.jobTitle && <span className="text-xs text-gray-500">{member.jobTitle}</span>}
                         {member.jobTitle && member.team && <span className="text-xs text-gray-300">&middot;</span>}
                         {member.team && <span className="text-xs text-gray-500">{member.team}</span>}
                       </div>
+                      <button
+                        onClick={() => router.push(`/team/${member.id}`)}
+                        className="text-xs text-visory hover:text-visory-dark font-medium mt-1"
+                      >
+                        View Profile
+                      </button>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
