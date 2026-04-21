@@ -4,6 +4,7 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
     signOut: "/login",
+    error: "/login",
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -20,18 +21,20 @@ export const authConfig: NextAuthConfig = {
         "/nine-box",
         "/admin",
         "/summary",
+        "/resources",
       ];
       const isProtected = protectedPaths.some((path) =>
         nextUrl.pathname.startsWith(path)
       );
 
-      if (isProtected) {
-        if (isLoggedIn) return true;
-        return false;
+      if (isProtected && !isLoggedIn) {
+        const loginUrl = new URL("/login", nextUrl.origin);
+        loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+        return Response.redirect(loginUrl);
       }
 
       if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register" || nextUrl.pathname === "/")) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(new URL("/dashboard", nextUrl.origin));
       }
 
       return true;
