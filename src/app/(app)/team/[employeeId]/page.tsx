@@ -79,15 +79,17 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/employees/${employeeId}`).then((r) => r.json()),
-      fetch(`/api/goals?employeeId=${employeeId}`).then((r) => r.json()),
-      fetch(`/api/key-metrics?employeeId=${employeeId}`).then((r) => r.json()),
+      fetch(`/api/employees/${employeeId}`).then((r) => r.ok ? r.json() : null),
+      fetch(`/api/goals?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
+      fetch(`/api/key-metrics?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
     ])
       .then(([empData, goalsData, metricsData]) => {
-        setEmployee(empData.employee);
-        setAssessments(empData.assessments || []);
-        setGoals(goalsData);
-        setMetrics(metricsData);
+        if (empData) {
+          setEmployee(empData.employee);
+          setAssessments(empData.assessments || []);
+        }
+        setGoals(Array.isArray(goalsData) ? goalsData : []);
+        setMetrics(Array.isArray(metricsData) ? metricsData : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));

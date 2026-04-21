@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/permissions";
+import { isManager, getVisibleEmployeeIds } from "@/lib/permissions";
 
 export async function GET(
   request: Request,
@@ -14,8 +14,16 @@ export async function GET(
 
   const { employeeId } = await params;
   const isOwn = employeeId === session.user.id;
+
   if (!isOwn && !isManager(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!isOwn) {
+    const visibleIds = await getVisibleEmployeeIds(session.user.id, session.user.role);
+    if (visibleIds !== "all" && !visibleIds.includes(employeeId)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const employee = await prisma.user.findUnique({
@@ -36,10 +44,6 @@ export async function GET(
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
-  }
-
-  if (!isOwn && session.user.role !== "LEADERSHIP" && session.user.role !== "ADMIN" && employee.managerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const assessments = await prisma.managerAssessment.findMany({
