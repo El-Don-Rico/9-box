@@ -62,6 +62,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<KeyMetricData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalDesc, setNewGoalDesc] = useState("");
@@ -78,21 +79,31 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/employees/${employeeId}`).then((r) => r.ok ? r.json() : null),
-      fetch(`/api/goals?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
-      fetch(`/api/key-metrics?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
-    ])
-      .then(([empData, goalsData, metricsData]) => {
-        if (empData) {
-          setEmployee(empData.employee);
-          setAssessments(empData.assessments || []);
+    async function loadData() {
+      try {
+        const empRes = await fetch(`/api/employees/${employeeId}`);
+        if (!empRes.ok) {
+          const errData = await empRes.json().catch(() => ({}));
+          setError(errData.error || `Error ${empRes.status}: ${empRes.statusText}`);
+          setLoading(false);
+          return;
         }
+        const empData = await empRes.json();
+        setEmployee(empData.employee);
+        setAssessments(empData.assessments || []);
+
+        const [goalsData, metricsData] = await Promise.all([
+          fetch(`/api/goals?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
+          fetch(`/api/key-metrics?employeeId=${employeeId}`).then((r) => r.ok ? r.json() : []),
+        ]);
         setGoals(Array.isArray(goalsData) ? goalsData : []);
         setMetrics(Array.isArray(metricsData) ? metricsData : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        setError("Failed to load employee data");
+      }
+      setLoading(false);
+    }
+    loadData();
   }, [employeeId]);
 
   async function handleAddGoal() {
@@ -169,6 +180,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   }
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
+  if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
   if (!employee) return <div className="text-center py-12 text-gray-500">Employee not found.</div>;
 
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
