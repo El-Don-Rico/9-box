@@ -50,6 +50,7 @@ export default function AdminUsersPage() {
   const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; emailsSent: number; results: { email: string; status: string; emailSent?: boolean }[] } | null>(null);
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [copiedJoinLink, setCopiedJoinLink] = useState(false);
+  const [pasteData, setPasteData] = useState("");
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -129,15 +130,10 @@ export default function AdminUsersPage() {
     }
   }
 
-  async function handleCsvImport(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-    if (!file) return;
-
+  async function doImport(file: File) {
     setImporting(true);
     setImportResult(null);
+    setError("");
     const formData = new FormData();
     formData.append("file", file);
 
@@ -150,13 +146,30 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setImportResult(data);
         loadInvitations();
-        fileInput.value = "";
       } else {
         setError(data.error || "Import failed");
       }
     } finally {
       setImporting(false);
     }
+  }
+
+  async function handleCsvImport(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = fileInput?.files?.[0];
+    if (!file) return;
+    await doImport(file);
+    fileInput.value = "";
+  }
+
+  async function handlePasteImport() {
+    const text = pasteData.trim();
+    if (!text) return;
+    const file = new File([text], "paste.csv", { type: "text/csv" });
+    await doImport(file);
+    setPasteData("");
   }
 
   async function deleteUser(userId: string) {
@@ -275,16 +288,14 @@ export default function AdminUsersPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-              <p className="text-xs font-medium text-gray-600 mb-1">CSV Format</p>
-              <p className="text-xs text-gray-500 mb-2">Required columns: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code></p>
-              <p className="text-xs text-gray-500 mb-2">Optional columns: <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">team</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
-              <p className="text-xs text-gray-400 font-mono">name,email,role,jobTitle,team,managerEmail</p>
-              <p className="text-xs text-gray-400 font-mono">Jane Smith,jane@company.com,EMPLOYEE,Accountant,BPP Team 1,manager@company.com</p>
+              <p className="text-xs font-medium text-gray-600 mb-1">Expected columns (with or without header row)</p>
+              <p className="text-xs text-gray-500 mb-2">Column order: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code>, <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">team</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
+              <p className="text-xs text-gray-500">Accepts CSV files or tab-separated data pasted from a spreadsheet.</p>
             </div>
             <form onSubmit={handleCsvImport} className="flex items-center gap-3">
               <input
                 type="file"
-                accept=".csv"
+                accept=".csv,.tsv,.txt"
                 required
                 className="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-visory file:text-white hover:file:opacity-90 file:cursor-pointer"
               />
@@ -292,6 +303,25 @@ export default function AdminUsersPage() {
                 {importing ? "Importing..." : "Import"}
               </Button>
             </form>
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-xs font-medium text-gray-600 mb-2">Or paste from spreadsheet</p>
+              <textarea
+                value={pasteData}
+                onChange={(e) => setPasteData(e.target.value)}
+                placeholder={"Paste rows here (tab-separated from Excel/Sheets)\ne.g. Jane Smith\tjane@company.com\tEMPLOYEE\tAccountant\tTeam 1\tmanager@company.com"}
+                rows={4}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono focus:ring-visory focus:border-visory"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="mt-2"
+                disabled={importing || !pasteData.trim()}
+                onClick={handlePasteImport}
+              >
+                {importing ? "Importing..." : "Import Pasted Data"}
+              </Button>
+            </div>
             {importResult && (
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="flex gap-4 mb-3">

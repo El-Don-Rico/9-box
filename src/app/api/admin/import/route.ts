@@ -16,12 +16,63 @@ interface CsvRow {
   managerEmail?: string;
 }
 
+function detectDelimiter(headerLine: string): string {
+  if (headerLine.includes("\t")) return "\t";
+  return ",";
+}
+
+function splitLine(line: string, delimiter: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === delimiter) {
+      fields.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 function parseCsv(text: string): CsvRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return [];
+  if (lines.length < 1) return [];
 
-  const headerLine = lines[0];
-  const headers = headerLine.split(",").map((h) => h.trim().toLowerCase().replace(/['"]/g, ""));
+  const delimiter = detectDelimiter(lines[0]);
+  const firstRowFields = splitLine(lines[0], delimiter).map((h) => h.toLowerCase().replace(/['"]/g, ""));
+
+  // Check if first row is a header or data
+  const knownHeaders = ["name", "email", "role", "jobtitle", "job_title", "job title", "title", "team", "manageremail", "manager_email", "manager email", "manager"];
+  const hasHeader = firstRowFields.some((f) => knownHeaders.includes(f));
+
+  let headers: string[];
+  let dataStart: number;
+
+  if (hasHeader) {
+    headers = firstRowFields;
+    dataStart = 1;
+  } else {
+    // No header row — assume column order: name, email, role, jobTitle, team, managerEmail
+    headers = ["name", "email", "role", "jobtitle", "team", "manageremail"];
+    dataStart = 0;
+  }
+
+  if (lines.length < dataStart + 1) return [];
 
   const nameIdx = headers.findIndex((h) => h === "name");
   const emailIdx = headers.findIndex((h) => h === "email");
@@ -35,8 +86,8 @@ function parseCsv(text: string): CsvRow[] {
   }
 
   const rows: CsvRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",").map((c) => c.trim().replace(/^["']|["']$/g, ""));
+  for (let i = dataStart; i < lines.length; i++) {
+    const cols = splitLine(lines[i], delimiter);
     const name = cols[nameIdx]?.trim();
     const email = cols[emailIdx]?.trim().toLowerCase();
     if (!name || !email) continue;
