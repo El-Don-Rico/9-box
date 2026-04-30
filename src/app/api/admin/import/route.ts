@@ -16,6 +16,18 @@ interface CsvRow {
   managerEmail?: string;
 }
 
+function cleanEmail(raw: string): string {
+  let email = raw.trim();
+  // Strip markdown link: [email](mailto:email) → email
+  const mdMatch = email.match(/\[([^\]]+)\]\(mailto:[^)]+\)/);
+  if (mdMatch) email = mdMatch[1];
+  // Strip mailto: prefix
+  email = email.replace(/^mailto:/i, "");
+  // Strip surrounding brackets/parens
+  email = email.replace(/^[[\]()<>]+|[[\]()<>]+$/g, "");
+  return email.trim().toLowerCase();
+}
+
 function detectDelimiter(headerLine: string): string {
   if (headerLine.includes("\t")) return "\t";
   return ",";
@@ -56,9 +68,8 @@ function parseCsv(text: string): CsvRow[] {
   const delimiter = detectDelimiter(lines[0]);
   const firstRowFields = splitLine(lines[0], delimiter).map((h) => h.toLowerCase().replace(/['"]/g, ""));
 
-  // Check if first row is a header or data
-  const knownHeaders = ["name", "email", "role", "jobtitle", "job_title", "job title", "title", "team", "manageremail", "manager_email", "manager email", "manager"];
-  const hasHeader = firstRowFields.some((f) => knownHeaders.includes(f));
+  // Check if first row is a header — require at least "name" and "email" to be present
+  const hasHeader = firstRowFields.includes("name") && firstRowFields.includes("email");
 
   let headers: string[];
   let dataStart: number;
@@ -89,16 +100,17 @@ function parseCsv(text: string): CsvRow[] {
   for (let i = dataStart; i < lines.length; i++) {
     const cols = splitLine(lines[i], delimiter);
     const name = cols[nameIdx]?.trim();
-    const email = cols[emailIdx]?.trim().toLowerCase();
-    if (!name || !email) continue;
+    const email = cleanEmail(cols[emailIdx] || "");
+    if (!name || !email || !email.includes("@")) continue;
 
+    const managerRaw = managerEmailIdx >= 0 ? cols[managerEmailIdx] : undefined;
     rows.push({
       name,
       email,
       role: roleIdx >= 0 ? cols[roleIdx]?.trim().toUpperCase() : undefined,
       jobTitle: jobTitleIdx >= 0 ? cols[jobTitleIdx]?.trim() : undefined,
       team: teamIdx >= 0 ? cols[teamIdx]?.trim() : undefined,
-      managerEmail: managerEmailIdx >= 0 ? cols[managerEmailIdx]?.trim().toLowerCase() : undefined,
+      managerEmail: managerRaw ? cleanEmail(managerRaw) : undefined,
     });
   }
 
