@@ -70,6 +70,27 @@ export async function POST(request: Request) {
   return NextResponse.json(cycle, { status: 201 });
 }
 
+export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdmin(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await request.json();
+  if (!id) {
+    return NextResponse.json({ error: "Cycle id is required" }, { status: 400 });
+  }
+
+  await prisma.selfAssessment.deleteMany({ where: { cycleId: id } });
+  await prisma.managerAssessment.deleteMany({ where: { cycleId: id } });
+  await prisma.assessmentCycle.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
+}
+
 export async function PUT(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {

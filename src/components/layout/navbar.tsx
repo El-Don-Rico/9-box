@@ -12,7 +12,7 @@ function getNavLinks(role: string) {
   const links = [{ href: "/dashboard", label: "Dashboard" }];
 
   // All roles are employees first - everyone gets results
-  links.push({ href: "/my-results", label: "My Results" });
+  links.push({ href: "/my-reviews", label: "My Reviews" });
 
   if (["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(role)) {
     links.push({ href: "/team", label: "My Team" });

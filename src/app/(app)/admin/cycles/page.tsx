@@ -68,6 +68,7 @@ export default function AdminCyclesPage() {
   const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null);
   const [cycleDetail, setCycleDetail] = useState<CycleDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [deletingCycleId, setDeletingCycleId] = useState<string | null>(null);
 
   // Create cycle form
   const { month: curMonth, year: curYear } = getCurrentPeriod();
@@ -111,6 +112,22 @@ export default function AdminCyclesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status: newStatus }),
     });
+    loadCycles();
+  }
+
+  async function deleteCycle(id: string) {
+    if (!confirm("Delete this cycle and all its assessments? This cannot be undone.")) return;
+    setDeletingCycleId(id);
+    await fetch("/api/cycles", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (expandedCycleId === id) {
+      setExpandedCycleId(null);
+      setCycleDetail(null);
+    }
+    setDeletingCycleId(null);
     loadCycles();
   }
 
@@ -214,6 +231,15 @@ export default function AdminCyclesPage() {
                     onClick={() => toggleCycle(cycle.id, cycle.status)}
                   >
                     {cycle.status === "OPEN" ? "Close" : "Reopen"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => deleteCycle(cycle.id)}
+                    disabled={deletingCycleId === cycle.id}
+                  >
+                    {deletingCycleId === cycle.id ? "Deleting..." : "Delete"}
                   </Button>
                 </div>
               </div>

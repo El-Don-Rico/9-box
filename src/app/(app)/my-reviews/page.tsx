@@ -108,8 +108,8 @@ export default function MyResultsPage() {
   if (cyclesWithResults.length === 0) {
     return (
       <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-visory-navy mb-2">Your Assessment Results</h1>
-        <p className="text-gray-500">No results available yet. Results appear after assessments are submitted.</p>
+        <h1 className="text-2xl font-bold text-visory-navy mb-2">My Reviews</h1>
+        <p className="text-gray-500">No reviews available yet. Reviews appear after assessments are submitted.</p>
       </div>
     );
   }
@@ -146,7 +146,7 @@ export default function MyResultsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-visory-navy">Your Assessment Results</h1>
+        <h1 className="text-2xl font-bold text-visory-navy">My Reviews</h1>
         <p className="text-sm text-gray-600 mt-1">Your scores, feedback, and prescribed actions</p>
       </div>
 

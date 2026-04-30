@@ -224,7 +224,7 @@ function EmployeeDashboard() {
                     </Button>
                   )}
                   {(summary.selfSubmitted || summary.mgrSubmitted) && (
-                    <Button variant="secondary" onClick={() => router.push("/my-results")}>
+                    <Button variant="secondary" onClick={() => router.push("/my-reviews")}>
                       View Results
                     </Button>
                   )}
