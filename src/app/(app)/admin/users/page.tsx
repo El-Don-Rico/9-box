@@ -47,7 +47,8 @@ export default function AdminUsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; results: { email: string; status: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; emailsSent: number; results: { email: string; status: string; emailSent?: boolean }[] } | null>(null);
+  const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -103,6 +104,28 @@ export default function AdminUsersPage() {
     navigator.clipboard.writeText(getInviteUrl(token));
     setCopiedToken(token);
     setTimeout(() => setCopiedToken(null), 2000);
+  }
+
+  async function resendEmail(invitationId: string) {
+    setResendingEmail(invitationId);
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitationId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResendingEmail("sent-" + invitationId);
+        setTimeout(() => setResendingEmail(null), 2000);
+      } else {
+        setError(data.error || "Failed to send email");
+        setResendingEmail(null);
+      }
+    } catch {
+      setError("Failed to send email");
+      setResendingEmail(null);
+    }
   }
 
   async function handleCsvImport(e: React.FormEvent<HTMLFormElement>) {
@@ -273,6 +296,10 @@ export default function AdminUsersPage() {
                     <p className="text-xs text-gray-500">Invited</p>
                   </div>
                   <div className="text-center">
+                    <p className="text-lg font-bold text-green-600">{importResult.emailsSent}</p>
+                    <p className="text-xs text-gray-500">Emails Sent</p>
+                  </div>
+                  <div className="text-center">
                     <p className="text-lg font-bold text-gray-400">{importResult.skipped}</p>
                     <p className="text-xs text-gray-500">Skipped</p>
                   </div>
@@ -316,13 +343,22 @@ export default function AdminUsersPage() {
                       {getRoleDisplayName(inv.role)}
                     </Badge>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => copyInviteLink(inv.token)}
-                  >
-                    {copiedToken === inv.token ? "Copied!" : "Copy Invite Link"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => resendEmail(inv.id)}
+                      disabled={resendingEmail === inv.id}
+                    >
+                      {resendingEmail === "sent-" + inv.id ? "Sent!" : resendingEmail === inv.id ? "Sending..." : "Send Email"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => copyInviteLink(inv.token)}
+                    >
+                      {copiedToken === inv.token ? "Copied!" : "Copy Link"}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

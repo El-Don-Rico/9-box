@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { sendInviteEmail, buildInviteUrl } from "@/lib/email";
 
 const VALID_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
   });
   const emailToUserId = new Map(allUsers.map((u) => [u.email, u.id]));
 
-  const results: { email: string; status: string; token?: string }[] = [];
+  const results: { email: string; status: string; token?: string; emailSent?: boolean }[] = [];
 
   for (const row of rows) {
     if (existingEmails.has(row.email)) {
@@ -125,11 +126,19 @@ export async function POST(request: Request) {
       },
     });
 
-    results.push({ email: row.email, status: "invited", token });
+    const inviteUrl = buildInviteUrl(token);
+    const emailResult = await sendInviteEmail({
+      to: row.email,
+      recipientName: row.name,
+      inviteUrl,
+    });
+
+    results.push({ email: row.email, status: "invited", token, emailSent: emailResult.success });
   }
 
   const invited = results.filter((r) => r.status === "invited").length;
   const skipped = results.filter((r) => r.status !== "invited").length;
+  const emailsSent = results.filter((r) => r.emailSent).length;
 
-  return NextResponse.json({ total: rows.length, invited, skipped, results });
+  return NextResponse.json({ total: rows.length, invited, skipped, emailsSent, results });
 }
