@@ -54,7 +54,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 });
     }
 
-    // No token: open registration (default EMPLOYEE)
+    // No token: look up pending invitation by email
+    const invitation = await prisma.invitation.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, usedAt: null },
+    });
+
+    if (invitation) {
+      const user = await prisma.user.create({
+        data: {
+          name: name || invitation.name,
+          email: invitation.email,
+          passwordHash,
+          jobTitle: invitation.jobTitle,
+          team: invitation.team,
+          role: invitation.role,
+          managerId: invitation.managerId,
+        },
+      });
+
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { usedAt: new Date() },
+      });
+
+      return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 });
+    }
+
+    // No token, no invitation: open registration (default EMPLOYEE)
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }

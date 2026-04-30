@@ -78,12 +78,12 @@ export default function LoginPage() {
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
+          Have an invitation?{" "}
           <Link
-            href="/register"
+            href="/join"
             className="font-semibold text-visory-link hover:underline"
           >
-            Register
+            Join here
           </Link>
         </p>
       </CardContent>
