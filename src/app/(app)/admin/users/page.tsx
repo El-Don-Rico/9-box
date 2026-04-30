@@ -49,6 +49,7 @@ export default function AdminUsersPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ total: number; invited: number; skipped: number; emailsSent: number; results: { email: string; status: string; emailSent?: boolean }[] } | null>(null);
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
+  const [copiedJoinLink, setCopiedJoinLink] = useState(false);
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -183,6 +184,9 @@ export default function AdminUsersPage() {
           <p className="text-sm text-gray-600 mt-1">Invite users and manage roles</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/join`); setCopiedJoinLink(true); setTimeout(() => setCopiedJoinLink(false), 2000); }}>
+            {copiedJoinLink ? "Copied!" : "Copy Join Link"}
+          </Button>
           <Button variant="secondary" onClick={() => { setShowImport(!showImport); setShowInviteForm(false); }}>
             {showImport ? "Cancel" : "Bulk Import"}
           </Button>
