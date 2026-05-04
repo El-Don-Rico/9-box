@@ -22,16 +22,12 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Only the employee themselves, their manager, or leadership/admin can view
-  if (assessment.employeeId !== session.user.id) {
-    const employee = await prisma.user.findUnique({
-      where: { id: assessment.employeeId },
-      select: { managerId: true },
-    });
-    const isTheirManager = employee?.managerId === session.user.id;
-    const isLeadership = session.user.role === "LEADERSHIP" || session.user.role === "ADMIN";
-
-    if (!isTheirManager && !isLeadership) {
+  // Only the employee, someone with visibility into them, or admin can view
+  if (assessment.employeeId !== session.user.id && session.user.role !== "ADMIN") {
+    const { getVisibleEmployeeIds } = await import("@/lib/permissions");
+    const visibleIds = await getVisibleEmployeeIds(session.user.id, session.user.role);
+    const canSee = visibleIds === "all" || visibleIds.includes(assessment.employeeId);
+    if (!canSee) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

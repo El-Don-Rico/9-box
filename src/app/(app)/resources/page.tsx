@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getRoleDisplayName } from "@/lib/utils";
 
-const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
+const ALL_ROLES = ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"];
 
 interface Resource {
   id: string;

@@ -7,14 +7,14 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getRoleDisplayName } from "@/lib/utils";
+import { getRoleDisplayName, getAreaDisplayName, AREA_OPTIONS } from "@/lib/utils";
 
 interface UserData {
   id: string;
   email: string;
   name: string;
   jobTitle: string | null;
-  team: string | null;
+  area: string | null;
   role: string;
   isActive: boolean;
   managerId: string | null;
@@ -31,7 +31,7 @@ interface InvitationData {
   createdAt: string;
 }
 
-const ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
+const ROLES = ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"];
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
@@ -39,7 +39,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [invitations, setInvitations] = useState<InvitationData[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [newInvite, setNewInvite] = useState({ name: "", email: "", jobTitle: "", team: "", role: "EMPLOYEE", managerId: "" });
+  const [newInvite, setNewInvite] = useState({ name: "", email: "", jobTitle: "", area: "", role: "EMPLOYEE", managerId: "" });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export default function AdminUsersPage() {
     });
     if (res.ok) {
       setShowInviteForm(false);
-      setNewInvite({ name: "", email: "", jobTitle: "", team: "", role: "EMPLOYEE", managerId: "" });
+      setNewInvite({ name: "", email: "", jobTitle: "", area: "", role: "EMPLOYEE", managerId: "" });
       loadInvitations();
     } else {
       const data = await res.json();
@@ -186,7 +186,7 @@ export default function AdminUsersPage() {
     setDeleting(false);
   }
 
-  const managers = users.filter((u) => ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(u.role));
+  const managers = users.filter((u) => ["MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"].includes(u.role));
   const pendingInvitations = invitations.filter((i) => !i.usedAt);
 
   return (
@@ -240,12 +240,19 @@ export default function AdminUsersPage() {
                   onChange={(e) => setNewInvite((u) => ({ ...u, jobTitle: e.target.value }))}
                   placeholder="e.g. Senior Developer"
                 />
-                <Input
-                  label="Team"
-                  value={newInvite.team}
-                  onChange={(e) => setNewInvite((u) => ({ ...u, team: e.target.value }))}
-                  placeholder="e.g. Engineering"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-visory-navy mb-1">Area</label>
+                  <select
+                    value={newInvite.area}
+                    onChange={(e) => setNewInvite((u) => ({ ...u, area: e.target.value }))}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
+                  >
+                    <option value="">Unassigned</option>
+                    {AREA_OPTIONS.map((a) => (
+                      <option key={a} value={a}>{getAreaDisplayName(a)}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-visory-navy mb-1">Role</label>
                   <select
@@ -289,7 +296,8 @@ export default function AdminUsersPage() {
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-xs font-medium text-gray-600 mb-1">Expected columns (with or without header row)</p>
-              <p className="text-xs text-gray-500 mb-2">Column order: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code>, <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">team</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
+              <p className="text-xs text-gray-500 mb-2">Column order: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code>, <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">area</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
+              <p className="text-xs text-gray-500 mb-2">Area accepts: <code className="bg-gray-200 px-1 rounded">CUSTOMER</code>, <code className="bg-gray-200 px-1 rounded">GTM</code>, <code className="bg-gray-200 px-1 rounded">OPS</code>, <code className="bg-gray-200 px-1 rounded">PLATFORM</code> (or common synonyms).</p>
               <p className="text-xs text-gray-500">Accepts CSV files or tab-separated data pasted from a spreadsheet.</p>
             </div>
             <form onSubmit={handleCsvImport} className="flex items-center gap-3">
@@ -308,7 +316,7 @@ export default function AdminUsersPage() {
               <textarea
                 value={pasteData}
                 onChange={(e) => setPasteData(e.target.value)}
-                placeholder={"Paste rows here (tab-separated from Excel/Sheets)\ne.g. Jane Smith\tjane@company.com\tEMPLOYEE\tAccountant\tTeam 1\tmanager@company.com"}
+                placeholder={"Paste rows here (tab-separated from Excel/Sheets)\ne.g. Jane Smith\tjane@company.com\tEMPLOYEE\tAccountant\tCUSTOMER\tmanager@company.com"}
                 rows={4}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono focus:ring-visory focus:border-visory"
               />
@@ -421,9 +429,9 @@ export default function AdminUsersPage() {
                     {user.jobTitle && (
                       <span className="text-xs text-gray-500">{user.jobTitle}</span>
                     )}
-                    {user.jobTitle && user.team && <span className="text-xs text-gray-400">&middot;</span>}
-                    {user.team && (
-                      <span className="text-xs text-gray-500">{user.team}</span>
+                    {user.jobTitle && user.area && <span className="text-xs text-gray-400">&middot;</span>}
+                    {user.area && (
+                      <span className="text-xs text-gray-500">{getAreaDisplayName(user.area)}</span>
                     )}
                   </div>
                   {user.manager && (
@@ -437,12 +445,15 @@ export default function AdminUsersPage() {
                     placeholder="Job title"
                     className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-visory"
                   />
-                  <input
-                    defaultValue={user.team || ""}
-                    onBlur={(e) => { if (e.target.value !== (user.team || "")) updateUser(user.id, { team: e.target.value }); }}
-                    placeholder="Team"
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-visory"
-                  />
+                  <select
+                    value={user.area || ""}
+                    onChange={(e) => updateUser(user.id, { area: e.target.value })}
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory"
+                  >
+                    {AREA_OPTIONS.map((a) => (
+                      <option key={a} value={a}>{getAreaDisplayName(a)}</option>
+                    ))}
+                  </select>
                   <select
                     value={user.role}
                     onChange={(e) => updateUser(user.id, { role: e.target.value })}

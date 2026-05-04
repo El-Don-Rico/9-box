@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
+import { getGrowthReadinessLabel, formatCyclePeriod, getAreaDisplayName } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -19,7 +19,7 @@ import {
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 
 interface SummaryData {
-  employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
+  employee: { id: string; name: string; email: string; jobTitle: string | null; area: string | null; role: string };
   cycle: { id: string; month: number; year: number; status: string } | null;
   selfAssessment: {
     performance: number | null;
@@ -228,9 +228,9 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
-        {(employee.jobTitle || employee.team) && (
+        {(employee.jobTitle || employee.area) && (
           <p className="text-sm text-gray-500 mt-0.5">
-            {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
+            {[employee.jobTitle, getAreaDisplayName(employee.area)].filter(Boolean).join(" · ")}
           </p>
         )}
         <div className="flex items-center gap-3 mt-1">

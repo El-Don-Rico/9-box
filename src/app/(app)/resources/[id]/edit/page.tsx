@@ -10,7 +10,7 @@ import { RichTextEditor } from "@/components/resources/rich-text-editor";
 import { RoleSelector } from "@/components/resources/role-selector";
 import Link from "next/link";
 
-const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
+const ALL_ROLES = ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"];
 
 interface Resource {
   id: string;

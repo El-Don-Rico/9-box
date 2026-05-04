@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
+import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName, getAreaDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
 
@@ -15,7 +15,7 @@ interface EmployeeProfile {
   name: string;
   email: string;
   jobTitle: string | null;
-  team: string | null;
+  area: string | null;
   role: string;
   isActive: boolean;
   createdAt: string;
@@ -80,7 +80,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
 
-  const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
+  const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "TEAM_LEAD" | "AREA_LEAD" | "ADMIN" | "EMPLOYEE");
 
   useEffect(() => {
     async function loadData() {
@@ -212,8 +212,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-1">
           {employee.jobTitle && <span className="text-sm text-gray-600">{employee.jobTitle}</span>}
-          {employee.jobTitle && employee.team && <span className="text-gray-300">·</span>}
-          {employee.team && <span className="text-sm text-gray-600">{employee.team}</span>}
+          {employee.jobTitle && employee.area && <span className="text-gray-300">·</span>}
+          {employee.area && <span className="text-sm text-gray-600">{getAreaDisplayName(employee.area)}</span>}
           <Badge className="bg-gray-100 text-gray-700 border-gray-200">{getRoleDisplayName(employee.role)}</Badge>
         </div>
         <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>

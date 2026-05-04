@@ -30,10 +30,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name, email, role, managerId, jobTitle, team } = await request.json();
+  const { name, email, role, managerId, jobTitle, area } = await request.json();
 
   if (!name || !email) {
     return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+  }
+
+  const VALID_AREAS = ["CUSTOMER", "GTM", "OPS", "PLATFORM"];
+  if (area && !VALID_AREAS.includes(area)) {
+    return NextResponse.json({ error: "Invalid area" }, { status: 400 });
   }
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
       name,
       email,
       jobTitle: jobTitle || null,
-      team: team || null,
+      area: area || null,
       role: role || "EMPLOYEE",
       managerId: managerId || null,
       token,

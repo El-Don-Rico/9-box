@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/permissions";
+import { getVisibleEmployeeIds } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -17,19 +17,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "employeeId and cycleId are required" }, { status: 400 });
   }
 
-  // Access control: the employee themselves, their manager, or leadership/admin
   const isOwnRecord = employeeId === session.user.id;
-  const isManagerRole = isManager(session.user.role);
-  const isLeadershipOrAdmin = session.user.role === "LEADERSHIP" || session.user.role === "ADMIN";
+  const visibleIds = await getVisibleEmployeeIds(session.user.id, session.user.role);
+  const canSee = isOwnRecord || visibleIds === "all" || visibleIds.includes(employeeId);
 
-  if (!isOwnRecord && !isManagerRole && !isLeadershipOrAdmin) {
+  if (!canSee) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const [employee, selfAssessment, managerAssessment, cycle] = await Promise.all([
     prisma.user.findUnique({
       where: { id: employeeId },
-      select: { id: true, name: true, email: true, jobTitle: true, team: true, role: true, managerId: true },
+      select: { id: true, name: true, email: true, jobTitle: true, area: true, role: true, managerId: true },
     }),
     prisma.selfAssessment.findUnique({
       where: { cycleId_employeeId: { cycleId, employeeId } },
@@ -43,11 +42,6 @@ export async function GET(request: Request) {
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
-  }
-
-  // Non-leadership managers can only see their own direct reports
-  if (!isOwnRecord && !isLeadershipOrAdmin && employee.managerId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const isRequesterManager = managerAssessment?.managerId === session.user.id;

@@ -18,7 +18,7 @@ export async function GET() {
       email: true,
       name: true,
       jobTitle: true,
-      team: true,
+      area: true,
       role: true,
       isActive: true,
       managerId: true,
@@ -40,7 +40,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { userId, role, managerId, isActive, jobTitle, team } = await request.json();
+  const { userId, role, managerId, isActive, jobTitle, area } = await request.json();
 
   if (!userId) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -51,17 +51,22 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });
   }
 
+  const VALID_AREAS = ["CUSTOMER", "GTM", "OPS", "PLATFORM"];
+  if (area !== undefined && !VALID_AREAS.includes(area)) {
+    return NextResponse.json({ error: "Invalid area" }, { status: 400 });
+  }
+
   const data: Record<string, unknown> = {};
   if (role !== undefined) data.role = role;
   if (managerId !== undefined) data.managerId = managerId || null;
   if (isActive !== undefined) data.isActive = isActive;
   if (jobTitle !== undefined) data.jobTitle = jobTitle || null;
-  if (team !== undefined) data.team = team || null;
+  if (area !== undefined) data.area = area;
 
   const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, email: true, name: true, jobTitle: true, team: true, role: true, isActive: true, managerId: true },
+    select: { id: true, email: true, name: true, jobTitle: true, area: true, role: true, isActive: true, managerId: true },
   });
 
   return NextResponse.json(user);

@@ -43,10 +43,22 @@ export function getRoleDisplayName(role: string): string {
   switch (role) {
     case "EMPLOYEE": return "Employee";
     case "MANAGER": return "Manager";
+    case "TEAM_LEAD": return "Team Lead";
     case "AREA_LEAD": return "Area Lead";
-    case "LEADERSHIP": return "Leadership";
     case "ADMIN": return "Admin";
     default: return role;
+  }
+}
+
+export const AREA_OPTIONS = ["CUSTOMER", "GTM", "OPS", "PLATFORM"] as const;
+
+export function getAreaDisplayName(area: string | null | undefined): string {
+  switch (area) {
+    case "CUSTOMER": return "Customer";
+    case "GTM": return "GTM";
+    case "OPS": return "Ops";
+    case "PLATFORM": return "Platform";
+    default: return "";
   }
 }
 

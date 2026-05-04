@@ -8,9 +8,11 @@ interface MultiSelectProps {
   options: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  renderOption?: (value: string) => string;
 }
 
-export function MultiSelect({ label, options, selected, onChange }: MultiSelectProps) {
+export function MultiSelect({ label, options, selected, onChange, renderOption }: MultiSelectProps) {
+  const display = (v: string) => (renderOption ? renderOption(v) : v);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +35,7 @@ export function MultiSelect({ label, options, selected, onChange }: MultiSelectP
   const displayText = selected.length === 0
     ? `All ${label}`
     : selected.length <= 2
-      ? selected.join(", ")
+      ? selected.map(display).join(", ")
       : `${selected.length} selected`;
 
   return (
@@ -74,7 +76,7 @@ export function MultiSelect({ label, options, selected, onChange }: MultiSelectP
                 onChange={() => toggle(opt)}
                 className="rounded border-gray-300 text-visory focus:ring-visory"
               />
-              {opt}
+              {display(opt)}
             </label>
           ))}
           {options.length === 0 && (

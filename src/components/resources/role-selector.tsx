@@ -2,7 +2,7 @@
 
 import { getRoleDisplayName } from "@/lib/utils";
 
-const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"] as const;
+const ALL_ROLES = ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"] as const;
 
 interface RoleSelectorProps {
   selected: string[];

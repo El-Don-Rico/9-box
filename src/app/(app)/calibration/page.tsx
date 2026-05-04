@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCyclePeriod, getAreaDisplayName } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -25,7 +25,7 @@ interface PlacedEmployee {
   name: string;
   role: string;
   jobTitle: string | null;
-  team: string | null;
+  area: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -44,7 +44,7 @@ function computePlaced(assessments: ManagerAssessmentData[]): PlacedEmployee[] {
         name: a.employee?.name || "Unknown",
         role: a.employee?.role || "EMPLOYEE",
         jobTitle: a.employee?.jobTitle || null,
-        team: a.employee?.team || null,
+        area: a.employee?.area || null,
         box1Label: getBox1Label(a.performance!, a.growthReadiness!),
         box2Label: getBox2Label(va, a.engagement!),
         performance: a.performance!,
@@ -157,7 +157,7 @@ export default function CalibrationPage() {
           name: first.employee?.name || "Unknown",
           role: first.employee?.role || "EMPLOYEE",
           jobTitle: first.employee?.jobTitle || null,
-          team: first.employee?.team || null,
+          area: first.employee?.area || null,
           box1Label: getBox1Label(avgPerf, avgGrowth),
           box2Label: getBox2Label(avgVa, avgEng),
           performance: avgPerf,
@@ -174,12 +174,12 @@ export default function CalibrationPage() {
   const prevPlacedEmployees = useMemo<PlacedEmployee[]>(() => computePlaced(prevAssessments), [prevAssessments]);
 
   const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
-  const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
+  const areaOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.area).filter(Boolean) as string[])].sort(), [placedEmployees]);
 
   const filteredEmployees = useMemo(() => {
     return placedEmployees.filter((e) => {
       if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
-      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      if (selectedTeams.length > 0 && (!e.area || !selectedTeams.includes(e.area))) return false;
       return true;
     });
   }, [placedEmployees, selectedTitles, selectedTeams]);
@@ -187,7 +187,7 @@ export default function CalibrationPage() {
   const filteredPrev = useMemo(() => {
     return prevPlacedEmployees.filter((e) => {
       if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
-      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      if (selectedTeams.length > 0 && (!e.area || !selectedTeams.includes(e.area))) return false;
       return true;
     });
   }, [prevPlacedEmployees, selectedTitles, selectedTeams]);
@@ -283,7 +283,13 @@ export default function CalibrationPage() {
           )}
 
           <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
-          <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+          <MultiSelect
+            label="Areas"
+            options={areaOptions}
+            selected={selectedTeams}
+            onChange={setSelectedTeams}
+            renderOption={getAreaDisplayName}
+          />
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
               onClick={() => setActiveGrid("box1")}

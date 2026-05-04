@@ -30,7 +30,7 @@ export async function GET(
         name: true,
         email: true,
         jobTitle: true,
-        team: true,
+        area: true,
         role: true,
         managerId: true,
         isActive: true,
@@ -64,13 +64,13 @@ async function canViewEmployee(
   viewerRole: string,
   employeeId: string
 ): Promise<boolean> {
-  if (viewerRole === "ADMIN" || viewerRole === "LEADERSHIP") {
+  if (viewerRole === "ADMIN") {
     return true;
   }
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { managerId: true },
+    select: { managerId: true, area: true },
   });
 
   if (!employee) return false;
@@ -78,14 +78,21 @@ async function canViewEmployee(
   if (employee.managerId === viewerId) return true;
 
   if (viewerRole === "AREA_LEAD") {
-    if (employee.managerId) {
-      const manager = await prisma.user.findUnique({
-        where: { id: employee.managerId },
-        select: { managerId: true },
-      });
-      if (manager?.managerId === viewerId) return true;
-    }
-    return true;
+    const viewer = await prisma.user.findUnique({
+      where: { id: viewerId },
+      select: { area: true },
+    });
+    if (!viewer?.area) return false;
+    return viewer.area === employee.area;
+  }
+
+  if (viewerRole === "TEAM_LEAD") {
+    if (!employee.managerId) return false;
+    const manager = await prisma.user.findUnique({
+      where: { id: employee.managerId },
+      select: { managerId: true },
+    });
+    return manager?.managerId === viewerId;
   }
 
   return false;

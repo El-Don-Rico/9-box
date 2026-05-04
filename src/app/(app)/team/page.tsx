@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCyclePeriod, getAreaDisplayName } from "@/lib/utils";
 
 interface TeamMember {
   id: string;
   name: string;
   email: string;
   jobTitle: string | null;
-  team: string | null;
+  area: string | null;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
   resultsSentAt: string | null;
@@ -96,8 +96,8 @@ export default function MyTeamPage() {
                       <p className="text-sm font-medium text-visory-navy">{member.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {member.jobTitle && <span className="text-xs text-gray-500">{member.jobTitle}</span>}
-                        {member.jobTitle && member.team && <span className="text-xs text-gray-300">&middot;</span>}
-                        {member.team && <span className="text-xs text-gray-500">{member.team}</span>}
+                        {member.jobTitle && member.area && <span className="text-xs text-gray-300">&middot;</span>}
+                        {member.area && <span className="text-xs text-gray-500">{getAreaDisplayName(member.area)}</span>}
                       </div>
                       <button
                         onClick={() => router.push(`/team/${member.id}`)}

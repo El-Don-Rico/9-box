@@ -26,13 +26,14 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Access control: own assessment or leadership/admin
-  if (
-    assessment.managerId !== session.user.id &&
-    session.user.role !== "LEADERSHIP" &&
-    session.user.role !== "ADMIN"
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Access control: own assessment, admin, or someone with visibility into the employee
+  if (assessment.managerId !== session.user.id && session.user.role !== "ADMIN") {
+    const { getVisibleEmployeeIds } = await import("@/lib/permissions");
+    const visibleIds = await getVisibleEmployeeIds(session.user.id, session.user.role);
+    const canSee = visibleIds === "all" || visibleIds.includes(assessment.employeeId);
+    if (!canSee) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   return NextResponse.json(assessment);

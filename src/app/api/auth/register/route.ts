@@ -40,7 +40,7 @@ export async function POST(request: Request) {
           email: invitation.email,
           passwordHash,
           jobTitle: invitation.jobTitle,
-          team: invitation.team,
+          area: invitation.area ?? "PLATFORM",
           role: invitation.role,
           managerId: invitation.managerId,
         },
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
           email: invitation.email,
           passwordHash,
           jobTitle: invitation.jobTitle,
-          team: invitation.team,
+          area: invitation.area ?? "PLATFORM",
           role: invitation.role,
           managerId: invitation.managerId,
         },
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash },
+      data: { name, email, passwordHash, area: "PLATFORM" },
     });
 
     return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 });

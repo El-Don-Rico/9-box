@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       content: content || "",
       published: published ?? false,
       sortOrder: nextOrder,
-      allowedRoles: allowedRoles ?? ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"],
+      allowedRoles: allowedRoles ?? ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"],
       createdById: session.user.id,
     },
   });

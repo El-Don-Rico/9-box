@@ -5,14 +5,47 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 import { sendInviteEmail, buildInviteUrl } from "@/lib/email";
 
-const VALID_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
+const VALID_ROLES = ["EMPLOYEE", "MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"];
+const VALID_AREAS = ["CUSTOMER", "GTM", "OPS", "PLATFORM"];
+
+const AREA_ALIASES: Record<string, "CUSTOMER" | "GTM" | "OPS" | "PLATFORM"> = {
+  customer: "CUSTOMER",
+  cs: "CUSTOMER",
+  "customer success": "CUSTOMER",
+  support: "CUSTOMER",
+  gtm: "GTM",
+  "go-to-market": "GTM",
+  "go to market": "GTM",
+  sales: "GTM",
+  marketing: "GTM",
+  growth: "GTM",
+  ops: "OPS",
+  operations: "OPS",
+  finance: "OPS",
+  hr: "OPS",
+  people: "OPS",
+  platform: "PLATFORM",
+  engineering: "PLATFORM",
+  eng: "PLATFORM",
+  tech: "PLATFORM",
+  product: "PLATFORM",
+  design: "PLATFORM",
+  data: "PLATFORM",
+};
+
+function normaliseArea(raw: string | undefined): "CUSTOMER" | "GTM" | "OPS" | "PLATFORM" | undefined {
+  if (!raw) return undefined;
+  const upper = raw.trim().toUpperCase();
+  if (VALID_AREAS.includes(upper)) return upper as "CUSTOMER" | "GTM" | "OPS" | "PLATFORM";
+  return AREA_ALIASES[raw.trim().toLowerCase()];
+}
 
 interface CsvRow {
   name: string;
   email: string;
   role?: string;
   jobTitle?: string;
-  team?: string;
+  area?: string;
   managerEmail?: string;
 }
 
@@ -78,8 +111,8 @@ function parseCsv(text: string): CsvRow[] {
     headers = firstRowFields;
     dataStart = 1;
   } else {
-    // No header row — assume column order: name, email, role, jobTitle, team, managerEmail
-    headers = ["name", "email", "role", "jobtitle", "team", "manageremail"];
+    // No header row — assume column order: name, email, role, jobTitle, area, managerEmail
+    headers = ["name", "email", "role", "jobtitle", "area", "manageremail"];
     dataStart = 0;
   }
 
@@ -89,7 +122,7 @@ function parseCsv(text: string): CsvRow[] {
   const emailIdx = headers.findIndex((h) => h === "email");
   const roleIdx = headers.findIndex((h) => h === "role");
   const jobTitleIdx = headers.findIndex((h) => ["jobtitle", "job_title", "job title", "title"].includes(h));
-  const teamIdx = headers.findIndex((h) => h === "team");
+  const areaIdx = headers.findIndex((h) => ["area", "team"].includes(h));
   const managerEmailIdx = headers.findIndex((h) => ["manageremail", "manager_email", "manager email", "manager"].includes(h));
 
   if (nameIdx === -1 || emailIdx === -1) {
@@ -109,7 +142,7 @@ function parseCsv(text: string): CsvRow[] {
       email,
       role: roleIdx >= 0 ? cols[roleIdx]?.trim().toUpperCase() : undefined,
       jobTitle: jobTitleIdx >= 0 ? cols[jobTitleIdx]?.trim() : undefined,
-      team: teamIdx >= 0 ? cols[teamIdx]?.trim() : undefined,
+      area: areaIdx >= 0 ? cols[areaIdx]?.trim() : undefined,
       managerEmail: managerRaw ? cleanEmail(managerRaw) : undefined,
     });
   }
@@ -176,14 +209,15 @@ export async function POST(request: Request) {
     const role = row.role && VALID_ROLES.includes(row.role) ? row.role : "EMPLOYEE";
     const managerId = row.managerEmail ? emailToUserId.get(row.managerEmail) ?? null : null;
     const token = randomBytes(32).toString("hex");
+    const area = normaliseArea(row.area) ?? null;
 
     await prisma.invitation.create({
       data: {
         name: row.name,
         email: row.email,
-        role: role as "EMPLOYEE" | "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN",
+        role: role as "EMPLOYEE" | "MANAGER" | "TEAM_LEAD" | "AREA_LEAD" | "ADMIN",
         jobTitle: row.jobTitle || null,
-        team: row.team || null,
+        area,
         managerId,
         token,
       },

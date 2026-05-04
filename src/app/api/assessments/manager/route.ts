@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/permissions";
+import { isManager, getVisibleEmployeeIds } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -17,15 +17,18 @@ export async function GET(request: Request) {
   if (cycleId) where.cycleId = cycleId;
   if (employeeId) where.employeeId = employeeId;
 
-  // Managers see their own assessments; leadership/admin see all
-  if (session.user.role === "MANAGER" || session.user.role === "AREA_LEAD") {
-    where.managerId = session.user.id;
+  // Constrain by what the viewer is allowed to see
+  const visibleIds = await getVisibleEmployeeIds(session.user.id, session.user.role);
+  if (visibleIds !== "all") {
+    where.employeeId = employeeId
+      ? (visibleIds.includes(employeeId) ? employeeId : "__none__")
+      : { in: visibleIds };
   }
 
   const assessments = await prisma.managerAssessment.findMany({
     where,
     include: {
-      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true } },
+      employee: { select: { id: true, name: true, email: true, role: true, area: true, jobTitle: true } },
       manager: { select: { id: true, name: true } },
       cycle: true,
     },

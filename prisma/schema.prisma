@@ -9,9 +9,16 @@ datasource db {
 enum Role {
   EMPLOYEE
   MANAGER
+  TEAM_LEAD
   AREA_LEAD
-  LEADERSHIP
   ADMIN
+}
+
+enum Area {
+  CUSTOMER
+  GTM
+  OPS
+  PLATFORM
 }
 
 enum CycleStatus {
@@ -37,7 +44,7 @@ model User {
   name         String
   passwordHash String
   jobTitle     String?
-  team         String?
+  area         Area
   role         Role     @default(EMPLOYEE)
   managerId    String?
   manager      User?    @relation("ManagerReports", fields: [managerId], references: [id])
@@ -64,7 +71,7 @@ model Invitation {
   email     String
   name      String
   jobTitle  String?
-  team      String?
+  area      Area?
   role      Role     @default(EMPLOYEE)
   managerId String?
   token     String   @unique
@@ -159,7 +166,7 @@ model Resource {
   content      String
   published    Boolean  @default(false)
   sortOrder    Int      @default(0)
-  allowedRoles Role[]   @default([EMPLOYEE, MANAGER, AREA_LEAD, LEADERSHIP, ADMIN])
+  allowedRoles Role[]   @default([EMPLOYEE, MANAGER, TEAM_LEAD, AREA_LEAD, ADMIN])
   createdById  String
   createdBy    User     @relation(fields: [createdById], references: [id])
   createdAt    DateTime @default(now())
