@@ -3,12 +3,17 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Migrations need an unpooled Postgres connection. Neon's pooled URL is used at
+// runtime via @prisma/adapter-neon, but PgBouncer can't run the session-level
+// DDL that `prisma migrate deploy` issues. Prefer DIRECT_URL when set.
+const migrationUrl = process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"];
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: migrationUrl,
   },
 });
