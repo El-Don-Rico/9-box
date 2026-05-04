@@ -11,11 +11,13 @@ import { useState } from "react";
 function getNavLinks(role: string) {
   const links = [{ href: "/dashboard", label: "Dashboard" }];
 
-  // All roles are employees first - everyone gets results
+  if (["MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"].includes(role)) {
+    links.push({ href: "/team", label: "My Team" });
+  }
+
   links.push({ href: "/my-reviews", label: "My Reviews" });
 
   if (["MANAGER", "TEAM_LEAD", "AREA_LEAD", "ADMIN"].includes(role)) {
-    links.push({ href: "/team", label: "My Team" });
     links.push({ href: "/calibration", label: "Analysis" });
   }
 

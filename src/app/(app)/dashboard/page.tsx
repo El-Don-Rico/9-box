@@ -17,6 +17,8 @@ import {
   BOX2_GRID,
   type GridCellConfig,
 } from "@/lib/nine-box";
+import { CycleTimeline, type TimelineRow } from "@/components/cycle/timeline";
+import { AdminCycleProgress } from "@/components/cycle/admin-progress";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -304,6 +306,7 @@ function ManagerDashboard() {
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
+  const [timelineRows, setTimelineRows] = useState<TimelineRow[]>([]);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -323,6 +326,9 @@ function ManagerDashboard() {
           fetch(`/api/assessments/manager?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then(setAssessments);
+          fetch(`/api/cycles/${recent.id}/progress`)
+            .then((r) => r.ok ? r.json() : { rows: [] })
+            .then((data) => setTimelineRows(data.rows || []));
         }
       });
   }, []);
@@ -511,6 +517,14 @@ function ManagerDashboard() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {role === "ADMIN" && timelineRows.length > 0 && (
+            <AdminCycleProgress rows={timelineRows} cycle={cycle} />
+          )}
+
+          {timelineRows.length > 0 && (
+            <CycleTimeline rows={timelineRows} cycle={cycle} showManager={role !== "MANAGER"} />
           )}
 
           {/* Team Roster */}
