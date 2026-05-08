@@ -301,9 +301,11 @@ function ManagerDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
   const role = session?.user?.role;
+  const userId = session?.user?.id;
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
+  const [mySelfStatus, setMySelfStatus] = useState<{ started: boolean; submitted: boolean } | null>(null);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -311,6 +313,7 @@ function ManagerDashboard() {
   const [sendingResults, setSendingResults] = useState(false);
 
   useEffect(() => {
+    if (!userId) return;
     fetch("/api/cycles")
       .then((r) => r.json())
       .then((cycles: CycleData[]) => {
@@ -323,9 +326,17 @@ function ManagerDashboard() {
           fetch(`/api/assessments/manager?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then(setAssessments);
+          fetch(`/api/assessments/summary?employeeId=${userId}&cycleId=${recent.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (!data) return;
+              const self = data.selfAssessment;
+              setMySelfStatus({ started: !!self, submitted: !!self?.submittedAt });
+            })
+            .catch(() => {});
         }
       });
-  }, []);
+  }, [userId]);
 
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
@@ -405,6 +416,36 @@ function ManagerDashboard() {
           </div>
         )}
       </div>
+
+      {/* Your Self-Assessment */}
+      {cycle?.status === "OPEN" && mySelfStatus && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Your Self-Assessment</h2>
+          </CardHeader>
+          <CardContent>
+            {mySelfStatus.submitted ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="text-sm text-gray-600">
+                  You have submitted your self-assessment for {formatCyclePeriod(cycle.month, cycle.year)}.
+                </p>
+                <Button variant="secondary" size="sm" onClick={() => router.push("/my-reviews")}>
+                  View
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-3">
+                  Complete your own self-assessment for {formatCyclePeriod(cycle.month, cycle.year)}.
+                </p>
+                <Button onClick={() => router.push(`/self-assessment?cycleId=${cycle.id}`)}>
+                  {mySelfStatus.started ? "Continue Self-Assessment" : "Start Self-Assessment"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Admin quick links */}
       {role === "ADMIN" && (
