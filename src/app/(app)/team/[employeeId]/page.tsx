@@ -79,6 +79,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [savingMetric, setSavingMetric] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [metricError, setMetricError] = useState<string | null>(null);
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
@@ -112,6 +114,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   async function handleAddGoal() {
     if (!newGoalTitle.trim()) return;
+    setGoalError(null);
     setSavingGoal(true);
     try {
       const res = await fetch("/api/goals", {
@@ -131,26 +134,40 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewGoalDesc("");
         setNewGoalDue("");
         setShowGoalForm(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setGoalError(data.error || `Failed to save goal (${res.status})`);
       }
+    } catch (e) {
+      setGoalError(e instanceof Error ? e.message : "Network error saving goal");
     } finally {
       setSavingGoal(false);
     }
   }
 
   async function handleGoalStatus(goalId: string, status: string) {
-    const res = await fetch("/api/goals", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goalId, status }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+    setGoalError(null);
+    try {
+      const res = await fetch("/api/goals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalId, status }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setGoalError(data.error || `Failed to update goal (${res.status})`);
+      }
+    } catch (e) {
+      setGoalError(e instanceof Error ? e.message : "Network error updating goal");
     }
   }
 
   async function handleAddMetric() {
     if (!newMetricName.trim() || !newMetricTarget.trim()) return;
+    setMetricError(null);
     setSavingMetric(true);
     try {
       const res = await fetch("/api/key-metrics", {
@@ -172,30 +189,51 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewMetricUnit("");
         setNewMetricNotes("");
         setShowMetricForm(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMetricError(data.error || `Failed to save metric (${res.status})`);
       }
+    } catch (e) {
+      setMetricError(e instanceof Error ? e.message : "Network error saving metric");
     } finally {
       setSavingMetric(false);
     }
   }
 
   async function handleDeleteMetric(metricId: string) {
-    const res = await fetch(`/api/key-metrics?metricId=${metricId}`, { method: "DELETE" });
-    if (res.ok) {
-      setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+    setMetricError(null);
+    try {
+      const res = await fetch(`/api/key-metrics?metricId=${metricId}`, { method: "DELETE" });
+      if (res.ok) {
+        setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMetricError(data.error || `Failed to delete metric (${res.status})`);
+      }
+    } catch (e) {
+      setMetricError(e instanceof Error ? e.message : "Network error deleting metric");
     }
   }
 
   async function handleSaveNotes(metricId: string) {
-    const res = await fetch("/api/key-metrics", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metricId, notes: editNotesValue }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setMetrics((prev) => prev.map((m) => (m.id === metricId ? updated : m)));
+    setMetricError(null);
+    try {
+      const res = await fetch("/api/key-metrics", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metricId, notes: editNotesValue }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMetrics((prev) => prev.map((m) => (m.id === metricId ? updated : m)));
+        setEditingNotes(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMetricError(data.error || `Failed to save notes (${res.status})`);
+      }
+    } catch (e) {
+      setMetricError(e instanceof Error ? e.message : "Network error saving notes");
     }
-    setEditingNotes(null);
   }
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
@@ -235,6 +273,11 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           </div>
         </CardHeader>
         <CardContent>
+          {metricError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {metricError}
+            </div>
+          )}
           {showMetricForm && (
             <div className="rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -349,6 +392,11 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           </div>
         </CardHeader>
         <CardContent>
+          {goalError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {goalError}
+            </div>
+          )}
           {showGoalForm && (
             <div className="rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
               <input
