@@ -75,9 +75,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Goal not found" }, { status: 404 });
   }
 
+  const isOwner = goal.employeeId === session.user.id;
   const isCreator = goal.createdById === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  if (!isOwner && !isCreator && !isAdmin && !isManager(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

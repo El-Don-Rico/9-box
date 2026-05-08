@@ -70,6 +70,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [newGoalDue, setNewGoalDue] = useState("");
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
 
   const [newMetricName, setNewMetricName] = useState("");
   const [newMetricTarget, setNewMetricTarget] = useState("");
@@ -77,8 +78,19 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [newMetricNotes, setNewMetricNotes] = useState("");
   const [showMetricForm, setShowMetricForm] = useState(false);
   const [savingMetric, setSavingMetric] = useState(false);
+  const [metricError, setMetricError] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
+  const [notesError, setNotesError] = useState<string | null>(null);
+
+  async function readError(res: Response): Promise<string> {
+    try {
+      const data = await res.json();
+      return data?.error || `Request failed (${res.status})`;
+    } catch {
+      return `Request failed (${res.status})`;
+    }
+  }
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
@@ -113,6 +125,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   async function handleAddGoal() {
     if (!newGoalTitle.trim()) return;
     setSavingGoal(true);
+    setGoalError(null);
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
@@ -131,27 +144,39 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewGoalDesc("");
         setNewGoalDue("");
         setShowGoalForm(false);
+      } else {
+        setGoalError(await readError(res));
       }
+    } catch {
+      setGoalError("Network error. Please try again.");
     } finally {
       setSavingGoal(false);
     }
   }
 
   async function handleGoalStatus(goalId: string, status: string) {
-    const res = await fetch("/api/goals", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goalId, status }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+    setGoalError(null);
+    try {
+      const res = await fetch("/api/goals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalId, status }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+      } else {
+        setGoalError(await readError(res));
+      }
+    } catch {
+      setGoalError("Network error. Please try again.");
     }
   }
 
   async function handleAddMetric() {
     if (!newMetricName.trim() || !newMetricTarget.trim()) return;
     setSavingMetric(true);
+    setMetricError(null);
     try {
       const res = await fetch("/api/key-metrics", {
         method: "POST",
@@ -172,30 +197,48 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewMetricUnit("");
         setNewMetricNotes("");
         setShowMetricForm(false);
+      } else {
+        setMetricError(await readError(res));
       }
+    } catch {
+      setMetricError("Network error. Please try again.");
     } finally {
       setSavingMetric(false);
     }
   }
 
   async function handleDeleteMetric(metricId: string) {
-    const res = await fetch(`/api/key-metrics?metricId=${metricId}`, { method: "DELETE" });
-    if (res.ok) {
-      setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+    setMetricError(null);
+    try {
+      const res = await fetch(`/api/key-metrics?metricId=${metricId}`, { method: "DELETE" });
+      if (res.ok) {
+        setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+      } else {
+        setMetricError(await readError(res));
+      }
+    } catch {
+      setMetricError("Network error. Please try again.");
     }
   }
 
   async function handleSaveNotes(metricId: string) {
-    const res = await fetch("/api/key-metrics", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metricId, notes: editNotesValue }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setMetrics((prev) => prev.map((m) => (m.id === metricId ? updated : m)));
+    setNotesError(null);
+    try {
+      const res = await fetch("/api/key-metrics", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metricId, notes: editNotesValue }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMetrics((prev) => prev.map((m) => (m.id === metricId ? updated : m)));
+        setEditingNotes(null);
+      } else {
+        setNotesError(await readError(res));
+      }
+    } catch {
+      setNotesError("Network error. Please try again.");
     }
-    setEditingNotes(null);
   }
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
@@ -267,13 +310,19 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                 rows={2}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
               />
+              {metricError && (
+                <p className="text-sm text-red-600">{metricError}</p>
+              )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleAddMetric} disabled={savingMetric || !newMetricName.trim() || !newMetricTarget.trim()}>
                   {savingMetric ? "Saving..." : "Save Metric"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowMetricForm(false)}>Cancel</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setShowMetricForm(false); setMetricError(null); }}>Cancel</Button>
               </div>
             </div>
+          )}
+          {!showMetricForm && metricError && (
+            <p className="text-sm text-red-600 mb-3">{metricError}</p>
           )}
           {metrics.length > 0 ? (
             <div className="divide-y divide-gray-100">
@@ -318,9 +367,12 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
                         autoFocus
                       />
+                      {notesError && (
+                        <p className="text-sm text-red-600">{notesError}</p>
+                      )}
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => handleSaveNotes(metric.id)}>Save</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditingNotes(null)}>Cancel</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingNotes(null); setNotesError(null); }}>Cancel</Button>
                       </div>
                     </div>
                   )}
@@ -374,13 +426,19 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
                 />
               </div>
+              {goalError && (
+                <p className="text-sm text-red-600">{goalError}</p>
+              )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleAddGoal} disabled={savingGoal || !newGoalTitle.trim()}>
                   {savingGoal ? "Saving..." : "Save Goal"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowGoalForm(false)}>Cancel</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setShowGoalForm(false); setGoalError(null); }}>Cancel</Button>
               </div>
             </div>
+          )}
+          {!showGoalForm && goalError && (
+            <p className="text-sm text-red-600 mb-3">{goalError}</p>
           )}
 
           {activeGoals.length > 0 && (
