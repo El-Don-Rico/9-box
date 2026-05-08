@@ -82,7 +82,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [goalError, setGoalError] = useState<string | null>(null);
   const [metricError, setMetricError] = useState<string | null>(null);
 
-  const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
+  const isOwnProfile = session?.user?.id === employeeId;
+  const canEdit = isOwnProfile || (session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE"));
 
   useEffect(() => {
     async function loadData() {

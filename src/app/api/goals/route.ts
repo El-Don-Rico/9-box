@@ -35,14 +35,16 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, title, description, dueDate } = await request.json();
 
   if (!employeeId || !title) {
     return NextResponse.json({ error: "employeeId and title are required" }, { status: 400 });
+  }
+
+  const isOwn = employeeId === session.user.id;
+  if (!isOwn && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const goal = await prisma.goal.create({
@@ -75,9 +77,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Goal not found" }, { status: 404 });
   }
 
+  const isOwner = goal.employeeId === session.user.id;
   const isCreator = goal.createdById === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  if (!isOwner && !isCreator && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

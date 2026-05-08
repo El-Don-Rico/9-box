@@ -35,14 +35,16 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, name, target, unit, notes } = await request.json();
 
   if (!employeeId || !name || !target) {
     return NextResponse.json({ error: "employeeId, name, and target are required" }, { status: 400 });
+  }
+
+  const isOwn = employeeId === session.user.id;
+  if (!isOwn && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const metric = await prisma.keyMetric.create({
@@ -79,7 +81,7 @@ export async function PATCH(request: Request) {
   const isOwner = metric.employeeId === session.user.id;
   const isCreator = metric.createdById === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
-  if (!isOwner && !isCreator && !isAdmin && !isManager(session.user.role)) {
+  if (!isOwner && !isCreator && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -115,9 +117,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Metric not found" }, { status: 404 });
   }
 
+  const isOwner = metric.employeeId === session.user.id;
   const isCreator = metric.createdById === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  if (!isOwner && !isCreator && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
