@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
-import { isManager as checkIsManager } from "@/lib/permissions";
+import { isManager as checkIsManager } from "@/lib/roles";
 
 interface EmployeeProfile {
   id: string;
