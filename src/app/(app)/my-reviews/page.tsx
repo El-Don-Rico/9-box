@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -68,6 +70,7 @@ interface CycleData {
 
 export default function MyResultsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [summaries, setSummaries] = useState<Map<string, SummaryData>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -86,7 +89,7 @@ export default function MyResultsPage() {
               const res = await fetch(`/api/assessments/summary?employeeId=${session.user.id}&cycleId=${cycle.id}`);
               if (res.ok) {
                 const data: SummaryData = await res.json();
-                if (data.selfAssessment?.submittedAt || data.managerAssessment?.submittedAt) {
+                if (cycle.status === "OPEN" || data.selfAssessment?.submittedAt || data.managerAssessment?.submittedAt) {
                   results.set(cycle.id, data);
                 }
               }
@@ -198,6 +201,9 @@ export default function MyResultsPage() {
       {cyclesWithResults.map((cycle) => {
         const data = summaries.get(cycle.id)!;
         const { selfAssessment: self, managerAssessment: mgr } = data;
+        const isOpen = cycle.status === "OPEN";
+        const canStartSelf = isOpen && !self?.submittedAt;
+        const hasSelfDraft = !!self && self.performance !== null;
 
         const mgrValuesAlignment = mgr?.valCustomerFirst && mgr?.valStepIntoArena && mgr?.valFlockToProblems && mgr?.valGiveEnergy
           ? getValuesAlignment(mgr.valCustomerFirst, mgr.valStepIntoArena, mgr.valFlockToProblems, mgr.valGiveEnergy)
@@ -289,18 +295,31 @@ export default function MyResultsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle.month, cycle.year)}</h2>
                 <div className="flex flex-wrap items-center gap-2">
+                  {isOpen && (
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
+                  )}
                   {self?.submittedAt && (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Self-Assessment Submitted</Badge>
                   )}
                   {mgr?.resultsSentAt ? (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
-                  ) : (
+                  ) : (self?.submittedAt || mgr?.submittedAt) && (
                     <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending Manager Review</Badge>
                   )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {canStartSelf && (
+                <div className="flex items-center justify-between rounded-lg bg-visory-grey p-3">
+                  <p className="text-sm text-visory-navy">
+                    {hasSelfDraft ? "You have a self-assessment in progress." : "Self-assessment open for this cycle."}
+                  </p>
+                  <Button onClick={() => router.push(`/self-assessment?cycleId=${cycle.id}`)}>
+                    {hasSelfDraft ? "Continue Self-Assessment" : "Start Self-Assessment"}
+                  </Button>
+                </div>
+              )}
               {showManager && (box1Label || box2Label) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {box1Label && (

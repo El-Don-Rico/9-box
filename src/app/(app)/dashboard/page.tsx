@@ -304,6 +304,7 @@ function ManagerDashboard() {
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
+  const [mySelfAssessment, setMySelfAssessment] = useState<{ submittedAt: string | null; performance: number | null } | null>(null);
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -311,6 +312,8 @@ function ManagerDashboard() {
   const [sendingResults, setSendingResults] = useState(false);
 
   useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
     fetch("/api/cycles")
       .then((r) => r.json())
       .then((cycles: CycleData[]) => {
@@ -323,9 +326,15 @@ function ManagerDashboard() {
           fetch(`/api/assessments/manager?cycleId=${recent.id}`)
             .then((r) => r.json())
             .then(setAssessments);
+          fetch(`/api/assessments/summary?employeeId=${userId}&cycleId=${recent.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data) setMySelfAssessment(data.selfAssessment);
+            })
+            .catch(() => { /* ignore */ });
         }
       });
-  }, []);
+  }, [session?.user?.id]);
 
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
@@ -426,6 +435,38 @@ function ManagerDashboard() {
 
       {cycle && (
         <>
+          {/* My Self-Assessment */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-lg font-semibold">My Self-Assessment</h2>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={
+                      mySelfAssessment?.submittedAt
+                        ? "bg-green-100 text-green-800 border-green-300"
+                        : "bg-gray-100 text-gray-800 border-gray-300"
+                    }
+                  >
+                    {mySelfAssessment?.submittedAt ? "Submitted" : "Pending"}
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    {formatCyclePeriod(cycle.month, cycle.year)}
+                  </span>
+                </div>
+                {!mySelfAssessment?.submittedAt && cycle.status === "OPEN" && (
+                  <Button onClick={() => router.push(`/self-assessment?cycleId=${cycle.id}`)}>
+                    {mySelfAssessment?.performance !== null && mySelfAssessment?.performance !== undefined
+                      ? "Continue Self-Assessment"
+                      : "Start Self-Assessment"}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Summary stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card>
