@@ -72,4 +72,5 @@ export interface TeamMemberStatus {
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
   resultsSentAt: string | null;
+  oneOnOneCompletedAt: string | null;
 }

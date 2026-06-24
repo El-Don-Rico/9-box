@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       managerAssessmentsReceived: cycleId
         ? {
             where: { cycleId, managerId: session.user.id },
-            select: { id: true, submittedAt: true, resultsSentAt: true },
+            select: { id: true, submittedAt: true, resultsSentAt: true, oneOnOneCompletedAt: true },
           }
         : undefined,
     },
@@ -53,6 +53,7 @@ export async function GET(request: Request) {
           ? "submitted"
           : "draft",
       resultsSentAt: managerAssessment?.resultsSentAt ?? null,
+      oneOnOneCompletedAt: managerAssessment?.oneOnOneCompletedAt ?? null,
     };
   });
 

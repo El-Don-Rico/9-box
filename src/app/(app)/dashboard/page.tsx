@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod } from "@/lib/utils";
+import { buildCycleTimeline } from "@/lib/timeline";
+import { CycleTimeline } from "@/components/dashboard/cycle-timeline";
 import {
   getBox1Label,
   getBox2Label,
@@ -39,6 +41,7 @@ interface EmployeeSummary {
   mgrValuesAlignment: number | null;
   selfSubmitted: boolean;
   mgrSubmitted: boolean;
+  mgrOneOnOneComplete: boolean;
   resultsSent: boolean;
 }
 
@@ -80,6 +83,7 @@ function EmployeeDashboard() {
                 mgrValuesAlignment: mgrVA,
                 selfSubmitted: !!self?.submittedAt,
                 mgrSubmitted: !!mgr?.submittedAt,
+                mgrOneOnOneComplete: !!mgr?.oneOnOneComplete,
                 resultsSent: !!mgr?.resultsSentAt,
               });
             } catch { /* skip */ }
@@ -97,6 +101,24 @@ function EmployeeDashboard() {
 
   const openCycle = cycles.find((c) => c.status === "OPEN");
   const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
+
+  // Timeline: show the open cycle if there is one, otherwise the most recent.
+  const timelineSummary = openCycle
+    ? cycleSummaries.find((s) => s.cycleId === openCycle.id)
+    : cycleSummaries[0];
+  const timelineStages = timelineSummary
+    ? buildCycleTimeline(
+        timelineSummary.month,
+        timelineSummary.year,
+        {
+          self: timelineSummary.selfSubmitted,
+          manager: timelineSummary.mgrSubmitted,
+          oneOnOne: timelineSummary.mgrOneOnOneComplete,
+          results: timelineSummary.resultsSent,
+        },
+        new Date(),
+      )
+    : [];
 
   // Compute averages from cycles that have manager assessments
   const completedCycles = cycleSummaries.filter((s) => s.mgrSubmitted);
@@ -119,6 +141,15 @@ function EmployeeDashboard() {
         <h1 className="text-2xl font-bold text-visory-navy">My Dashboard</h1>
         <p className="text-sm text-gray-600 mt-1">Your performance cycle status</p>
       </div>
+
+      {/* Cycle Timeline - milestone due dates & your progress */}
+      {timelineSummary && (
+        <CycleTimeline
+          title="Cycle Timeline"
+          subtitle={formatCyclePeriod(timelineSummary.month, timelineSummary.year)}
+          stages={timelineStages}
+        />
+      )}
 
       {/* Summary Card - averages & latest */}
       {latestWithResults && (
@@ -329,6 +360,30 @@ function ManagerDashboard() {
 
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
+  const oneOnOneDone = team.filter((t) => t.oneOnOneCompletedAt).length;
+  const resultsDone = team.filter((t) => t.resultsSentAt).length;
+
+  // Team-aggregate timeline: a stage is "complete" once every member has
+  // finished it; the detail text shows running progress (e.g. "3/5 done").
+  const timelineStages = cycle && team.length > 0
+    ? buildCycleTimeline(
+        cycle.month,
+        cycle.year,
+        {
+          self: selfDone === team.length,
+          manager: assessed === team.length,
+          oneOnOne: oneOnOneDone === team.length,
+          results: resultsDone === team.length,
+        },
+        new Date(),
+        {
+          self: `${selfDone}/${team.length} done`,
+          manager: `${assessed}/${team.length} done`,
+          oneOnOne: `${oneOnOneDone}/${team.length} done`,
+          results: `${resultsDone}/${team.length} shared`,
+        },
+      )
+    : [];
 
   const placedEmployees = useMemo<PlacedEmployee[]>(() => {
     return assessments
@@ -441,6 +496,13 @@ function ManagerDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Cycle Timeline - milestone due dates & team progress */}
+          <CycleTimeline
+            title="Cycle Timeline"
+            subtitle={`${formatCyclePeriod(cycle.month, cycle.year)} · team progress against milestone due dates`}
+            stages={timelineStages}
+          />
 
           {/* 9-Box Grid */}
           {placedEmployees.length > 0 && (
