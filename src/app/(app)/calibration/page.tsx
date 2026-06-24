@@ -120,6 +120,7 @@ export default function CalibrationPage() {
         .then((r) => r.json())
         .then(setPrevAssessments);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPrevAssessments([]);
     }
   }, [selectedCycleId, cycles, viewMode]);

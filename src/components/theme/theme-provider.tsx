@@ -36,7 +36,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("ledger");
   const [density, setDensityState] = useState<Density>("regular");
 
-  // Hydrate from localStorage on mount.
+  // Hydrate the stored preference once on mount and sync the root classes.
+  // Intentional setState-in-effect: the persisted value is only available
+  // client-side, so React state is reconciled after hydration.
   useEffect(() => {
     const storedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
     const storedDensity = localStorage.getItem(DENSITY_KEY) as Density | null;
@@ -45,6 +47,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       storedDensity === "compact" || storedDensity === "cozy" || storedDensity === "regular"
         ? storedDensity
         : "regular";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(t);
     setDensityState(d);
     applyClasses(t, d);

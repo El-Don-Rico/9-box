@@ -272,7 +272,8 @@ function SendResultsModal({ memberName, onConfirm, onCancel, busy }: { memberNam
 }
 
 function CycleTimeline({ due }: { due: CycleDueDates }) {
-  const now = Date.now();
+  // Lazy init so "now" is sampled once, off the render path.
+  const [now] = useState(() => Date.now());
   const milestones = [
     { label: "Ready to Meet", date: due.readyToMeet },
     { label: "Meeting Complete", date: due.meetingComplete },

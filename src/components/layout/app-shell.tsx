@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -8,12 +8,9 @@ import { Topbar } from "@/components/layout/topbar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // `key` re-triggers the page fadeUp on navigation; the mobile drawer closes
+  // itself via Sidebar's onNavigate when a link is tapped.
   const pathname = usePathname();
-
-  // Close the mobile drawer on navigation.
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   return (
     <div className="app">
