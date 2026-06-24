@@ -39,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${instrumentSerif.variable} ${geist.variable} ${geistMono.variable} theme-ledger density-regular`}
+      className={`${instrumentSerif.variable} ${geist.variable} ${geistMono.variable} theme-ledger density-compact`}
       suppressHydrationWarning
     >
       <body className="antialiased">

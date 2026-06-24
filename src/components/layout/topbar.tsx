@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, HelpCircle, Menu, Search } from "lucide-react";
+import { Menu } from "lucide-react";
 import { ThemeMenu } from "@/components/theme/theme-menu";
 
 const LABELS: Record<string, string> = {
@@ -16,7 +17,7 @@ const LABELS: Record<string, string> = {
   "self-assessment": "Self-assessment",
   summary: "Summary",
   meeting: "Meeting",
-  cycles: "Cycles",
+  cycles: "Assessment Cycles",
   users: "Users",
   new: "New",
   edit: "Edit",
@@ -29,7 +30,11 @@ function labelFor(seg: string) {
 export function Topbar({ onMenu }: { onMenu?: () => void }) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
-  const crumbs = segments.slice(0, 3).map(labelFor);
+  // Each crumb links to its cumulative path so you can step back up the tree.
+  const crumbs = segments.slice(0, 3).map((seg, i) => ({
+    label: labelFor(seg),
+    href: "/" + segments.slice(0, i + 1).join("/"),
+  }));
 
   return (
     <header className="topbar">
@@ -42,30 +47,27 @@ export function Topbar({ onMenu }: { onMenu?: () => void }) {
         <Menu size={18} />
       </button>
 
-      <div className="crumb">
-        <span>Visory</span>
+      <nav className="crumb" aria-label="Breadcrumb">
+        <Link href="/dashboard" className="hover:text-ink-2 transition-colors">
+          Visory
+        </Link>
         {crumbs.map((c, i) => (
-          <span key={i} className="flex items-center gap-2">
+          <span key={c.href} className="flex items-center gap-2">
             <span className="sep">/</span>
-            <span className={i === crumbs.length - 1 ? "text-ink-2" : undefined}>{c}</span>
+            {i === crumbs.length - 1 ? (
+              <span className="text-ink-2">{c.label}</span>
+            ) : (
+              <Link href={c.href} className="hover:text-ink-2 transition-colors">
+                {c.label}
+              </Link>
+            )}
           </span>
         ))}
-      </div>
+      </nav>
 
-      <div className="search">
-        <Search size={14} />
-        <input placeholder="Search people, tasks, docs…" aria-label="Search" />
-        <kbd>⌘K</kbd>
+      <div className="ml-auto flex items-center gap-1">
+        <ThemeMenu />
       </div>
-
-      <ThemeMenu />
-      <button type="button" className="icon-btn" aria-label="Notifications">
-        <Bell size={18} />
-        <span className="dot" />
-      </button>
-      <button type="button" className="icon-btn" aria-label="Help">
-        <HelpCircle size={18} />
-      </button>
     </header>
   );
 }

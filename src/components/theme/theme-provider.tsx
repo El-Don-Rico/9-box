@@ -34,7 +34,7 @@ function applyClasses(theme: Theme, density: Density) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("ledger");
-  const [density, setDensityState] = useState<Density>("regular");
+  const [density, setDensityState] = useState<Density>("compact");
 
   // Hydrate the stored preference once on mount and sync the root classes.
   // Intentional setState-in-effect: the persisted value is only available
@@ -46,7 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const d =
       storedDensity === "compact" || storedDensity === "cozy" || storedDensity === "regular"
         ? storedDensity
-        : "regular";
+        : "compact";
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(t);
     setDensityState(d);
@@ -56,7 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
     localStorage.setItem(THEME_KEY, t);
-    applyClasses(t, (localStorage.getItem(DENSITY_KEY) as Density) || "regular");
+    applyClasses(t, (localStorage.getItem(DENSITY_KEY) as Density) || "compact");
   }, []);
 
   const setDensity = useCallback((d: Density) => {
