@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { maybeMarkReadyToMeet } from "@/lib/meeting-server";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   const assessments = await prisma.managerAssessment.findMany({
     where,
     include: {
-      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true } },
+      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true, startDate: true } },
       manager: { select: { id: true, name: true } },
       cycle: true,
     },
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
       where: { cycleId, employeeId, submittedAt: { not: null } },
     });
     bothComplete = !!selfAssessment;
+    await maybeMarkReadyToMeet(cycleId, employeeId);
   }
 
   return NextResponse.json({ ...assessment, bothComplete });

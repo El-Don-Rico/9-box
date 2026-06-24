@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { maybeMarkReadyToMeet } from "@/lib/meeting-server";
 
 export async function GET(
   _request: Request,
@@ -61,6 +62,11 @@ export async function PUT(
     where: { id },
     data: body,
   });
+
+  // Once both self + manager assessments are submitted, the employee is Ready to Meet.
+  if (assessment.submittedAt) {
+    await maybeMarkReadyToMeet(assessment.cycleId, assessment.employeeId);
+  }
 
   return NextResponse.json(assessment);
 }

@@ -18,6 +18,7 @@ interface UserData {
   role: string;
   isActive: boolean;
   managerId: string | null;
+  startDate: string | null;
   manager: { id: string; name: string } | null;
 }
 
@@ -442,6 +443,13 @@ export default function AdminUsersPage() {
                     onBlur={(e) => { if (e.target.value !== (user.team || "")) updateUser(user.id, { team: e.target.value }); }}
                     placeholder="Team"
                     className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-visory"
+                  />
+                  <input
+                    type="date"
+                    title="Start date"
+                    defaultValue={user.startDate ? user.startDate.slice(0, 10) : ""}
+                    onBlur={(e) => { if (e.target.value !== (user.startDate ? user.startDate.slice(0, 10) : "")) updateUser(user.id, { startDate: e.target.value || null }); }}
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-visory"
                   />
                   <select
                     value={user.role}

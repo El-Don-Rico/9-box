@@ -34,6 +34,7 @@ export async function GET(
         role: true,
         managerId: true,
         isActive: true,
+        startDate: true,
         createdAt: true,
         manager: { select: { id: true, name: true } },
       },

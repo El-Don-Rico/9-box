@@ -1,4 +1,5 @@
-export type { Role } from "@prisma/client";
+export type { Role, MeetingStatus, TaskStatus } from "@prisma/client";
+import type { MeetingStatus, TaskStatus } from "@prisma/client";
 
 export interface UserProfile {
   id: string;
@@ -36,9 +37,10 @@ export interface ManagerAssessmentData {
   engagementEvidence: string | null;
   notes: string | null;
   submittedAt: string | null;
+  meetingStatus?: MeetingStatus;
   createdAt: string;
   updatedAt: string;
-  employee?: { id: string; name: string; email: string; role: string; team: string | null; jobTitle: string | null };
+  employee?: { id: string; name: string; email: string; role: string; team: string | null; jobTitle: string | null; startDate?: string | null };
   manager?: { id: string; name: string };
 }
 
@@ -69,7 +71,48 @@ export interface TeamMemberStatus {
   id: string;
   name: string;
   email: string;
+  jobTitle?: string | null;
+  team?: string | null;
+  startDate?: string | null;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  meetingStatus?: MeetingStatus;
+  managerAssessmentId?: string | null;
   resultsSentAt: string | null;
+}
+
+export interface TaskCommentData {
+  id: string;
+  taskId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  author?: { id: string; name: string };
+}
+
+export interface TaskData {
+  id: string;
+  title: string;
+  description: string | null;
+  employeeId: string;
+  assigneeId: string | null;
+  createdById: string;
+  meetingId: string | null;
+  dueDate: string | null;
+  status: TaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  employee?: { id: string; name: string };
+  assignee?: { id: string; name: string } | null;
+  createdBy?: { id: string; name: string };
+  comments?: TaskCommentData[];
+}
+
+export interface MeetingData {
+  id: string;
+  managerAssessmentId: string;
+  notes: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  tasks?: TaskData[];
 }

@@ -7,8 +7,11 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { TasksPanel } from "@/components/tasks/tasks-panel";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod } from "@/lib/utils";
+import { MEETING_STATUS_LABELS, meetingStatusColor } from "@/lib/meeting";
+import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
 import {
   getBox1Label,
   getBox2Label,
@@ -96,6 +99,8 @@ function EmployeeDashboard() {
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
 
   const openCycle = cycles.find((c) => c.status === "OPEN");
+  const openSummary = openCycle ? cycleSummaries.find((s) => s.cycleId === openCycle.id) : undefined;
+  const needsSelfAssessment = !!openCycle && !openSummary?.selfSubmitted;
   const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
 
   // Compute averages from cycles that have manager assessments
@@ -119,6 +124,21 @@ function EmployeeDashboard() {
         <h1 className="text-2xl font-bold text-visory-navy">My Dashboard</h1>
         <p className="text-sm text-gray-600 mt-1">Your performance cycle status</p>
       </div>
+
+      {/* Cycle-open invitation banner */}
+      {needsSelfAssessment && openCycle && (
+        <div className="rounded-lg border border-visory bg-visory-light/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-visory-navy">
+              The {formatCyclePeriod(openCycle.month, openCycle.year)} cycle is open
+            </p>
+            <p className="text-sm text-visory-navy/80">Complete your self-assessment to get started.</p>
+          </div>
+          <Button onClick={() => router.push(`/self-assessment?cycleId=${openCycle.id}`)}>
+            Start Self-Assessment
+          </Button>
+        </div>
+      )}
 
       {/* Summary Card - averages & latest */}
       {latestWithResults && (
@@ -256,6 +276,18 @@ function EmployeeDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* My Tasks */}
+      {session?.user?.id && (
+        <Card>
+          <CardContent className="py-4">
+            <TasksPanel
+              employeeId={session.user.id}
+              emptyText="No tasks assigned to you yet. Actions agreed in your 1:1 will appear here."
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -266,6 +298,7 @@ interface PlacedEmployee {
   role: string;
   jobTitle: string | null;
   team: string | null;
+  startDate: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -307,6 +340,7 @@ function ManagerDashboard() {
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedTenures, setSelectedTenures] = useState<string[]>([]);
   const [sendConfirm, setSendConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
   const [sendingResults, setSendingResults] = useState(false);
 
@@ -341,6 +375,7 @@ function ManagerDashboard() {
           role: a.employee?.role || "EMPLOYEE",
           jobTitle: a.employee?.jobTitle || null,
           team: a.employee?.team || null,
+          startDate: a.employee?.startDate ?? null,
           box1Label: getBox1Label(a.performance!, a.growthReadiness!),
           box2Label: getBox2Label(va, a.engagement!),
           performance: a.performance!,
@@ -358,9 +393,13 @@ function ManagerDashboard() {
     return placedEmployees.filter((e) => {
       if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
       if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      if (selectedTenures.length > 0) {
+        const bucket = getTenureBucket(e.startDate);
+        if (!bucket || !selectedTenures.includes(bucket)) return false;
+      }
       return true;
     });
-  }, [placedEmployees, selectedTitles, selectedTeams]);
+  }, [placedEmployees, selectedTitles, selectedTeams, selectedTenures]);
 
   const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
   const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
@@ -451,6 +490,7 @@ function ManagerDashboard() {
                   <div className="flex flex-wrap items-center gap-2">
                     <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
                     <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+                    <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
                     <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                       <button
                         onClick={() => setActiveGrid("box1")}
@@ -552,6 +592,11 @@ function ManagerDashboard() {
                       >
                         Mgr: {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
                       </Badge>
+                      {member.meetingStatus && member.meetingStatus !== "NOT_READY" && (
+                        <Badge className={meetingStatusColor(member.meetingStatus)}>
+                          {MEETING_STATUS_LABELS[member.meetingStatus]}
+                        </Badge>
+                      )}
                       <Button
                         size="sm"
                         variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}

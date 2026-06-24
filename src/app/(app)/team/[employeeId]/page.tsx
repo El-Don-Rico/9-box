@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
+import { TasksPanel } from "@/components/tasks/tasks-panel";
 
 interface EmployeeProfile {
   id: string;
@@ -441,6 +442,23 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Tasks */}
+      <Card>
+        <CardContent className="py-4">
+          <TasksPanel
+            employeeId={employeeId}
+            canManage={!!canEdit}
+            assigneeOptions={[
+              { id: employee.id, name: employee.name },
+              ...(session?.user?.id && session.user.name && session.user.id !== employee.id
+                ? [{ id: session.user.id, name: session.user.name }]
+                : []),
+            ]}
+            emptyText="No tasks yet. Tasks created in 1:1 meetings appear here."
+          />
         </CardContent>
       </Card>
 

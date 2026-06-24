@@ -21,13 +21,16 @@ export async function GET(request: Request) {
       id: true,
       name: true,
       email: true,
+      jobTitle: true,
+      team: true,
+      startDate: true,
       selfAssessments: cycleId
         ? { where: { cycleId }, select: { id: true, submittedAt: true } }
         : undefined,
       managerAssessmentsReceived: cycleId
         ? {
             where: { cycleId, managerId: session.user.id },
-            select: { id: true, submittedAt: true, resultsSentAt: true },
+            select: { id: true, submittedAt: true, resultsSentAt: true, meetingStatus: true },
           }
         : undefined,
     },
@@ -42,6 +45,9 @@ export async function GET(request: Request) {
       id: r.id,
       name: r.name,
       email: r.email,
+      jobTitle: r.jobTitle,
+      team: r.team,
+      startDate: r.startDate,
       selfAssessmentStatus: !selfAssessment
         ? "not_started"
         : selfAssessment.submittedAt
@@ -52,6 +58,8 @@ export async function GET(request: Request) {
         : managerAssessment.submittedAt
           ? "submitted"
           : "draft",
+      meetingStatus: managerAssessment?.meetingStatus ?? "NOT_READY",
+      managerAssessmentId: managerAssessment?.id ?? null,
       resultsSentAt: managerAssessment?.resultsSentAt ?? null,
     };
   });
