@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger" | "ghost";
+  variant?: "primary" | "secondary" | "danger" | "ghost" | "magenta";
   size?: "sm" | "md" | "lg";
 }
 
+// Visory pill button. `primary` is the navy slate; `magenta` is the scarce key-CTA
+// accent; `secondary` is the bordered paper default; `danger` reuses magenta
+// (the system has no separate red).
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", disabled, ...props }, ref) => {
     return (
@@ -15,18 +18,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
-          variant === "primary" &&
-            "bg-visory text-white hover:bg-visory-dark focus:ring-visory",
-          variant === "secondary" &&
-            "bg-white text-visory-navy border border-gray-300 hover:bg-gray-50 focus:ring-visory",
-          variant === "danger" &&
-            "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
-          variant === "ghost" &&
-            "text-visory-navy hover:bg-gray-100 focus:ring-gray-500",
-          size === "sm" && "px-3 py-1.5 text-sm",
-          size === "md" && "px-4 py-2 text-sm",
-          size === "lg" && "px-6 py-3 text-base",
+          "btn",
+          variant === "primary" && "btn-primary",
+          variant === "secondary" && "",
+          variant === "danger" && "btn-magenta",
+          variant === "magenta" && "btn-magenta",
+          variant === "ghost" && "btn-ghost",
+          size === "sm" && "btn-sm",
+          size === "lg" && "btn-lg",
           className
         )}
         {...props}

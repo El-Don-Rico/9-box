@@ -1,18 +1,28 @@
 import { cn } from "@/lib/utils";
 
+type ChipVariant = "default" | "magenta" | "navy" | "success" | "slate" | "warning";
+
 interface BadgeProps {
   children: React.ReactNode;
   className?: string;
+  variant?: ChipVariant;
+  /** show a small leading dot in the current text color */
+  dot?: boolean;
 }
 
-export function Badge({ children, className }: BadgeProps) {
+const variantClass: Record<ChipVariant, string> = {
+  default: "",
+  magenta: "chip-magenta",
+  navy: "chip-navy",
+  success: "chip-success",
+  slate: "chip-slate",
+  warning: "chip-warning",
+};
+
+export function Badge({ children, className, variant = "default", dot }: BadgeProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        className
-      )}
-    >
+    <span className={cn("chip", variantClass[variant], className)}>
+      {dot && <span className="chip-dot" />}
       {children}
     </span>
   );
