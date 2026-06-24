@@ -20,7 +20,7 @@ import { DimensionComparison } from "@/components/assessments/dimension-comparis
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
-  cycle: { id: string; month: number; year: number; status: string } | null;
+  cycle: { id: string; month: number | null; quarter: number | null; year: number; status: string } | null;
   selfAssessment: {
     performance: number | null;
     performanceJustification: string | null;
@@ -235,7 +235,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
         <div className="flex items-center gap-3 mt-1">
           <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
+            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle)}` : ""}
           </p>
           {mgr?.resultsSentAt && (
             <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
@@ -322,7 +322,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                 <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
               </div>
             )}
@@ -418,7 +418,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
                 <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
                 <p className="text-sm text-amber-700">
-                  Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+                  Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}

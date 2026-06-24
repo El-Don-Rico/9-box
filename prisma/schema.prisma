@@ -77,7 +77,11 @@ model Invitation {
 
 model AssessmentCycle {
   id        String      @id @default(cuid())
-  month     Int
+  // Legacy monthly cycles keep `month`; new quarterly cycles use `quarter` (1-4).
+  // Uniqueness per period is enforced in application code so historical monthly
+  // rows can coexist with quarterly ones.
+  month     Int?
+  quarter   Int?
   year      Int
   status    CycleStatus @default(OPEN)
   createdAt DateTime    @default(now())
@@ -85,7 +89,7 @@ model AssessmentCycle {
   managerAssessments ManagerAssessment[]
   selfAssessments    SelfAssessment[]
 
-  @@unique([month, year])
+  @@index([year])
 }
 
 model ManagerAssessment {

@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Visory Performance",
-  description: "Monthly performance management and 9-box assessment tool",
+  description: "Quarterly performance management and 9-box assessment tool",
 };
 
 export default function RootLayout({

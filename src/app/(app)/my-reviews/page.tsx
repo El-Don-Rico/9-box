@@ -54,14 +54,15 @@ interface ManagerAssessmentData {
 
 interface SummaryData {
   employee: { id: string; name: string };
-  cycle: { id: string; month: number; year: number; status: string } | null;
+  cycle: { id: string; month: number | null; quarter: number | null; year: number; status: string } | null;
   selfAssessment: SelfAssessmentData | null;
   managerAssessment: ManagerAssessmentData | null;
 }
 
 interface CycleData {
   id: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   status: string;
 }
@@ -124,6 +125,7 @@ export default function MyResultsPage() {
         : null;
       return {
         month: c.month,
+        quarter: c.quarter,
         year: c.year,
         performance: mgr.performance,
         growthReadiness: mgr.growthReadiness,
@@ -131,7 +133,7 @@ export default function MyResultsPage() {
         valuesAlignment: va,
       };
     })
-    .filter(Boolean) as { month: number; year: number; performance: number; growthReadiness: number | null; engagement: number | null; valuesAlignment: number | null }[];
+    .filter(Boolean) as { month: number | null; quarter: number | null; year: number; performance: number; growthReadiness: number | null; engagement: number | null; valuesAlignment: number | null }[];
 
   const latest = completedSummaries[0] ?? null;
   const avg = (arr: (number | null)[]) => {
@@ -188,7 +190,7 @@ export default function MyResultsPage() {
             </div>
             {completedSummaries.length > 1 && (
               <p className="text-xs text-gray-400 mt-3 text-center">
-                Latest: {formatCyclePeriod(latest.month, latest.year)} · Averages across {completedSummaries.length} cycles
+                Latest: {formatCyclePeriod(latest)} · Averages across {completedSummaries.length} cycles
               </p>
             )}
           </CardContent>
@@ -287,7 +289,7 @@ export default function MyResultsPage() {
           <Card key={cycle.id}>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle.month, cycle.year)}</h2>
+                <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle)}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   {self?.submittedAt && (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Self-Assessment Submitted</Badge>
@@ -342,7 +344,7 @@ export default function MyResultsPage() {
                     )}
                     {self.goalsNextMonth && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                         <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
                       </div>
                     )}

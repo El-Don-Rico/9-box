@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { comparePeriodDesc } from "@/lib/utils";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -25,16 +26,14 @@ export async function GET(request: Request) {
   const prefill = searchParams.get("prefill") === "true";
   if (prefill && cycleId && assessments.length > 0 && !assessments[0].submittedAt && !assessments[0].performance) {
     const currentCycle = assessments[0].cycle;
-    const previousCycle = await prisma.assessmentCycle.findFirst({
-      where: {
-        id: { not: cycleId },
-        OR: [
-          { year: { lt: currentCycle.year } },
-          { year: currentCycle.year, month: { lt: currentCycle.month } },
-        ],
-      },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
+    // Find the most recent cycle strictly before the current one. Cycles may be
+    // quarterly or legacy-monthly, so order in JS via the shared comparator.
+    const earlierCycles = await prisma.assessmentCycle.findMany({
+      where: { id: { not: cycleId } },
     });
+    const previousCycle = earlierCycles
+      .filter((c) => comparePeriodDesc(currentCycle, c) < 0)
+      .sort(comparePeriodDesc)[0];
 
     if (previousCycle) {
       const prev = await prisma.selfAssessment.findUnique({

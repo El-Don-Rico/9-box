@@ -33,7 +33,7 @@ interface AssessmentHistory {
   valGiveEnergy: number | null;
   submittedAt: string | null;
   resultsSentAt: string | null;
-  cycle: { id: string; month: number; year: number };
+  cycle: { id: string; month: number | null; quarter: number | null; year: number };
 }
 
 interface GoalData {
@@ -476,7 +476,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     return (
                       <tr key={a.id}>
                         <td className="py-2 px-2 font-medium text-visory-navy">
-                          {formatCyclePeriod(a.cycle.month, a.cycle.year)}
+                          {formatCyclePeriod(a.cycle)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (

@@ -49,7 +49,7 @@ function buildInviteEmailHtml({
               Join Visory Performance &amp; Growth OS
             </h1>
             <p style="margin:0 0 32px;font-size:15px;line-height:1.6;color:#00314f;">
-              This is where you'll complete your monthly feedback cycle. Click the button below to set up your account and get started.
+              This is where you'll complete your quarterly feedback cycle. Click the button below to set up your account and get started.
             </p>
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>

@@ -21,7 +21,8 @@ interface TeamMember {
 
 interface CycleData {
   id: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   status: "OPEN" | "CLOSED";
 }
@@ -68,7 +69,7 @@ export default function MyTeamPage() {
         <h1 className="text-2xl font-bold text-visory-navy">My Team</h1>
         {cycle && (
           <p className="text-sm text-gray-600 mt-1">
-            Current cycle: {formatCyclePeriod(cycle.month, cycle.year)}
+            Current cycle: {formatCyclePeriod(cycle)}
             {cycle.status === "OPEN" && (
               <Badge className="ml-2 bg-green-100 text-green-800 border-green-300">Open</Badge>
             )}
