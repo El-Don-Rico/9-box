@@ -83,7 +83,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   async function reportFailure(res: Response, fallback: string) {
     const data = await res.json().catch(() => ({}));
-    setActionError(data.error || `${fallback} (error ${res.status})`);
+    const base = data.error || `${fallback} (error ${res.status})`;
+    setActionError(data.detail ? `${base} — ${data.detail}` : base);
   }
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");

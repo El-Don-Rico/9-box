@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { dbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -53,19 +54,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "employeeId, name, and target are required" }, { status: 400 });
   }
 
-  const metric = await prisma.keyMetric.create({
-    data: {
-      employeeId,
-      createdById: session.user.id,
-      name,
-      target,
-      unit: unit || null,
-      notes: notes || null,
-    },
-    include: { createdBy: { select: { id: true, name: true } } },
-  });
+  try {
+    const metric = await prisma.keyMetric.create({
+      data: {
+        employeeId,
+        createdById: session.user.id,
+        name,
+        target,
+        unit: unit || null,
+        notes: notes || null,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
 
-  return NextResponse.json(metric);
+    return NextResponse.json(metric);
+  } catch (err) {
+    return dbErrorResponse(err, "Save metric");
+  }
 }
 
 export async function PATCH(request: Request) {

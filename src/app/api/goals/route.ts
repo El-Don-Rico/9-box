@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { dbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -53,18 +54,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "employeeId and title are required" }, { status: 400 });
   }
 
-  const goal = await prisma.goal.create({
-    data: {
-      employeeId,
-      createdById: session.user.id,
-      title,
-      description: description || null,
-      dueDate: dueDate ? new Date(dueDate) : null,
-    },
-    include: { createdBy: { select: { id: true, name: true } } },
-  });
+  try {
+    const goal = await prisma.goal.create({
+      data: {
+        employeeId,
+        createdById: session.user.id,
+        title,
+        description: description || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
 
-  return NextResponse.json(goal);
+    return NextResponse.json(goal);
+  } catch (err) {
+    return dbErrorResponse(err, "Save goal");
+  }
 }
 
 export async function PATCH(request: Request) {
