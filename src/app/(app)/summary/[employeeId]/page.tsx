@@ -82,19 +82,21 @@ function AuditTrail({ assessmentId }: { assessmentId: string }) {
 
   return (
     <Card>
-      <CardHeader>
-        <h2 className="text-lg font-semibold">Audit Trail</h2>
-        <p className="text-xs text-gray-500">Changes to this assessment</p>
-      </CardHeader>
+      <div className="card-head">
+        <div>
+          <div className="eyebrow">History</div>
+          <h2 className="card-title">Audit Trail</h2>
+        </div>
+      </div>
       <CardContent>
         <ul className="space-y-2">
           {logs.map((log) => (
-            <li key={log.id} className="text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-xs text-gray-400 whitespace-nowrap">
+            <li key={log.id} className="text-sm text-ink-2 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="mono tnum text-xs text-ink-3 whitespace-nowrap">
                 {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
               </span>
               <span>
-                <span className="font-medium text-visory-navy">{log.actor.name}</span>
+                <span className="font-medium text-ink">{log.actor.name}</span>
                 {" — "}
                 {log.summary || log.action}
               </span>
@@ -109,9 +111,9 @@ function AuditTrail({ assessmentId }: { assessmentId: string }) {
 function ScoreOutOf3({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${value >= 2 ? "text-green-700" : "text-orange-600"}`}>
-        {value}<span className="text-base font-medium text-gray-400">/3</span>
+      <p className="eyebrow mb-1">{label}</p>
+      <p className={`serif text-3xl ${value >= 2 ? "text-success" : "text-magenta"}`}>
+        <span className="mono tnum">{value}</span><span className="text-base text-ink-3 mono tnum">/3</span>
       </p>
     </div>
   );
