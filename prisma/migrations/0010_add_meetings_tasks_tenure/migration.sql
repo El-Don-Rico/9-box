@@ -10,11 +10,6 @@ ALTER TABLE "User" ADD COLUMN "startDate" TIMESTAMP(3);
 -- AlterTable
 ALTER TABLE "ManagerAssessment" ADD COLUMN "meetingStatus" "MeetingStatus" NOT NULL DEFAULT 'NOT_READY';
 
--- AlterTable (drop legacy 1:1 meeting-notes columns, replaced by Meeting model)
-ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneComplete";
-ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneCompletedAt";
-ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneNotes";
-
 -- CreateTable
 CREATE TABLE "Meeting" (
     "id" TEXT NOT NULL,
@@ -79,3 +74,18 @@ ALTER TABLE "Task" ADD CONSTRAINT "Task_meetingId_fkey" FOREIGN KEY ("meetingId"
 -- AddForeignKey
 ALTER TABLE "TaskComment" ADD CONSTRAINT "TaskComment_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "TaskComment" ADD CONSTRAINT "TaskComment_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Data migration: preserve legacy 1:1 notes into the new Meeting model before
+-- dropping the old columns. One Meeting per assessment that had notes or was
+-- marked complete; a completed 1:1 is reflected on the board as MEETING_COMPLETE.
+INSERT INTO "Meeting" ("id", "managerAssessmentId", "notes", "startedAt", "completedAt", "createdAt", "updatedAt")
+SELECT gen_random_uuid()::text, "id", "oneOnOneNotes", "oneOnOneCompletedAt", "oneOnOneCompletedAt", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM "ManagerAssessment"
+WHERE "oneOnOneNotes" IS NOT NULL OR "oneOnOneComplete" = true;
+
+UPDATE "ManagerAssessment" SET "meetingStatus" = 'MEETING_COMPLETE' WHERE "oneOnOneComplete" = true;
+
+-- AlterTable (drop legacy 1:1 meeting-notes columns, now preserved in Meeting)
+ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneComplete";
+ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneCompletedAt";
+ALTER TABLE "ManagerAssessment" DROP COLUMN IF EXISTS "oneOnOneNotes";
