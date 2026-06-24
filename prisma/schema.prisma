@@ -64,6 +64,7 @@ model User {
   goalUpdatesCreated         GoalUpdate[]       @relation("GoalUpdateCreator")
   metricResultsCreated       MetricResult[]     @relation("MetricResultCreator")
   auditLogs                  AuditLog[]         @relation("AuditActor")
+  passwordResetTokens        PasswordResetToken[]
 
   @@index([managerId])
   @@index([role])
@@ -219,6 +220,20 @@ model KeyMetric {
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+// Single-use, time-limited token backing the self-service password reset flow.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
 }
 
 // Append-only audit trail for sensitive changes (e.g. editing a completed
