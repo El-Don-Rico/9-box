@@ -21,9 +21,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // When a cycleId is supplied, include this cycle's recorded actual result.
+  const cycleId = searchParams.get("cycleId");
+
   const metrics = await prisma.keyMetric.findMany({
     where: { employeeId },
-    include: { createdBy: { select: { id: true, name: true } } },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      results: cycleId
+        ? { where: { cycleId }, orderBy: { createdAt: "desc" }, take: 1 }
+        : false,
+    },
     orderBy: { createdAt: "desc" },
   });
 

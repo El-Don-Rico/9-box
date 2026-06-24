@@ -17,6 +17,7 @@ import {
   getBox2Color,
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
@@ -306,6 +307,9 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
           <DimensionComparison sections={comparisonSections} />
         </CardContent>
       </Card>
+
+      {/* Goals & metrics reviewed this cycle (read-only) */}
+      {cycle && <GoalsPanel employeeId={employeeId} cycleId={cycle.id} />}
 
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (

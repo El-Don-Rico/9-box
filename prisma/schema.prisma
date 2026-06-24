@@ -31,6 +31,13 @@ enum GoalStatus {
   CANCELLED
 }
 
+// Per-review-cycle progress status recorded against a goal.
+enum GoalProgressStatus {
+  ON_TRACK
+  OFF_TRACK
+  COMPLETE
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -54,6 +61,8 @@ model User {
   goalsCreated               Goal[]             @relation("GoalCreator")
   keyMetrics                 KeyMetric[]        @relation("EmployeeKeyMetrics")
   keyMetricsCreated          KeyMetric[]        @relation("KeyMetricCreator")
+  goalUpdatesCreated         GoalUpdate[]       @relation("GoalUpdateCreator")
+  metricResultsCreated       MetricResult[]     @relation("MetricResultCreator")
 
   @@index([managerId])
   @@index([role])
@@ -88,6 +97,8 @@ model AssessmentCycle {
 
   managerAssessments ManagerAssessment[]
   selfAssessments    SelfAssessment[]
+  goalUpdates        GoalUpdate[]
+  metricResults      MetricResult[]
 
   @@index([year])
 }
@@ -185,6 +196,7 @@ model Goal {
   status      GoalStatus @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  updates     GoalUpdate[]
 
   @@index([employeeId])
   @@index([createdById])
@@ -202,7 +214,47 @@ model KeyMetric {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  results     MetricResult[]
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+// A goal's progress recorded during a specific review cycle: an off-track /
+// on-track / complete status plus a free-text update.
+model GoalUpdate {
+  id          String             @id @default(cuid())
+  goalId      String
+  goal        Goal               @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  cycleId     String
+  cycle       AssessmentCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  status      GoalProgressStatus
+  note        String?
+  createdById String
+  createdBy   User               @relation("GoalUpdateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([goalId, cycleId])
+  @@index([goalId])
+  @@index([cycleId])
+}
+
+// A key metric's actual result recorded during a specific review cycle.
+model MetricResult {
+  id          String          @id @default(cuid())
+  keyMetricId String
+  keyMetric   KeyMetric       @relation(fields: [keyMetricId], references: [id], onDelete: Cascade)
+  cycleId     String
+  cycle       AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  actual      String
+  note        String?
+  createdById String
+  createdBy   User            @relation("MetricResultCreator", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([keyMetricId, cycleId])
+  @@index([keyMetricId])
+  @@index([cycleId])
 }

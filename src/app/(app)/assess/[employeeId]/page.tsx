@@ -167,7 +167,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
         </div>
       </div>
-      <GoalsPanel employeeId={employeeId} />
+      <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
       <StepForm
         steps={steps}
         values={values}
