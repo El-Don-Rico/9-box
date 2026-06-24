@@ -285,8 +285,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mgr?.performance && mgr?.growthReadiness && (
             <Card>
-              <CardContent className="py-4">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Talent Density</p>
+              <CardContent className="py-2">
+                <p className="eyebrow mb-3 text-center">Talent Density</p>
                 <div className="grid grid-cols-2 gap-4">
                   <ScoreOutOf3 label="Performance" value={mgr.performance} />
                   <ScoreOutOf3 label="Growth Readiness" value={mgr.growthReadiness} />
@@ -296,8 +296,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
           )}
           {mgrValuesAlignment && mgr?.engagement && (
             <Card>
-              <CardContent className="py-4">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Cultural Momentum</p>
+              <CardContent className="py-2">
+                <p className="eyebrow mb-3 text-center">Cultural Momentum</p>
                 <div className="grid grid-cols-2 gap-4">
                   <ScoreOutOf3 label="Engagement" value={mgr.engagement} />
                   <ScoreOutOf3 label="Values Alignment" value={mgrValuesAlignment} />
@@ -312,18 +312,18 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {(box1Label || box2Label) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {box1Label && (
-            <div className={`rounded-lg border-2 p-4 ${getBox1Color(box1Label)}`}>
-              <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
-              <p className="text-lg font-bold mt-1">{box1Label}</p>
-              <p className="text-sm text-visory-navy mt-2">{getBox1Action(box1Label)}</p>
-            </div>
+            <Card navy>
+              <p className="eyebrow text-white/70">Talent Density</p>
+              <p className="card-title mt-1">{box1Label}</p>
+              <p className="text-sm text-white/80 mt-2">{getBox1Action(box1Label)}</p>
+            </Card>
           )}
           {box2Label && (
-            <div className={`rounded-lg border-2 p-4 ${getBox2Color(box2Label)}`}>
-              <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
-              <p className="text-lg font-bold mt-1">{box2Label}</p>
-              <p className="text-sm text-visory-navy mt-2">{getBox2Action(box2Label)}</p>
-            </div>
+            <Card>
+              <p className="eyebrow">Cultural Momentum</p>
+              <p className="card-title mt-1">{box2Label}</p>
+              <p className="text-sm text-ink-2 mt-2">{getBox2Action(box2Label)}</p>
+            </Card>
           )}
         </div>
       )}
