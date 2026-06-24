@@ -62,6 +62,51 @@ interface SummaryData {
   } | null;
 }
 
+interface AuditEntry {
+  id: string;
+  action: string;
+  summary: string | null;
+  createdAt: string;
+  actor: { id: string; name: string };
+}
+
+function AuditTrail({ assessmentId }: { assessmentId: string }) {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  useEffect(() => {
+    fetch(`/api/audit?entityType=ManagerAssessment&entityId=${assessmentId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setLogs(Array.isArray(d) ? d : []))
+      .catch(() => setLogs([]));
+  }, [assessmentId]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Audit Trail</h2>
+        <p className="text-xs text-gray-500">Changes to this assessment</p>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          {logs.map((log) => (
+            <li key={log.id} className="text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+              </span>
+              <span>
+                <span className="font-medium text-visory-navy">{log.actor.name}</span>
+                {" — "}
+                {log.summary || log.action}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ScoreOutOf3({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
@@ -415,6 +460,9 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
           </CardContent>
         </Card>
       )}
+
+      {/* Audit trail (manager/admin only) */}
+      {isManagerView && mgr?.id && <AuditTrail assessmentId={mgr.id} />}
 
       {!self?.submittedAt && !mgr?.submittedAt && (
         <Card>

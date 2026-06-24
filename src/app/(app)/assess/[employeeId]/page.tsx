@@ -16,6 +16,8 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resultsSent, setResultsSent] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           const a = data[0];
           setAssessmentId(a.id);
           setIsSubmitted(!!a.submittedAt);
+          setResultsSent(!!a.resultsSentAt);
           setEmployeeName(a.employee?.name || "");
           setValues({
             performance: a.performance,
@@ -66,6 +69,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
+        setEditing(false);
         if (data.bothComplete) {
           router.push(`/summary/${employeeId}?cycleId=${cycleId}`);
         }
@@ -158,6 +162,25 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         </div>
       </div>
       <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
+
+      {resultsSent ? (
+        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600">
+          Results have been sent to the employee. This assessment is locked and can no longer be edited.
+        </div>
+      ) : isSubmitted && !editing ? (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-amber-50 border border-amber-200 p-4">
+          <p className="text-sm text-amber-800">
+            This assessment has been submitted. You can edit it until results are sent — changes are recorded in the audit log.
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="shrink-0 rounded-lg bg-visory px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Edit assessment
+          </button>
+        </div>
+      ) : null}
+
       <StepForm
         steps={steps}
         values={values}
@@ -166,7 +189,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         onSubmit={() => save(true)}
         saving={saving}
         submitting={submitting}
-        isSubmitted={isSubmitted}
+        isSubmitted={resultsSent || (isSubmitted && !editing)}
       />
     </div>
   );

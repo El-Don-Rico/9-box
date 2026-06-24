@@ -63,6 +63,7 @@ model User {
   keyMetricsCreated          KeyMetric[]        @relation("KeyMetricCreator")
   goalUpdatesCreated         GoalUpdate[]       @relation("GoalUpdateCreator")
   metricResultsCreated       MetricResult[]     @relation("MetricResultCreator")
+  auditLogs                  AuditLog[]         @relation("AuditActor")
 
   @@index([managerId])
   @@index([role])
@@ -218,6 +219,24 @@ model KeyMetric {
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+// Append-only audit trail for sensitive changes (e.g. editing a completed
+// assessment before results are sent, sending results, admin password resets).
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  summary    String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
 }
 
 // A goal's progress recorded during a specific review cycle: an off-track /
