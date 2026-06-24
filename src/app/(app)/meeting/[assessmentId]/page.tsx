@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MeetingEditor } from "@/components/meetings/meeting-editor";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatCyclePeriod } from "@/lib/utils";
 
 interface AssessmentData {
@@ -40,8 +41,8 @@ export default function MeetingPage({ params }: { params: Promise<{ assessmentId
       });
   }, [assessmentId]);
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading…</div>;
-  if (error || !assessment) return <div className="text-center py-12 text-red-500">{error || "Not found"}</div>;
+  if (loading) return <div className="text-center py-12 text-ink-3">Loading…</div>;
+  if (error || !assessment) return <div className="text-center py-12 text-magenta">{error || "Not found"}</div>;
 
   const assigneeOptions = [
     { id: assessment.employee.id, name: assessment.employee.name },
@@ -50,17 +51,16 @@ export default function MeetingPage({ params }: { params: Promise<{ assessmentId
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">1:1 Meeting — {assessment.employee.name}</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {formatCyclePeriod(assessment.cycle)}
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => router.push(`/team/${assessment.employee.id}`)}>
-          View Profile
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="1:1 meeting"
+        title={<>Meeting with <em>{assessment.employee.name}.</em></>}
+        sub={<span className="mono tnum">{formatCyclePeriod(assessment.cycle)}</span>}
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => router.push(`/team/${assessment.employee.id}`)}>
+            View Profile
+          </Button>
+        }
+      />
 
       <MeetingEditor
         assessmentId={assessment.id}

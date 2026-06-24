@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -55,71 +54,63 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-bold text-visory">Create Account</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Register to join the Visory performance platform
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <Input
-            id="name"
-            label="Full Name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Jane Smith"
-            required
-          />
-          <Input
-            id="email"
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            required
-          />
-          <Input
-            id="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-            required
-            minLength={8}
-          />
-          <Input
-            id="confirmPassword"
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm your password"
-            required
-          />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create Account"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-visory-link hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="eyebrow mb-2">Get started</div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
+        Create <em style={{ fontStyle: "italic" }}>account.</em>
+      </h1>
+      <p className="lead mt-1 mb-5">Register to join the Visory performance platform.</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="chip chip-magenta w-full justify-start">{error}</div>
+        )}
+        <Input
+          id="name"
+          label="Full Name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Jane Smith"
+          required
+        />
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@company.com"
+          required
+        />
+        <Input
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 characters"
+          required
+          minLength={8}
+        />
+        <Input
+          id="confirmPassword"
+          label="Confirm Password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirm your password"
+          required
+        />
+        <Button type="submit" variant="magenta" className="w-full" disabled={loading}>
+          {loading ? "Creating account…" : "Create Account"}
+        </Button>
+      </form>
+      <p className="mt-4 text-center small muted">
+        Already have an account?{" "}
+        <Link href="/login" className="text-cobalt hover:underline font-medium">
+          Sign in
+        </Link>
+      </p>
+    </div>
   );
 }

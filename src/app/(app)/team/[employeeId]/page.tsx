@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader, Eyebrow } from "@/components/ui/page-header";
+import { getRatingLabel, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
@@ -222,48 +224,58 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     setEditingNotes(null);
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
-  if (!employee) return <div className="text-center py-12 text-gray-500">Employee not found.</div>;
+  if (loading) return <div className="text-center py-12 muted">Loading...</div>;
+  if (error) return <div className="text-center py-12 text-magenta">{error}</div>;
+  if (!employee) return <div className="text-center py-12 muted">Employee not found.</div>;
 
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
   const completedGoals = goals.filter((g) => g.status !== "ACTIVE");
   // A 1:1 can be run once the manager marks the meeting as scheduled.
   const scheduledMeeting = canEdit ? assessments.find((a) => a.meetingStatus === "MEETING_SCHEDULED") : undefined;
 
+  // Map a 1–3 rating to a Visory badge variant (3→success, 2→warning, 1→magenta).
+  const ratingVariant = (r: number): "success" | "warning" | "magenta" =>
+    r >= 3 ? "success" : r >= 2 ? "warning" : "magenta";
+
   return (
     <div className="space-y-6">
       {actionError && (
-        <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-paper-2 border border-magenta/30 p-3 text-sm text-magenta">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 shrink-0">✕</button>
+          <button onClick={() => setActionError(null)} className="text-magenta hover:text-magenta-2 shrink-0">✕</button>
         </div>
       )}
       {/* Profile Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          {employee.jobTitle && <span className="text-sm text-gray-600">{employee.jobTitle}</span>}
-          {employee.jobTitle && employee.team && <span className="text-gray-300">·</span>}
-          {employee.team && <span className="text-sm text-gray-600">{employee.team}</span>}
-          <Badge className="bg-gray-100 text-gray-700 border-gray-200">{getRoleDisplayName(employee.role)}</Badge>
-        </div>
-        <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
-      </div>
+      <PageHeader
+        eyebrow="Team member"
+        title={<><em>{employee.name}</em></>}
+        sub={
+          <span className="flex flex-wrap items-center gap-2">
+            {employee.jobTitle && <span>{employee.jobTitle}</span>}
+            {employee.jobTitle && employee.team && <span className="muted-2">·</span>}
+            {employee.team && <span>{employee.team}</span>}
+            <Badge variant="slate">{getRoleDisplayName(employee.role)}</Badge>
+            <span className="muted-2">·</span>
+            <span className="mono text-xs">{employee.email}</span>
+          </span>
+        }
+        actions={<Avatar name={employee.name} size="xl" />}
+      />
 
       {/* Scheduled 1:1 meeting */}
       {scheduledMeeting && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <Card navy className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-visory-navy">1:1 meeting scheduled</p>
-            <p className="text-sm text-gray-600">
-              {formatCyclePeriod(scheduledMeeting.cycle)} cycle
+            <Eyebrow className="mb-1">1:1 meeting</Eyebrow>
+            <p className="serif text-lg leading-tight">1:1 meeting scheduled</p>
+            <p className="text-sm muted">
+              <span className="mono tnum">{formatCyclePeriod(scheduledMeeting.cycle)}</span> cycle
             </p>
           </div>
-          <Button onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
+          <Button variant="magenta" onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
             {scheduledMeeting.meeting ? "Edit Meeting Notes" : "Start Meeting"}
           </Button>
-        </div>
+        </Card>
       )}
 
       {/* Key Metrics */}

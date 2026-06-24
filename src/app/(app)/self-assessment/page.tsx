@@ -8,6 +8,7 @@ import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();

@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
@@ -214,10 +215,10 @@ export default function CalibrationPage() {
 
   function TrendArrow({ current, previous, suffix = "" }: { current: number; previous: number; suffix?: string }) {
     const diff = current - previous;
-    if (Math.abs(diff) < 0.05) return <span className="text-xs text-gray-400 ml-1">—</span>;
+    if (Math.abs(diff) < 0.05) return <span className="text-xs muted ml-1">—</span>;
     const isUp = diff > 0;
     return (
-      <span className={`text-xs ml-1 ${isUp ? "text-green-600" : "text-red-500"}`}>
+      <span className={`text-xs mono tnum ml-1 ${isUp ? "text-success" : "text-magenta"}`}>
         {isUp ? "↑" : "↓"} {Math.abs(diff).toFixed(1)}{suffix}
       </span>
     );
@@ -231,80 +232,81 @@ export default function CalibrationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Analysis</h1>
-          <p className="text-sm text-gray-600 mt-1">Team performance analysis and 9-box insights</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-            <button
-              onClick={() => setViewMode("single")}
-              className={`px-3 py-2 text-xs font-medium ${viewMode === "single" ? "bg-visory-navy text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Single Quarter
-            </button>
-            <button
-              onClick={() => { setViewMode("range"); if (!rangeStartId && cycles.length > 0) { setRangeStartId(cycles[cycles.length - 1].id); setRangeEndId(cycles[0].id); } }}
-              className={`px-3 py-2 text-xs font-medium ${viewMode === "range" ? "bg-visory-navy text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Period Average
-            </button>
-          </div>
-
-          {viewMode === "single" ? (
-            <select
-              value={selectedCycleId}
-              onChange={(e) => setSelectedCycleId(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
-            >
-              {cycles.map((c) => (
-                <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-              ))}
-            </select>
-          ) : (
-            <div className="flex items-center gap-2">
-              <select
-                value={rangeStartId}
-                onChange={(e) => setRangeStartId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
+      <PageHeader
+        eyebrow="Calibration"
+        title={<>The <em>grid.</em></>}
+        sub="Team performance analysis and 9-box insights"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex border border-line rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode("single")}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${viewMode === "single" ? "bg-navy text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
               >
-                {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-                ))}
-              </select>
-              <span className="text-sm text-gray-500">to</span>
-              <select
-                value={rangeEndId}
-                onChange={(e) => setRangeEndId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
+                Single Quarter
+              </button>
+              <button
+                onClick={() => { setViewMode("range"); if (!rangeStartId && cycles.length > 0) { setRangeStartId(cycles[cycles.length - 1].id); setRangeEndId(cycles[0].id); } }}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${viewMode === "range" ? "bg-navy text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
               >
-                {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-                ))}
-              </select>
+                Period Average
+              </button>
             </div>
-          )}
 
-          <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
-          <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
-          <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
-          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-            <button
-              onClick={() => setActiveGrid("box1")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Talent Density
-            </button>
-            <button
-              onClick={() => setActiveGrid("box2")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Cultural Momentum
-            </button>
+            {viewMode === "single" ? (
+              <select
+                value={selectedCycleId}
+                onChange={(e) => setSelectedCycleId(e.target.value)}
+                className="border border-line rounded-md bg-paper text-ink px-3 py-2 text-sm"
+              >
+                {cycles.map((c) => (
+                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <select
+                  value={rangeStartId}
+                  onChange={(e) => setRangeStartId(e.target.value)}
+                  className="border border-line rounded-md bg-paper text-ink px-2 py-2 text-sm"
+                >
+                  {cycles.map((c) => (
+                    <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                  ))}
+                </select>
+                <span className="text-sm muted">to</span>
+                <select
+                  value={rangeEndId}
+                  onChange={(e) => setRangeEndId(e.target.value)}
+                  className="border border-line rounded-md bg-paper text-ink px-2 py-2 text-sm"
+                >
+                  {cycles.map((c) => (
+                    <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
+            <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+            <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
+            <div className="flex border border-line rounded-md overflow-hidden">
+              <button
+                onClick={() => setActiveGrid("box1")}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${activeGrid === "box1" ? "bg-magenta text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
+              >
+                Talent Density
+              </button>
+              <button
+                onClick={() => setActiveGrid("box2")}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${activeGrid === "box2" ? "bg-magenta text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
+              >
+                Cultural Momentum
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* 9-Box Grid */}
       <Card>

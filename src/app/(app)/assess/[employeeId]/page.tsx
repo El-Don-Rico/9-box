@@ -7,6 +7,8 @@ import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
@@ -149,7 +151,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
 
   if (!cycleId) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-ink-3">
         No cycle selected. Go to your dashboard to start assessments.
       </div>
     );
@@ -157,12 +159,11 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
 
   return (
     <div className="py-4">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Manager Assessment</h1>
-          {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Manager assessment"
+        title={<>Assess <em>{employeeName || "report"}.</em></>}
+        sub={employeeName ? `Rate ${employeeName} across performance, growth, values and engagement.` : undefined}
+      />
       <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
 
       <div className="max-w-2xl mx-auto mb-6">
@@ -170,20 +171,17 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       </div>
 
       {resultsSent ? (
-        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600">
+        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-paper-2 border border-line p-4 text-sm text-ink-2">
           Results have been sent to the employee. This assessment is locked and can no longer be edited.
         </div>
       ) : isSubmitted && !editing ? (
-        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-amber-50 border border-amber-200 p-4">
-          <p className="text-sm text-amber-800">
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">
+          <p className="text-sm text-ink-2">
             This assessment has been submitted. You can edit it until results are sent — changes are recorded in the audit log.
           </p>
-          <button
-            onClick={() => setEditing(true)}
-            className="shrink-0 rounded-lg bg-visory px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-          >
+          <Button size="sm" variant="magenta" className="shrink-0" onClick={() => setEditing(true)}>
             Edit assessment
-          </button>
+          </Button>
         </div>
       ) : null}
 
