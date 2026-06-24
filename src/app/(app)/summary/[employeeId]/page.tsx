@@ -253,27 +253,31 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
-        {(employee.jobTitle || employee.team) && (
-          <p className="text-sm text-gray-500 mt-0.5">
-            {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        <div className="flex items-center gap-3 mt-1">
-          <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle)}` : ""}
-          </p>
-          {mgr?.resultsSentAt && (
-            <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
-          )}
-        </div>
-        {canSendResults && (
-          <Button className="mt-3" size="sm" onClick={() => setShowSendConfirm(true)}>
-            Send Results to {employee.name}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Assessment summary"
+        title={
+          <span className="flex items-center gap-3">
+            <Avatar name={employee.name} size="lg" />
+            <em>{employee.name}</em>
+          </span>
+        }
+        sub={
+          <span className="flex flex-wrap items-center gap-3">
+            {(employee.jobTitle || employee.team) && (
+              <span>{[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}</span>
+            )}
+            <span className="mono tnum">{cycle ? formatCyclePeriod(cycle) : ""}</span>
+            {mgr?.resultsSentAt && <Badge variant="success">Results Sent</Badge>}
+          </span>
+        }
+        actions={
+          canSendResults ? (
+            <Button size="sm" variant="magenta" onClick={() => setShowSendConfirm(true)}>
+              Send Results to {employee.name}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Performance & Growth (Talent Density) and Engagement & Values (Cultural
           Momentum) shown as separate scores out of 3 — not a combined /9. */}

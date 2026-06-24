@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/toggle";
+import { ChevronDown } from "lucide-react";
 
 interface MultiSelectProps {
   label: string;
