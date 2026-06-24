@@ -8,6 +8,31 @@ import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import { useCallback } from "react";
+import {
+  Heading1,
+  Heading2,
+  Heading3,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link2,
+  ImageIcon,
+  Table as TableIcon,
+  Quote,
+  Code,
+  Minus,
+  Columns3,
+  Rows3,
+  Trash2,
+  Undo2,
+  Redo2,
+} from "lucide-react";
 
 interface RichTextEditorProps {
   content: string;
@@ -30,10 +55,8 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2 py-1 text-sm rounded transition-colors ${
-        active
-          ? "bg-visory-navy text-white"
-          : "text-visory-navy hover:bg-visory-navy/10"
+      className={`btn btn-ghost btn-sm ${
+        active ? "bg-magenta/10 text-magenta-2" : "text-ink-2"
       }`}
     >
       {children}
@@ -42,7 +65,7 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-6 bg-visory-border mx-1" />;
+  return <div className="w-px h-6 bg-line-2 mx-1" />;
 }
 
 export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
@@ -63,7 +86,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none",
+        class: "tiptap prose max-w-none min-h-[300px] p-4 focus:outline-none",
       },
     },
   });

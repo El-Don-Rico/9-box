@@ -472,27 +472,29 @@ export default function CalibrationPage() {
       {viewMode === "single" && prevPlacedEmployees.length > 0 && filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Quarter-over-Quarter Movement</h2>
-            <p className="text-xs text-gray-500">
-              {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel)} vs.{" "}
-              {prevCycleLabel && formatCyclePeriod(prevCycleLabel)}
-            </p>
+            <div>
+              <h2 className="card-title">Quarter-over-Quarter Movement</h2>
+              <p className="text-xs mono tnum muted mt-0.5">
+                {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel)} vs.{" "}
+                {prevCycleLabel && formatCyclePeriod(prevCycleLabel)}
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">Employee</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Perf</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Growth</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Values</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Engage</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">TD</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">CM</th>
+                  <tr className="dt-head">
+                    <th className="text-left py-2 px-2">Employee</th>
+                    <th className="text-center py-2 px-2">Perf</th>
+                    <th className="text-center py-2 px-2">Growth</th>
+                    <th className="text-center py-2 px-2">Values</th>
+                    <th className="text-center py-2 px-2">Engage</th>
+                    <th className="text-center py-2 px-2">TD</th>
+                    <th className="text-center py-2 px-2">CM</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {filteredEmployees.map((emp) => {
                     const prev = filteredPrev.find((p) => p.id === emp.id);
                     const td = emp.performance * emp.growthReadiness;
@@ -500,34 +502,35 @@ export default function CalibrationPage() {
                     const prevTd = prev ? prev.performance * prev.growthReadiness : null;
                     const prevCm = prev ? prev.valuesAlignment * prev.engagement : null;
                     return (
-                      <tr key={emp.id}>
+                      <tr key={emp.id} className="dt-row">
                         <td className="py-2 px-2">
-                          <Link href={`/team/${emp.id}`} className="text-sm font-medium text-visory-navy hover:underline">
+                          <Link href={`/team/${emp.id}`} className="flex items-center gap-2 text-sm font-medium text-ink hover:text-magenta transition-colors">
+                            <Avatar name={emp.name} size="sm" />
                             {emp.name}
                           </Link>
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.performance}</span>
+                          <span className="text-sm mono tnum">{emp.performance}</span>
                           {prev && <TrendDot current={emp.performance} previous={prev.performance} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.growthReadiness}</span>
+                          <span className="text-sm mono tnum">{emp.growthReadiness}</span>
                           {prev && <TrendDot current={emp.growthReadiness} previous={prev.growthReadiness} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.valuesAlignment}</span>
+                          <span className="text-sm mono tnum">{emp.valuesAlignment}</span>
                           {prev && <TrendDot current={emp.valuesAlignment} previous={prev.valuesAlignment} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.engagement}</span>
+                          <span className="text-sm mono tnum">{emp.engagement}</span>
                           {prev && <TrendDot current={emp.engagement} previous={prev.engagement} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className={`text-sm font-bold ${td >= 6 ? "text-green-700" : "text-orange-600"}`}>{td}</span>
+                          <span className={`text-sm mono tnum font-semibold ${td >= 6 ? "text-success" : "text-magenta"}`}>{td}</span>
                           {prevTd !== null && <TrendDot current={td} previous={prevTd} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className={`text-sm font-bold ${cm >= 6 ? "text-green-700" : "text-orange-600"}`}>{cm}</span>
+                          <span className={`text-sm mono tnum font-semibold ${cm >= 6 ? "text-success" : "text-magenta"}`}>{cm}</span>
                           {prevCm !== null && <TrendDot current={cm} previous={prevCm} />}
                         </td>
                       </tr>
@@ -544,22 +547,23 @@ export default function CalibrationPage() {
       {filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Prescribed Actions</h2>
+            <h2 className="card-title">Prescribed Actions</h2>
           </CardHeader>
           <CardContent>
-            <div className="divide-y divide-gray-100">
+            <div>
               {filteredEmployees.map((emp) => {
                 const label = activeGrid === "box1" ? emp.box1Label : emp.box2Label;
                 const action = activeGrid === "box1" ? getBox1Action(label) : getBox2Action(label);
                 return (
-                  <div key={emp.id} className="py-3">
+                  <div key={emp.id} className="py-3 border-b border-line last:border-b-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Link href={`/team/${emp.id}`} className="text-sm font-medium text-visory-navy hover:text-visory underline-offset-2 hover:underline transition-colors">
+                      <Link href={`/team/${emp.id}`} className="flex items-center gap-2 text-sm font-medium text-ink hover:text-magenta underline-offset-2 hover:underline transition-colors">
+                        <Avatar name={emp.name} size="sm" />
                         {emp.name}
                       </Link>
-                      <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{label}</Badge>
+                      <Badge variant="slate">{label}</Badge>
                     </div>
-                    <p className="text-sm text-gray-600">{action}</p>
+                    <p className="text-sm muted">{action}</p>
                   </div>
                 );
               })}
@@ -583,14 +587,14 @@ function InsightCard({ label, value, color, prev, current, showTrend, suffix = "
   const diff = prev !== undefined ? current - prev : 0;
   const hasTrend = showTrend && prev !== undefined && Math.abs(diff) >= 0.05;
   return (
-    <div className="text-center p-3 rounded-lg bg-visory-grey">
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    <div className="text-center p-3 rounded-md bg-paper-2 border border-line">
+      <p className={`text-xl mono tnum ${color}`}>{value}</p>
       {hasTrend && (
-        <span className={`text-xs ${diff > 0 ? "text-green-600" : "text-red-500"}`}>
+        <span className={`text-xs mono tnum ${diff > 0 ? "text-success" : "text-magenta"}`}>
           {diff > 0 ? "↑" : "↓"} {Math.abs(diff).toFixed(1)}{suffix}
         </span>
       )}
-      <p className="text-xs text-gray-600 mt-1">{label}</p>
+      <p className="eyebrow mt-1">{label}</p>
     </div>
   );
 }
@@ -599,7 +603,7 @@ function TrendDot({ current, previous }: { current: number; previous: number }) 
   const diff = current - previous;
   if (diff === 0) return null;
   return (
-    <span className={`text-xs ml-0.5 ${diff > 0 ? "text-green-600" : "text-red-500"}`}>
+    <span className={`text-xs ml-0.5 ${diff > 0 ? "text-success" : "text-magenta"}`}>
       {diff > 0 ? "↑" : "↓"}
     </span>
   );

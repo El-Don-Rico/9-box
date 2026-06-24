@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/toggle";
 import type { PerformancePlanData, PerformanceMeetingData, PerformanceActionData } from "@/types";
 
 interface ActionRow { title: string; dueDate: string }
+
+const FIELD =
+  "w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-magenta focus:ring-2 focus:ring-magenta/20 focus:outline-none";
 
 function MeetingActions({ meeting, onChange }: { meeting: PerformanceMeetingData; onChange: (m: PerformanceMeetingData) => void }) {
   const [newAction, setNewAction] = useState("");
@@ -38,13 +42,13 @@ function MeetingActions({ meeting, onChange }: { meeting: PerformanceMeetingData
   }
 
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-2 space-y-1.5">
       {(meeting.actions || []).map((a) => (
-        <label key={a.id} className="flex items-center gap-2 text-sm cursor-pointer">
-          <input type="checkbox" checked={a.done} onChange={() => toggle(a)} className="rounded border-gray-300 text-visory focus:ring-visory" />
-          <span className={a.done ? "line-through text-gray-400" : "text-visory-navy"}>{a.title}</span>
-          {a.dueDate && <span className="text-xs text-gray-400">· {new Date(a.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
-        </label>
+        <div key={a.id} className="flex items-center gap-2 text-sm">
+          <Checkbox checked={a.done} onChange={() => toggle(a)} />
+          <span className={a.done ? "line-through muted-2" : "text-ink"}>{a.title}</span>
+          {a.dueDate && <span className="mono tnum text-xs muted-2">· {new Date(a.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+        </div>
       ))}
       <div className="flex gap-2 pt-1">
         <input
@@ -52,7 +56,7 @@ function MeetingActions({ meeting, onChange }: { meeting: PerformanceMeetingData
           onChange={(e) => setNewAction(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") add(); }}
           placeholder="Add an action…"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+          className={`flex-1 ${FIELD} py-1.5`}
         />
         <Button size="sm" variant="secondary" onClick={add} disabled={!newAction.trim()}>Add</Button>
       </div>
@@ -134,49 +138,47 @@ export function PerformancePlanCard({ employeeId, employeeName }: { employeeId: 
   if (loading) return null;
 
   return (
-    <Card className="border-purple-200">
+    <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Performance Improvement Plan</h2>
-            <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">Manager only</Badge>
-          </div>
-          {plan ? (
-            <Button size="sm" variant="ghost" onClick={closePlan}>Close plan</Button>
-          ) : (
-            <Button size="sm" onClick={startPlan} disabled={starting}>
-              {starting ? "Starting…" : "Start PIP"}
-            </Button>
-          )}
+        <div className="flex items-center gap-2">
+          <CardTitle>Performance Improvement Plan</CardTitle>
+          <Badge variant="navy">Manager only</Badge>
         </div>
+        {plan ? (
+          <Button size="sm" variant="ghost" onClick={closePlan}>Close plan</Button>
+        ) : (
+          <Button size="sm" onClick={startPlan} disabled={starting}>
+            {starting ? "Starting…" : "Start PIP"}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {!plan ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm muted">
             No active plan for {employeeName}. Starting a PIP creates a manager-only task and a space to log performance management meetings, notes, and actions — not visible to the employee.
           </p>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">Performance management meetings</p>
+              <p className="eyebrow">Performance management meetings</p>
               {!showForm && <Button size="sm" variant="secondary" onClick={() => setShowForm(true)}>Add meeting</Button>}
             </div>
 
             {showForm && (
-              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <div className="rounded-lg border border-line p-4 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     placeholder="Meeting title (e.g. Week 1 check-in)"
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                    className={FIELD}
                   />
                   <input
                     type="date"
                     value={form.meetingDate}
                     onChange={(e) => setForm((f) => ({ ...f, meetingDate: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                    className={`mono tnum ${FIELD}`}
                   />
                 </div>
                 <textarea
@@ -184,7 +186,7 @@ export function PerformancePlanCard({ employeeId, employeeName }: { employeeId: 
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   placeholder="Notes…"
                   rows={3}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className={FIELD}
                 />
                 <div className="space-y-2">
                   {form.actions.map((row, i) => (
@@ -194,13 +196,13 @@ export function PerformancePlanCard({ employeeId, employeeName }: { employeeId: 
                         value={row.title}
                         onChange={(e) => setForm((f) => ({ ...f, actions: f.actions.map((a, idx) => idx === i ? { ...a, title: e.target.value } : a) }))}
                         placeholder="Action…"
-                        className="sm:col-span-8 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                        className={`sm:col-span-8 ${FIELD}`}
                       />
                       <input
                         type="date"
                         value={row.dueDate}
                         onChange={(e) => setForm((f) => ({ ...f, actions: f.actions.map((a, idx) => idx === i ? { ...a, dueDate: e.target.value } : a) }))}
-                        className="sm:col-span-4 rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                        className={`mono tnum sm:col-span-4 ${FIELD}`}
                       />
                     </div>
                   ))}
@@ -218,20 +220,20 @@ export function PerformancePlanCard({ employeeId, employeeName }: { employeeId: 
             )}
 
             {(plan.meetings || []).length === 0 ? (
-              <p className="text-sm text-gray-400">No performance meetings logged yet.</p>
+              <p className="text-sm muted-2">No performance meetings logged yet.</p>
             ) : (
               <div className="space-y-3">
                 {(plan.meetings || []).map((m) => (
-                  <div key={m.id} className="rounded-lg border border-gray-200 p-3">
+                  <div key={m.id} className="rounded-lg border border-line p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-visory-navy">{m.title}</p>
+                      <p className="text-sm font-medium text-ink">{m.title}</p>
                       {m.meetingDate && (
-                        <span className="text-xs text-gray-400">
+                        <span className="mono tnum text-xs muted-2">
                           {new Date(m.meetingDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </span>
                       )}
                     </div>
-                    {m.notes && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{m.notes}</p>}
+                    {m.notes && <p className="text-sm muted mt-1 whitespace-pre-wrap">{m.notes}</p>}
                     <MeetingActions meeting={m} onChange={updateMeeting} />
                   </div>
                 ))}

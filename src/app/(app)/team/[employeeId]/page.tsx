@@ -522,25 +522,28 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
       {/* Performance History */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Performance History</h2>
+          <div>
+            <Eyebrow className="mb-1">Assessment record</Eyebrow>
+            <h2 className="card-title">Performance History</h2>
+          </div>
         </CardHeader>
         <CardContent>
           {assessments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">Period</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Performance</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Growth</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Values</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Engagement</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">TD</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">CM</th>
+                  <tr className="dt-head">
+                    <th className="text-left py-2 px-2 eyebrow">Period</th>
+                    <th className="text-center py-2 px-2 eyebrow">Performance</th>
+                    <th className="text-center py-2 px-2 eyebrow">Growth</th>
+                    <th className="text-center py-2 px-2 eyebrow">Values</th>
+                    <th className="text-center py-2 px-2 eyebrow">Engagement</th>
+                    <th className="text-center py-2 px-2 eyebrow">TD</th>
+                    <th className="text-center py-2 px-2 eyebrow">CM</th>
                     <th className="text-right py-2 px-2"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {assessments.map((a) => {
                     const va = a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy
                       ? getValuesAlignment(a.valCustomerFirst, a.valStepIntoArena, a.valFlockToProblems, a.valGiveEnergy)
@@ -549,39 +552,39 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     const cm = va && a.engagement ? va * a.engagement : null;
 
                     return (
-                      <tr key={a.id}>
-                        <td className="py-2 px-2 font-medium text-visory-navy">
+                      <tr key={a.id} className="dt-row">
+                        <td className="py-2 px-2 font-medium text-ink mono tnum">
                           {formatCyclePeriod(a.cycle)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (
-                            <Badge className={getRatingColor(a.performance)}>{getRatingLabel(a.performance)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.performance)}>{getRatingLabel(a.performance)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.growthReadiness ? (
-                            <Badge className={getRatingColor(a.growthReadiness)}>{getGrowthReadinessLabel(a.growthReadiness)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.growthReadiness)}>{getGrowthReadinessLabel(a.growthReadiness)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {va ? (
-                            <Badge className={getRatingColor(va)}>{getRatingLabel(va)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(va)}>{getRatingLabel(va)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.engagement ? (
-                            <Badge className={getRatingColor(a.engagement)}>{getRatingLabel(a.engagement)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.engagement)}>{getRatingLabel(a.engagement)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {td !== null ? (
-                            <span className={`text-sm font-bold ${td >= 6 ? "text-green-700" : "text-orange-600"}`}>{td}/9</span>
-                          ) : <span className="text-gray-400">-</span>}
+                            <span className={`mono tnum text-sm ${td >= 6 ? "text-success" : "text-magenta"}`}>{td}/9</span>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {cm !== null ? (
-                            <span className={`text-sm font-bold ${cm >= 6 ? "text-green-700" : "text-orange-600"}`}>{cm}/9</span>
-                          ) : <span className="text-gray-400">-</span>}
+                            <span className={`mono tnum text-sm ${cm >= 6 ? "text-success" : "text-magenta"}`}>{cm}/9</span>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-right">
                           <Button
@@ -599,7 +602,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">No assessment history yet.</p>
+            <p className="text-sm muted text-center py-4">No assessment history yet.</p>
           )}
         </CardContent>
       </Card>

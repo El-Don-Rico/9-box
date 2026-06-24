@@ -314,16 +314,16 @@ export default function MyResultsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {box1Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox1Color(box1Label)}`}>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
-                      <p className="text-base font-bold mt-1">{box1Label}</p>
-                      <p className="text-sm text-visory-navy mt-1">{getBox1Action(box1Label)}</p>
+                      <p className="eyebrow">Talent Density</p>
+                      <p className="serif text-base mt-1">{box1Label}</p>
+                      <p className="text-sm mt-1">{getBox1Action(box1Label)}</p>
                     </div>
                   )}
                   {box2Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox2Color(box2Label)}`}>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
-                      <p className="text-base font-bold mt-1">{box2Label}</p>
-                      <p className="text-sm text-visory-navy mt-1">{getBox2Action(box2Label)}</p>
+                      <p className="eyebrow">Cultural Momentum</p>
+                      <p className="serif text-base mt-1">{box2Label}</p>
+                      <p className="text-sm mt-1">{getBox2Action(box2Label)}</p>
                     </div>
                   )}
                 </div>
@@ -331,28 +331,28 @@ export default function MyResultsPage() {
 
               {(self?.submittedAt || showManager) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                  <h3 className="eyebrow mb-3">
                     {showManager ? "Assessment Comparison" : "Your Ratings"}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">Click a dimension to expand and compare notes</p>
+                  <p className="text-xs text-ink-3 mb-2">Click a dimension to expand and compare notes</p>
                   <DimensionComparison sections={sections} showManagerColumn={showManager} />
                 </div>
               )}
 
               {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Additional Context</h3>
+                  <h3 className="eyebrow mb-3">Additional Context</h3>
                   <div className="space-y-3">
                     {self.learning && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
-                        <p className="text-sm text-visory-navy">{self.learning}</p>
+                        <p className="eyebrow mb-1">Learning</p>
+                        <p className="text-sm text-ink-2">{self.learning}</p>
                       </div>
                     )}
                     {self.goalsNextMonth && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
-                        <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
+                        <p className="eyebrow mb-1">Goals for Next Quarter</p>
+                        <p className="text-sm text-ink-2">{self.goalsNextMonth}</p>
                       </div>
                     )}
                   </div>
@@ -361,11 +361,11 @@ export default function MyResultsPage() {
 
               {showManager && mgr?.notes && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                  <h3 className="eyebrow mb-3">
                     Manager Notes
-                    <span className="text-xs font-normal text-gray-500 ml-2">by {mgr.manager.name}</span>
+                    <span className="text-xs font-normal text-ink-3 ml-2 normal-case tracking-normal">by {mgr.manager.name}</span>
                   </h3>
-                  <p className="text-sm text-visory-navy">{mgr.notes}</p>
+                  <p className="text-sm text-ink-2">{mgr.notes}</p>
                 </div>
               )}
             </CardContent>

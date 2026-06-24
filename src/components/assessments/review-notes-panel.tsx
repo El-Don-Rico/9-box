@@ -90,11 +90,12 @@ export function ReviewNotesPanel({
   if (loading) return null;
 
   return (
-    <div className="rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+    <div className="rounded-lg border border-line bg-paper">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-line">
         <div>
-          <p className="text-sm font-semibold text-visory-navy">Review Notes &amp; Meeting Records</p>
-          <p className="text-xs text-gray-500">Notes, meeting links, transcripts or summaries</p>
+          <div className="eyebrow">Records</div>
+          <p className="text-sm font-medium text-ink">Review Notes &amp; Meeting Records</p>
+          <p className="text-xs text-ink-3">Notes, meeting links, transcripts or summaries</p>
         </div>
         {!showForm && (
           <Button size="sm" variant="secondary" onClick={() => setShowForm(true)}>
@@ -105,7 +106,7 @@ export function ReviewNotesPanel({
 
       <div className="p-4 space-y-3">
         {showForm && (
-          <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+          <div className="rounded-lg border border-line p-3 space-y-2">
             <div className="flex flex-wrap gap-2">
               {(Object.keys(KIND_LABELS) as Kind[]).map((k) => (
                 <button
@@ -114,8 +115,8 @@ export function ReviewNotesPanel({
                   onClick={() => setKind(k)}
                   className={`rounded-full border px-3 py-1 text-xs ${
                     kind === k
-                      ? "border-visory bg-visory-light text-visory-dark font-medium"
-                      : "border-gray-300 text-gray-600 hover:border-gray-400"
+                      ? "border-magenta bg-magenta-3 text-magenta-2 font-medium"
+                      : "border-line-2 text-ink-2 hover:border-ink-3"
                   }`}
                 >
                   {KIND_LABELS[k]}
@@ -127,7 +128,7 @@ export function ReviewNotesPanel({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title (optional)"
-              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
             />
             {(kind === "MEETING_LINK" || kind === "SUMMARY") && (
               <input
@@ -135,7 +136,7 @@ export function ReviewNotesPanel({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="Link to meeting notes / recording (optional)"
-                className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
               />
             )}
             <textarea
@@ -147,9 +148,9 @@ export function ReviewNotesPanel({
                   : "Write a note..."
               }
               rows={kind === "TRANSCRIPT" ? 6 : 3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
             />
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-magenta">{error}</p>}
             <div className="flex gap-2">
               <Button size="sm" onClick={save} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
@@ -162,29 +163,29 @@ export function ReviewNotesPanel({
         )}
 
         {notes.length === 0 && !showForm ? (
-          <p className="text-sm text-gray-400 text-center py-2">No notes yet.</p>
+          <p className="text-sm text-ink-3 text-center py-2">No notes yet.</p>
         ) : (
           notes.map((n) => (
-            <div key={n.id} className="rounded-lg border border-gray-200 p-3">
+            <div key={n.id} className="rounded-lg border border-line p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-xs">{KIND_LABELS[n.kind]}</Badge>
-                  {n.title && <span className="text-sm font-medium text-visory-navy">{n.title}</span>}
+                  <Badge variant="slate">{KIND_LABELS[n.kind]}</Badge>
+                  {n.title && <span className="text-sm font-medium text-ink">{n.title}</span>}
                 </div>
                 {currentUserId === n.author.id && (
-                  <button onClick={() => remove(n.id)} className="text-xs text-gray-400 hover:text-red-600 shrink-0">
+                  <button onClick={() => remove(n.id)} className="text-xs text-ink-3 hover:text-magenta shrink-0">
                     Delete
                   </button>
                 )}
               </div>
               {n.url && (
-                <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-visory-link hover:underline break-all">
+                <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-navy hover:underline break-all">
                   {n.url}
                 </a>
               )}
-              {n.body && <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{n.body}</p>}
-              <p className="mt-2 text-xs text-gray-400">
-                {n.author.name} · {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {n.body && <p className="mt-1 text-sm text-ink-2 whitespace-pre-wrap">{n.body}</p>}
+              <p className="mt-2 text-xs text-ink-3">
+                {n.author.name} · <span className="mono tnum">{new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
               </p>
             </div>
           ))

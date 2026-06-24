@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -13,8 +15,6 @@ import {
   getValuesAlignment,
   getBox1Action,
   getBox2Action,
-  getBox1Color,
-  getBox2Color,
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
