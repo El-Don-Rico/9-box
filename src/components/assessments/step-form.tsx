@@ -8,9 +8,16 @@ export interface StepConfig {
   id: string;
   title: string;
   description?: string;
-  render: (
+  // Single-field step: receives this step's value and a setter for its own id.
+  render?: (
     value: unknown,
     onChange: (val: unknown) => void
+  ) => React.ReactNode;
+  // Multi-field step (e.g. several ratings + one comment in a single step):
+  // receives the whole values map and a (key, value) setter.
+  renderMulti?: (
+    values: Record<string, unknown>,
+    onChange: (key: string, val: unknown) => void
   ) => React.ReactNode;
 }
 
@@ -63,7 +70,9 @@ export function StepForm({
           <p className="text-sm text-gray-500 mb-6">{step.description}</p>
         )}
         <div className="mt-4">
-          {step.render(values[step.id], (val) => onChange(step.id, val))}
+          {step.renderMulti
+            ? step.renderMulti(values, onChange)
+            : step.render?.(values[step.id], (val) => onChange(step.id, val))}
         </div>
       </div>
 
@@ -163,5 +172,57 @@ export function TextStep({ value, onChange, placeholder, rows = 4 }: TextStepPro
       rows={rows}
       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory transition-colors"
     />
+  );
+}
+
+interface MultiRatingItem {
+  id: string;
+  label: string;
+  prompts?: string[];
+}
+
+interface MultiRatingStepProps {
+  items: MultiRatingItem[];
+  values: Record<string, unknown>;
+  onChange: (key: string, val: unknown) => void;
+  commentId: string;
+  commentLabel?: string;
+  commentPlaceholder?: string;
+  labels?: Record<number, string>;
+}
+
+// Renders several ratings (one per value) plus a single shared comment box,
+// all within one step.
+export function MultiRatingStep({
+  items,
+  values,
+  onChange,
+  commentId,
+  commentLabel = "Comments",
+  commentPlaceholder,
+  labels,
+}: MultiRatingStepProps) {
+  return (
+    <div className="space-y-8">
+      {items.map((item) => (
+        <div key={item.id}>
+          <p className="text-base font-semibold text-visory-navy mb-3">{item.label}</p>
+          <RatingStep
+            value={(values[item.id] as number | null) ?? null}
+            onChange={(v) => onChange(item.id, v)}
+            labels={labels}
+            prompts={item.prompts}
+          />
+        </div>
+      ))}
+      <div>
+        <p className="text-base font-semibold text-visory-navy mb-3">{commentLabel}</p>
+        <TextStep
+          value={(values[commentId] as string) || ""}
+          onChange={(v) => onChange(commentId, v)}
+          placeholder={commentPlaceholder}
+        />
+      </div>
+    </div>
   );
 }

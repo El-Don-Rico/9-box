@@ -2,20 +2,25 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { useSession } from "next-auth/react";
+import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const cycleId = searchParams.get("cycleId");
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resultsSent, setResultsSent] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
 
   useEffect(() => {
@@ -27,6 +32,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           const a = data[0];
           setAssessmentId(a.id);
           setIsSubmitted(!!a.submittedAt);
+          setResultsSent(!!a.resultsSentAt);
           setEmployeeName(a.employee?.name || "");
           setValues({
             performance: a.performance,
@@ -66,6 +72,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
+        setEditing(false);
         if (data.bothComplete) {
           router.push(`/summary/${employeeId}?cycleId=${cycleId}`);
         }
@@ -102,34 +109,24 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe growth indicators, learning agility..." />,
     },
     {
-      id: "valCustomerFirst",
-      title: "Customer First",
-      description: "How well does this employee embody 'Customer First'?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.manager} />,
-    },
-    {
-      id: "valStepIntoArena",
-      title: "Step Into the Arena",
-      description: "How well does this employee take initiative and show courage?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.manager} />,
-    },
-    {
-      id: "valFlockToProblems",
-      title: "Flock to Problems",
-      description: "How well does this employee seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.manager} />,
-    },
-    {
-      id: "valGiveEnergy",
-      title: "Give Energy",
-      description: "How well does this employee energise and uplift the team?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.manager} />,
-    },
-    {
-      id: "valuesEvidence",
-      title: "Values Evidence",
-      description: "Provide examples of values-aligned behaviour.",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Specific examples..." />,
+      id: "values",
+      title: "Values Alignment",
+      description: "Rate this employee against each value, then add overall comments for the section.",
+      renderMulti: (vals, onChange) => (
+        <MultiRatingStep
+          values={vals}
+          onChange={onChange}
+          commentId="valuesEvidence"
+          commentLabel="Values Evidence"
+          commentPlaceholder="Examples of values-aligned behaviour..."
+          items={[
+            { id: "valCustomerFirst", label: "Customer First", prompts: assessmentPrompts.valCustomerFirst?.manager },
+            { id: "valStepIntoArena", label: "Step Into the Arena", prompts: assessmentPrompts.valStepIntoArena?.manager },
+            { id: "valFlockToProblems", label: "Flock to Problems", prompts: assessmentPrompts.valFlockToProblems?.manager },
+            { id: "valGiveEnergy", label: "Give Energy", prompts: assessmentPrompts.valGiveEnergy?.manager },
+          ]}
+        />
+      ),
     },
     {
       id: "engagement",
@@ -167,7 +164,30 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
           {employeeName && <p className="text-sm text-gray-600 mt-1">Assessing: {employeeName}</p>}
         </div>
       </div>
-      <GoalsPanel employeeId={employeeId} />
+      <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
+
+      <div className="max-w-2xl mx-auto mb-6">
+        <ReviewNotesPanel employeeId={employeeId} cycleId={cycleId} currentUserId={session?.user?.id} />
+      </div>
+
+      {resultsSent ? (
+        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600">
+          Results have been sent to the employee. This assessment is locked and can no longer be edited.
+        </div>
+      ) : isSubmitted && !editing ? (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-amber-50 border border-amber-200 p-4">
+          <p className="text-sm text-amber-800">
+            This assessment has been submitted. You can edit it until results are sent — changes are recorded in the audit log.
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="shrink-0 rounded-lg bg-visory px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Edit assessment
+          </button>
+        </div>
+      ) : null}
+
       <StepForm
         steps={steps}
         values={values}
@@ -176,7 +196,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         onSubmit={() => save(true)}
         saving={saving}
         submitting={submitting}
-        isSubmitted={isSubmitted}
+        isSubmitted={resultsSent || (isSubmitted && !editing)}
       />
     </div>
   );

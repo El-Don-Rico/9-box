@@ -47,7 +47,7 @@ export async function GET(
     const assessments = await prisma.managerAssessment.findMany({
       where: { employeeId, submittedAt: { not: null } },
       include: { cycle: true, meeting: { select: { id: true } } },
-      orderBy: [{ cycle: { year: "desc" } }, { cycle: { month: "desc" } }],
+      orderBy: [{ cycle: { year: "desc" } }, { cycle: { quarter: "desc" } }, { cycle: { month: "desc" } }],
     });
 
     return NextResponse.json({ employee, assessments });

@@ -54,7 +54,7 @@ export default function MeetingPage({ params }: { params: Promise<{ assessmentId
         <div>
           <h1 className="text-2xl font-bold text-visory-navy">1:1 Meeting — {assessment.employee.name}</h1>
           <p className="text-sm text-gray-600 mt-1">
-            {formatCyclePeriod(assessment.cycle.month, assessment.cycle.year)}
+            {formatCyclePeriod(assessment.cycle)}
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => router.push(`/team/${assessment.employee.id}`)}>

@@ -37,7 +37,7 @@ interface AssessmentHistory {
   resultsSentAt: string | null;
   meetingStatus: string;
   meeting: { id: string } | null;
-  cycle: { id: string; month: number; year: number };
+  cycle: { id: string; month: number | null; quarter: number | null; year: number };
 }
 
 interface GoalData {
@@ -83,6 +83,13 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [savingMetric, setSavingMetric] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function reportFailure(res: Response, fallback: string) {
+    const data = await res.json().catch(() => ({}));
+    const base = data.error || `${fallback} (error ${res.status})`;
+    setActionError(data.detail ? `${base} — ${data.detail}` : base);
+  }
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
@@ -117,6 +124,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   async function handleAddGoal() {
     if (!newGoalTitle.trim()) return;
     setSavingGoal(true);
+    setActionError(null);
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
@@ -135,13 +143,18 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewGoalDesc("");
         setNewGoalDue("");
         setShowGoalForm(false);
+      } else {
+        await reportFailure(res, "Failed to save goal");
       }
+    } catch {
+      setActionError("Network error while saving goal");
     } finally {
       setSavingGoal(false);
     }
   }
 
   async function handleGoalStatus(goalId: string, status: string) {
+    setActionError(null);
     const res = await fetch("/api/goals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -150,12 +163,15 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     if (res.ok) {
       const updated = await res.json();
       setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+    } else {
+      await reportFailure(res, "Failed to update goal");
     }
   }
 
   async function handleAddMetric() {
     if (!newMetricName.trim() || !newMetricTarget.trim()) return;
     setSavingMetric(true);
+    setActionError(null);
     try {
       const res = await fetch("/api/key-metrics", {
         method: "POST",
@@ -176,7 +192,11 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewMetricUnit("");
         setNewMetricNotes("");
         setShowMetricForm(false);
+      } else {
+        await reportFailure(res, "Failed to save metric");
       }
+    } catch {
+      setActionError("Network error while saving metric");
     } finally {
       setSavingMetric(false);
     }
@@ -213,6 +233,12 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 shrink-0">✕</button>
+        </div>
+      )}
       {/* Profile Header */}
       <div>
         <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
@@ -231,7 +257,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           <div>
             <p className="text-sm font-semibold text-visory-navy">1:1 meeting scheduled</p>
             <p className="text-sm text-gray-600">
-              {formatCyclePeriod(scheduledMeeting.cycle.month, scheduledMeeting.cycle.year)} cycle
+              {formatCyclePeriod(scheduledMeeting.cycle)} cycle
             </p>
           </div>
           <Button onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
@@ -517,7 +543,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     return (
                       <tr key={a.id}>
                         <td className="py-2 px-2 font-medium text-visory-navy">
-                          {formatCyclePeriod(a.cycle.month, a.cycle.year)}
+                          {formatCyclePeriod(a.cycle)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (

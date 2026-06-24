@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
 import { KanbanBoard } from "@/components/meetings/kanban-board";
 import type { CycleData, TeamMemberStatus, TaskData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 
 export default function DashboardPage() {
@@ -24,7 +24,8 @@ export default function DashboardPage() {
 
 interface EmployeeSummary {
   cycleId: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   selfPerformance: number | null;
   mgrPerformance: number | null;
@@ -66,6 +67,7 @@ function EmployeeDashboard() {
               summaries.push({
                 cycleId: cycle.id,
                 month: cycle.month,
+                quarter: cycle.quarter,
                 year: cycle.year,
                 selfPerformance: self?.performance ?? null,
                 mgrPerformance: mgr?.performance ?? null,
@@ -80,8 +82,8 @@ function EmployeeDashboard() {
             } catch { /* skip */ }
           })
         );
-        // Sort by year desc, month desc
-        summaries.sort((a, b) => b.year - a.year || b.month - a.month);
+        // Sort most recent first (quarter/legacy-month aware)
+        summaries.sort(comparePeriodDesc);
         setCycleSummaries(summaries);
         setLoading(false);
       })
@@ -122,7 +124,7 @@ function EmployeeDashboard() {
         <div className="rounded-lg border border-visory bg-visory-light/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-visory-navy">
-              The {formatCyclePeriod(openCycle.month, openCycle.year)} cycle is open
+              The {formatCyclePeriod(openCycle)} cycle is open
             </p>
             <p className="text-sm text-visory-navy/80">Complete your self-assessment to get started.</p>
           </div>
@@ -179,7 +181,7 @@ function EmployeeDashboard() {
             </div>
             {completedCycles.length > 1 && (
               <p className="text-xs text-gray-400 mt-3 text-center">
-                Latest: {formatCyclePeriod(latestWithResults.month, latestWithResults.year)} · Averages across {completedCycles.length} cycles
+                Latest: {formatCyclePeriod(latestWithResults)} · Averages across {completedCycles.length} cycles
               </p>
             )}
           </CardContent>
@@ -195,7 +197,7 @@ function EmployeeDashboard() {
             <Card key={summary.cycleId}>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">{formatCyclePeriod(summary.month, summary.year)}</h2>
+                  <h2 className="text-lg font-semibold">{formatCyclePeriod(summary)}</h2>
                   {isOpen && (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
                   )}
@@ -249,7 +251,7 @@ function EmployeeDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{formatCyclePeriod(openCycle.month, openCycle.year)}</h2>
+              <h2 className="text-lg font-semibold">{formatCyclePeriod(openCycle)}</h2>
               <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
             </div>
           </CardHeader>
@@ -364,7 +366,7 @@ function ManagerDashboard() {
         <h1 className="text-2xl font-bold text-visory-navy">Dashboard</h1>
         {cycle && (
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-gray-600">{formatCyclePeriod(cycle.month, cycle.year)}</p>
+            <p className="text-sm text-gray-600">{formatCyclePeriod(cycle)}</p>
             <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
               {cycle.status === "OPEN" ? "Open" : "Closed"}
             </Badge>
@@ -378,7 +380,7 @@ function ManagerDashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/cycles")}>
             <CardContent className="py-4">
               <h3 className="text-sm font-semibold text-visory-navy">Assessment Cycles</h3>
-              <p className="text-xs text-gray-600 mt-1">Open, close, and manage monthly cycles</p>
+              <p className="text-xs text-gray-600 mt-1">Open, close, and manage quarterly cycles</p>
             </CardContent>
           </Card>
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/users")}>

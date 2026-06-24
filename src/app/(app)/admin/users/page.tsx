@@ -52,6 +52,40 @@ export default function AdminUsersPage() {
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [copiedJoinLink, setCopiedJoinLink] = useState(false);
   const [pasteData, setPasteData] = useState("");
+  const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSetFor, setPasswordSetFor] = useState<string | null>(null);
+
+  async function setUserPassword(userId: string) {
+    setPasswordError("");
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (res.ok) {
+        setPasswordUserId(null);
+        setNewPassword("");
+        setPasswordSetFor(userId);
+        setTimeout(() => setPasswordSetFor(null), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setPasswordError(data.error || "Failed to set password");
+      }
+    } catch {
+      setPasswordError("Network error while setting password");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -479,6 +513,17 @@ export default function AdminUsersPage() {
                   >
                     {user.isActive ? "Deactivate" : "Activate"}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setPasswordUserId(passwordUserId === user.id ? null : user.id);
+                      setNewPassword("");
+                      setPasswordError("");
+                    }}
+                  >
+                    Set password
+                  </Button>
                   {user.id !== session?.user?.id && (
                     <Button
                       size="sm"
@@ -489,6 +534,34 @@ export default function AdminUsersPage() {
                     </Button>
                   )}
                 </div>
+                {passwordSetFor === user.id && (
+                  <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-2 text-sm text-green-700">
+                    Password updated for {user.name}.
+                  </div>
+                )}
+                {passwordUserId === user.id && (
+                  <div className="mt-2 rounded-lg bg-gray-50 border border-gray-200 p-3 space-y-2">
+                    <p className="text-sm text-gray-600">
+                      Set a new password for <strong>{user.name}</strong>. Share it securely; they can change it later.
+                    </p>
+                    {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+                    <div className="flex gap-2">
+                      <Input
+                        id={`pw-${user.id}`}
+                        type="text"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="New password (min 8 characters)"
+                      />
+                      <Button size="sm" onClick={() => setUserPassword(user.id)} disabled={savingPassword}>
+                        {savingPassword ? "Saving..." : "Save"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setPasswordUserId(null); setNewPassword(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {confirmDeleteId === user.id && (
                   <div className="mt-2 rounded-lg bg-red-50 border border-red-200 p-3 flex items-center justify-between gap-3">
                     <p className="text-sm text-red-700">

@@ -17,10 +17,12 @@ import {
   getBox2Color,
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
-  cycle: { id: string; month: number; year: number; status: string } | null;
+  cycle: { id: string; month: number | null; quarter: number | null; year: number; status: string } | null;
   selfAssessment: {
     performance: number | null;
     performanceJustification: string | null;
@@ -57,6 +59,62 @@ interface SummaryData {
     meetingStatus: string;
     manager: { id: string; name: string };
   } | null;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  summary: string | null;
+  createdAt: string;
+  actor: { id: string; name: string };
+}
+
+function AuditTrail({ assessmentId }: { assessmentId: string }) {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  useEffect(() => {
+    fetch(`/api/audit?entityType=ManagerAssessment&entityId=${assessmentId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setLogs(Array.isArray(d) ? d : []))
+      .catch(() => setLogs([]));
+  }, [assessmentId]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Audit Trail</h2>
+        <p className="text-xs text-gray-500">Changes to this assessment</p>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          {logs.map((log) => (
+            <li key={log.id} className="text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+              </span>
+              <span>
+                <span className="font-medium text-visory-navy">{log.actor.name}</span>
+                {" — "}
+                {log.summary || log.action}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScoreOutOf3({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className={`text-3xl font-bold ${value >= 2 ? "text-green-700" : "text-orange-600"}`}>
+        {value}<span className="text-base font-medium text-gray-400">/3</span>
+      </p>
+    </div>
+  );
 }
 
 export default function SummaryPage({ params }: { params: Promise<{ employeeId: string }> }) {
@@ -202,7 +260,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
         <div className="flex items-center gap-3 mt-1">
           <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
+            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle)}` : ""}
           </p>
           {mgr?.resultsSentAt && (
             <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
@@ -215,28 +273,29 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
       </div>
 
-      {/* Talent Density & Cultural Momentum Scores */}
+      {/* Performance & Growth (Talent Density) and Engagement & Values (Cultural
+          Momentum) shown as separate scores out of 3 — not a combined /9. */}
       {(mgr?.performance && mgr?.growthReadiness) || (mgrValuesAlignment && mgr?.engagement) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mgr?.performance && mgr?.growthReadiness && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Talent Density</p>
-                <p className={`text-3xl font-bold ${mgr.performance * mgr.growthReadiness >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgr.performance * mgr.growthReadiness}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Talent Density</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Performance" value={mgr.performance} />
+                  <ScoreOutOf3 label="Growth Readiness" value={mgr.growthReadiness} />
+                </div>
               </CardContent>
             </Card>
           )}
           {mgrValuesAlignment && mgr?.engagement && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Cultural Momentum</p>
-                <p className={`text-3xl font-bold ${mgrValuesAlignment * mgr.engagement >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgrValuesAlignment * mgr.engagement}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Cultural Momentum</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Engagement" value={mgr.engagement} />
+                  <ScoreOutOf3 label="Values Alignment" value={mgrValuesAlignment} />
+                </div>
               </CardContent>
             </Card>
           )}
@@ -274,6 +333,18 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </CardContent>
       </Card>
 
+      {/* Goals & metrics reviewed this cycle (read-only) */}
+      {cycle && <GoalsPanel employeeId={employeeId} cycleId={cycle.id} />}
+
+      {/* Review notes & meeting records */}
+      {cycle && (
+        <Card>
+          <CardContent className="py-4">
+            <ReviewNotesPanel employeeId={employeeId} cycleId={cycle.id} currentUserId={session?.user?.id} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
         <Card>
@@ -289,7 +360,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                 <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
               </div>
             )}
@@ -333,6 +404,9 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
+      {/* Audit trail (manager/admin only) */}
+      {isManagerView && mgr?.id && <AuditTrail assessmentId={mgr.id} />}
+
       {!self?.submittedAt && !mgr?.submittedAt && (
         <Card>
           <CardContent>
@@ -351,7 +425,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
                 <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
                 <p className="text-sm text-amber-700">
-                  Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+                  Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}

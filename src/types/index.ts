@@ -13,7 +13,8 @@ export interface UserProfile {
 
 export interface CycleData {
   id: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   status: "OPEN" | "CLOSED";
   createdAt: string;

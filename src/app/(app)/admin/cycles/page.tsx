@@ -33,9 +33,11 @@ interface CycleDetail {
   };
 }
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+const QUARTERS = [
+  { value: 1, label: "Q1 (Jan–Mar)" },
+  { value: 2, label: "Q2 (Apr–Jun)" },
+  { value: 3, label: "Q3 (Jul–Sep)" },
+  { value: 4, label: "Q4 (Oct–Dec)" },
 ];
 
 function getStatusBadge(status: string) {
@@ -71,8 +73,8 @@ export default function AdminCyclesPage() {
   const [deletingCycleId, setDeletingCycleId] = useState<string | null>(null);
 
   // Create cycle form
-  const { month: curMonth, year: curYear } = getCurrentPeriod();
-  const [selectedMonth, setSelectedMonth] = useState(curMonth);
+  const { quarter: curQuarter, year: curYear } = getCurrentPeriod();
+  const [selectedQuarter, setSelectedQuarter] = useState(curQuarter);
   const [selectedYear, setSelectedYear] = useState(curYear);
   const [createError, setCreateError] = useState("");
 
@@ -94,7 +96,7 @@ export default function AdminCyclesPage() {
     const res = await fetch("/api/cycles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
+      body: JSON.stringify({ quarter: selectedQuarter, year: selectedYear }),
     });
     if (res.ok) {
       loadCycles();
@@ -156,16 +158,16 @@ export default function AdminCyclesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-visory-navy">Assessment Cycles</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage monthly assessment cycles</p>
+          <p className="text-sm text-gray-600 mt-1">Manage quarterly assessment cycles</p>
         </div>
         <div className="flex items-center gap-2">
           <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            value={selectedQuarter}
+            onChange={(e) => setSelectedQuarter(Number(e.target.value))}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
           >
-            {MONTHS.map((name, i) => (
-              <option key={i + 1} value={i + 1}>{name}</option>
+            {QUARTERS.map((q) => (
+              <option key={q.value} value={q.value}>{q.label}</option>
             ))}
           </select>
           <select
@@ -208,7 +210,7 @@ export default function AdminCyclesPage() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-visory-navy">
-                      {formatCyclePeriod(cycle.month, cycle.year)}
+                      {formatCyclePeriod(cycle)}
                     </p>
                     <p className="text-xs text-gray-500">
                       Created {formatDate(cycle.createdAt)}

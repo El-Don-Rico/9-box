@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -83,7 +84,7 @@ export default function SelfAssessmentPage() {
   const steps: StepConfig[] = [
     {
       id: "performance",
-      title: "How would you rate your performance this month?",
+      title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
     },
@@ -94,7 +95,7 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "achievements",
-      title: "What are your key achievements this month?",
+      title: "What are your key achievements this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="List your main accomplishments..." />,
     },
     {
@@ -104,38 +105,28 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "learning",
-      title: "What did you learn this month?",
+      title: "What did you learn this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Skills developed, insights gained..." />,
     },
     {
-      id: "valCustomerFirst",
-      title: "Customer First",
-      description: "How well did you embody the 'Customer First' value?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.self} />,
-    },
-    {
-      id: "valStepIntoArena",
-      title: "Step Into the Arena",
-      description: "How well did you step up and take initiative?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.self} />,
-    },
-    {
-      id: "valFlockToProblems",
-      title: "Flock to Problems",
-      description: "How well did you seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.self} />,
-    },
-    {
-      id: "valGiveEnergy",
-      title: "Give Energy",
-      description: "How well did you energise and support those around you?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.self} />,
-    },
-    {
-      id: "valuesReflection",
-      title: "Values Reflection",
-      description: "Share examples of how you demonstrated Visory values.",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Give specific examples..." />,
+      id: "values",
+      title: "Values Alignment",
+      description: "Rate yourself against each value, then share overall reflections for the section.",
+      renderMulti: (vals, onChange) => (
+        <MultiRatingStep
+          values={vals}
+          onChange={onChange}
+          commentId="valuesReflection"
+          commentLabel="Values Reflection"
+          commentPlaceholder="Give specific examples of how you demonstrated Visory values..."
+          items={[
+            { id: "valCustomerFirst", label: "Customer First", prompts: assessmentPrompts.valCustomerFirst?.self },
+            { id: "valStepIntoArena", label: "Step Into the Arena", prompts: assessmentPrompts.valStepIntoArena?.self },
+            { id: "valFlockToProblems", label: "Flock to Problems", prompts: assessmentPrompts.valFlockToProblems?.self },
+            { id: "valGiveEnergy", label: "Give Energy", prompts: assessmentPrompts.valGiveEnergy?.self },
+          ]}
+        />
+      ),
     },
     {
       id: "engagement",
@@ -155,7 +146,7 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "goalsNextMonth",
-      title: "What are your goals for next month?",
+      title: "What are your goals for next quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Key priorities and objectives..." />,
     },
   ];
@@ -179,11 +170,16 @@ export default function SelfAssessmentPage() {
       {prefilled && (
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-6 max-w-2xl mx-auto">
           <p className="text-sm text-blue-800">
-            Text responses have been pre-filled from last month. Review and update as needed.
+            Text responses have been pre-filled from last quarter. Review and update as needed.
           </p>
         </div>
       )}
       {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
+      {session?.user?.id && cycleId && (
+        <div className="max-w-2xl mx-auto mb-6">
+          <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
+        </div>
+      )}
       <StepForm
         steps={steps}
         values={values}
