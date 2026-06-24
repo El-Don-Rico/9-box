@@ -9,6 +9,7 @@ import {
   SquareCheckBig,
   Users,
   Grid2x2,
+  KanbanSquare,
   BookOpen,
   Settings,
   LogOut,
@@ -45,6 +46,7 @@ const NAV: NavSection[] = [
     roles: ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"],
     items: [
       { href: "/team", label: "My Team", icon: Users },
+      { href: "/team/cycles", label: "Assessment Cycles", icon: KanbanSquare },
       { href: "/calibration", label: "Analysis", icon: Grid2x2 },
     ],
   },
@@ -59,10 +61,6 @@ const NAV: NavSection[] = [
   },
 ];
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + "/");
-}
-
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -70,6 +68,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const name = session?.user?.name || "You";
 
   const sections = NAV.filter((s) => !s.roles || s.roles.includes(role));
+
+  // Pick the single best match so nested siblings (e.g. /team vs /team/cycles)
+  // don't both highlight — the longest matching href wins.
+  const activeHref =
+    sections
+      .flatMap((s) => s.items.map((i) => i.href))
+      .filter((h) => pathname === h || pathname.startsWith(h + "/"))
+      .sort((a, b) => b.length - a.length)[0] ?? "";
 
   return (
     <nav className="sidebar">
@@ -92,7 +98,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
-                  className={cn("nav-item", isActive(pathname, item.href) && "active")}
+                  className={cn("nav-item", item.href === activeHref && "active")}
                 >
                   <span className="ico">
                     <Icon size={16} strokeWidth={1.6} />
