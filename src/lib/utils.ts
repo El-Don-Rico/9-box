@@ -30,6 +30,32 @@ export function getCurrentPeriod(): { quarter: number; year: number } {
   return { quarter: Math.floor(now.getMonth() / 3) + 1, year: now.getFullYear() };
 }
 
+export interface CycleDueDates {
+  readyToMeet: Date; // both assessments submitted, ready for the 1:1
+  meetingComplete: Date; // 1:1 meeting held
+  resultsSent: Date; // results shared & review complete
+}
+
+/**
+ * Target due dates for a cycle's close-out, anchored to the final calendar month
+ * of the period (the last month of the quarter, or a legacy month):
+ *  - Ready to Meet by the 10th
+ *  - Meeting Complete by the 20th
+ *  - Results Sent / Review Complete by the 25th
+ */
+export function getCycleDueDates(period: CyclePeriod): CycleDueDates {
+  const month = period.quarter ? period.quarter * 3 : period.month ?? 12;
+  return {
+    readyToMeet: new Date(period.year, month - 1, 10),
+    meetingComplete: new Date(period.year, month - 1, 20),
+    resultsSent: new Date(period.year, month - 1, 25),
+  };
+}
+
+export function formatDueDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function getRatingLabel(rating: number): string {
   switch (rating) {
     case 1: return "Below";

@@ -414,9 +414,9 @@ function ManagerDashboard() {
           <Card>
             <CardHeader>
               <div>
-                <h2 className="text-lg font-semibold">1:1 Meetings</h2>
+                <h2 className="text-lg font-semibold">Current Cycle</h2>
                 <p className="text-xs text-gray-500">
-                  Drag a card between columns, or use the dropdown, to update meeting status.
+                  Track each report against the cycle due dates. Drag a card between columns to update meeting status.
                 </p>
               </div>
             </CardHeader>
@@ -426,7 +426,7 @@ function ManagerDashboard() {
                   No direct reports found. Ask your admin to assign employees to you.
                 </p>
               ) : (
-                <KanbanBoard members={team} />
+                <KanbanBoard members={team} cycle={cycle} />
               )}
             </CardContent>
           </Card>

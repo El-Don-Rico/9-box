@@ -7,6 +7,7 @@ import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -71,9 +72,8 @@ export default function SelfAssessmentPage() {
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
-        if (data.bothComplete) {
-          router.push(`/summary/${data.employeeId}?cycleId=${cycleId}`);
-        }
+        // Always return to the dashboard after submitting.
+        router.push("/dashboard");
       }
     } finally {
       setSaving(false);
@@ -145,9 +145,10 @@ export default function SelfAssessmentPage() {
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Resources, guidance, feedback..." />,
     },
     {
-      id: "goalsNextMonth",
+      id: "goals",
       title: "What are your goals for next quarter?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Key priorities and objectives..." />,
+      description: "Add each goal individually. They are saved to your profile and tracked over time.",
+      render: () => (session?.user?.id ? <SelfGoalsEditor employeeId={session.user.id} /> : null),
     },
   ];
 

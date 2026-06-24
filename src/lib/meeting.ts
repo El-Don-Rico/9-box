@@ -1,4 +1,5 @@
 import type { MeetingStatus } from "@prisma/client";
+import type { CycleDueDates } from "./utils";
 
 export const MEETING_STATUS_LABELS: Record<MeetingStatus, string> = {
   NOT_READY: "In Assessment",
@@ -42,4 +43,43 @@ export function meetingStatusColor(status: MeetingStatus): string {
  */
 export function canTransition(to: MeetingStatus): boolean {
   return MANAGER_SETTABLE_STATUSES.includes(to);
+}
+
+// ---- Due-date tracking ------------------------------------------------------
+
+export type BoardColumn = MeetingStatus | "REVIEW_COMPLETE";
+
+export type TrackingStatus = "on_track" | "due_soon" | "overdue" | "done";
+
+export const TRACKING_META: Record<
+  TrackingStatus,
+  { label: string; icon: string; className: string }
+> = {
+  on_track: { label: "On track", icon: "●", className: "text-green-600" },
+  due_soon: { label: "Due soon", icon: "◐", className: "text-amber-600" },
+  overdue: { label: "Overdue", icon: "▲", className: "text-red-600" },
+  done: { label: "Complete", icon: "✓", className: "text-green-600" },
+};
+
+/**
+ * Maps a board column to the next milestone deadline and reports how the card is
+ * tracking against it. `now` is injected so the function stays pure.
+ */
+export function getColumnTracking(
+  column: BoardColumn,
+  due: CycleDueDates,
+  now: Date
+): TrackingStatus {
+  if (column === "REVIEW_COMPLETE") return "done";
+
+  let deadline: Date;
+  if (column === "NOT_READY") deadline = due.readyToMeet;
+  else if (column === "READY_TO_MEET" || column === "MEETING_SCHEDULED") deadline = due.meetingComplete;
+  else deadline = due.resultsSent; // MEETING_COMPLETE → results
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / msPerDay);
+  if (daysLeft < 0) return "overdue";
+  if (daysLeft <= 3) return "due_soon";
+  return "on_track";
 }

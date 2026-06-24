@@ -40,18 +40,12 @@ const QUARTERS = [
   { value: 4, label: "Q4 (Oct–Dec)" },
 ];
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "results_sent":
-      return <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>;
-    case "ready_to_send":
-      return <Badge className="bg-blue-100 text-blue-800 border-blue-300">Ready to Send</Badge>;
-    case "in_progress":
-      return <Badge className="bg-amber-100 text-amber-800 border-amber-300">In Progress</Badge>;
-    default:
-      return <Badge className="bg-gray-100 text-gray-600 border-gray-300">Pending</Badge>;
-  }
-}
+const ADMIN_COLUMNS: { key: CycleAssessment["overallStatus"]; label: string }[] = [
+  { key: "pending", label: "Pending" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "ready_to_send", label: "Ready to Send" },
+  { key: "results_sent", label: "Results Sent" },
+];
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
@@ -276,54 +270,43 @@ export default function AdminCyclesPage() {
                         </div>
                       </div>
 
-                      {/* Assessment table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-200">
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Employee</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Manager</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Self</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Manager</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Status</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Created</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Sent</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {cycleDetail.assessments.map((a) => (
-                              <tr key={a.id}>
-                                <td className="py-2 px-2 text-visory-navy">{a.employee.name}</td>
-                                <td className="py-2 px-2 text-gray-600">{a.manager.name}</td>
-                                <td className="py-2 px-2 text-center">
-                                  {a.selfStatus === "submitted" ? (
-                                    <span className="text-green-600">Done</span>
-                                  ) : (
-                                    <span className="text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-center">
-                                  {a.managerStatus === "submitted" ? (
-                                    <span className="text-green-600">Done</span>
-                                  ) : (
-                                    <span className="text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-center">
-                                  {getStatusBadge(a.overallStatus)}
-                                </td>
-                                <td className="py-2 px-2 text-gray-500 text-xs">{formatDate(a.createdAt)}</td>
-                                <td className="py-2 px-2 text-gray-500 text-xs">{formatDate(a.resultsSentAt)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {cycleDetail.assessments.length === 0 && (
+                      {/* Assessment kanban by status */}
+                      {cycleDetail.assessments.length === 0 ? (
                         <p className="text-center text-sm text-gray-500 py-2">
                           No assessments created for this cycle.
                         </p>
+                      ) : (
+                        <div className="flex gap-3 overflow-x-auto pb-2">
+                          {ADMIN_COLUMNS.map((col) => {
+                            const items = cycleDetail.assessments.filter((a) => a.overallStatus === col.key);
+                            return (
+                              <div key={col.key} className="flex-shrink-0 w-56">
+                                <div className="flex items-center justify-between mb-2 px-1">
+                                  <span className="text-xs font-semibold text-visory-navy">{col.label}</span>
+                                  <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-[11px]">{items.length}</Badge>
+                                </div>
+                                <div className="space-y-2 rounded-lg bg-gray-50 p-2 min-h-[80px] max-h-[26rem] overflow-y-auto">
+                                  {items.map((a) => (
+                                    <div key={a.id} className="rounded-md border border-gray-200 bg-white p-2.5 shadow-sm">
+                                      <button
+                                        onClick={() => router.push(`/summary/${a.employee.id}?cycleId=${cycle.id}`)}
+                                        className="text-xs font-medium text-visory-navy hover:underline text-left"
+                                      >
+                                        {a.employee.name}
+                                      </button>
+                                      <p className="text-[11px] text-gray-400">Mgr: {a.manager.name}</p>
+                                      <div className="flex items-center gap-2.5 mt-1 text-[11px]">
+                                        <span className={a.selfStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Self">● Self</span>
+                                        <span className={a.managerStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Manager">● Mgr</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {items.length === 0 && <p className="text-[11px] text-gray-400 text-center py-3">None</p>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                   ) : null}

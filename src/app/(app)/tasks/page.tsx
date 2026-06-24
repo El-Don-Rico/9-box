@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { TaskSourceBadge, TaskVisibilityBadge } from "@/components/tasks/task-meta";
 import type { TaskData, TaskStatus, TaskCommentData } from "@/types";
 
@@ -78,10 +79,11 @@ export default function TasksPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [showDone, setShowDone] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ employeeId: "", title: "", assigneeId: "", dueDate: "", visibility: "SHARED", isPip: false });
+  const [filterEmployee, setFilterEmployee] = useState("");
+  const [filterType, setFilterType] = useState("");
 
   useEffect(() => {
     if (!role) return;
@@ -107,7 +109,28 @@ export default function TasksPage() {
     return opts.filter((o, i, a) => a.findIndex((x) => x.id === o.id) === i);
   }, [form.employeeId, reports, session?.user?.id, session?.user?.name]);
 
-  const visible = useMemo(() => tasks.filter((t) => showDone || t.status !== "DONE"), [tasks, showDone]);
+  // "Type" filter mirrors the source label (Manual / Meeting action / Performance plan).
+  function typeOf(t: TaskData): string {
+    if (t.type === "PIP") return "Performance plan";
+    if (t.meetingId) return "Meeting action";
+    return "Manual";
+  }
+
+  const visible = useMemo(
+    () =>
+      tasks.filter((t) => {
+        if (filterEmployee && t.employee?.id !== filterEmployee) return false;
+        if (filterType && typeOf(t) !== filterType) return false;
+        return true;
+      }),
+    [tasks, filterEmployee, filterType]
+  );
+
+  const byStatus = useMemo(() => {
+    const map: Record<TaskStatus, TaskData[]> = { TODO: [], IN_PROGRESS: [], DONE: [] };
+    for (const t of visible) map[t.status].push(t);
+    return map;
+  }, [visible]);
 
   async function updateStatus(taskId: string, status: TaskStatus) {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
@@ -170,11 +193,29 @@ export default function TasksPage() {
             {manager ? "Tasks across your team — from meetings, plans, or added directly." : "Your tasks and meeting actions."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600">
-            <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="rounded border-gray-300 text-visory focus:ring-visory" />
-            Show done
-          </label>
+        <div className="flex flex-wrap items-center gap-2">
+          {manager && (
+            <>
+              <select
+                value={filterEmployee}
+                onChange={(e) => setFilterEmployee(e.target.value)}
+                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              >
+                <option value="">All employees</option>
+                {reports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              >
+                <option value="">All types</option>
+                <option value="Manual">Manual</option>
+                <option value="Meeting action">Meeting action</option>
+                <option value="Performance plan">Performance plan</option>
+              </select>
+            </>
+          )}
           {!showForm && <Button size="sm" onClick={() => setShowForm(true)}>Add Task</Button>}
         </div>
       </div>
@@ -258,59 +299,61 @@ export default function TasksPage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">{visible.length} task{visible.length === 1 ? "" : "s"}</h2>
-        </CardHeader>
-        <CardContent>
-          {visible.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">No tasks to show.</p>
-          ) : (
-            <div className="space-y-2">
-              {visible.map((task) => (
-                <div key={task.id} className="rounded-lg border border-gray-200 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium text-visory-navy ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
-                        {task.title}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {manager && task.employee && (
-                          <a href={`/team/${task.employee.id}`} className="text-xs text-visory hover:text-visory-dark font-medium">
-                            {task.employee.name}
-                          </a>
-                        )}
-                        <span className="text-xs text-gray-500">{task.assignee?.name ?? "Unassigned"}</span>
-                        {task.dueDate && (
-                          <span className="text-xs text-gray-400">
-                            Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </span>
-                        )}
-                        <TaskSourceBadge task={task} canSeeMeeting={manager} />
-                        <TaskVisibilityBadge task={task} />
-                      </div>
+      {/* Kanban: To Do / In Progress / Done */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {STATUS_ORDER.map((col) => {
+          const items = byStatus[col];
+          return (
+            <div key={col}>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-sm font-semibold text-visory-navy">{STATUS_LABELS[col]}</span>
+                <Badge className={statusColor(col)}>{items.length}</Badge>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-2 space-y-2 min-h-[120px]">
+                {items.map((task) => (
+                  <div key={task.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                    <p className={`text-sm font-medium text-visory-navy ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
+                      {task.title}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {manager && task.employee && (
+                        <a href={`/team/${task.employee.id}`} className="text-xs text-visory hover:text-visory-dark font-medium">
+                          {task.employee.name}
+                        </a>
+                      )}
+                      <span className="text-xs text-gray-500">{task.assignee?.name ?? "Unassigned"}</span>
+                      {task.dueDate && (
+                        <span className="text-xs text-gray-400">
+                          Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      )}
+                      <TaskSourceBadge task={task} canSeeMeeting={manager} />
+                      <TaskVisibilityBadge task={task} />
                     </div>
-                    <select
-                      value={task.status}
-                      onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
-                      className={`rounded-lg border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory ${statusColor(task.status)}`}
-                    >
-                      {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                    </select>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+                        className={`rounded-lg border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory ${statusColor(task.status)}`}
+                      >
+                        {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                      </select>
+                      <button
+                        onClick={() => setExpanded(expanded === task.id ? null : task.id)}
+                        className="text-xs text-visory hover:text-visory-dark font-medium"
+                      >
+                        {expanded === task.id ? "Hide" : "Comments"}
+                      </button>
+                    </div>
+                    {expanded === task.id && <TaskComments taskId={task.id} />}
                   </div>
-                  <button
-                    onClick={() => setExpanded(expanded === task.id ? null : task.id)}
-                    className="text-xs text-visory hover:text-visory-dark font-medium mt-2"
-                  >
-                    {expanded === task.id ? "Hide updates" : "Comments & updates"}
-                  </button>
-                  {expanded === task.id && <TaskComments taskId={task.id} />}
-                </div>
-              ))}
+                ))}
+                {items.length === 0 && <p className="text-xs text-gray-400 text-center py-4">None</p>}
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -73,9 +73,8 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       if (submit) {
         setIsSubmitted(true);
         setEditing(false);
-        if (data.bothComplete) {
-          router.push(`/summary/${employeeId}?cycleId=${cycleId}`);
-        }
+        // Always return to the dashboard after submitting.
+        router.push("/dashboard");
       }
     } finally {
       setSaving(false);
