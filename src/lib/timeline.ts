@@ -17,8 +17,9 @@ export interface CycleStageDefinition {
   dueDay: number;
 }
 
-// Due dates are auto-derived from the cycle's month. These day-of-month targets
-// space the four stages across the month with room between each.
+// Due dates are auto-derived from the cycle's month. Self- and manager
+// assessments are both due by the 10th, the 1:1 meeting by the 20th, and
+// results shared / assessment complete by the 25th.
 export const CYCLE_STAGES: CycleStageDefinition[] = [
   {
     key: "self",
@@ -32,21 +33,21 @@ export const CYCLE_STAGES: CycleStageDefinition[] = [
     label: "Manager Assessment",
     shortLabel: "Manager",
     description: "Manager completes their assessment.",
-    dueDay: 20,
+    dueDay: 10,
   },
   {
     key: "oneOnOne",
     label: "1:1 Meeting",
     shortLabel: "1:1",
     description: "Manager and employee hold their 1:1.",
-    dueDay: 25,
+    dueDay: 20,
   },
   {
     key: "results",
     label: "Results Shared",
     shortLabel: "Results",
-    description: "Manager shares the results with the employee.",
-    dueDay: 28,
+    description: "Manager shares the results with the employee; the assessment is complete.",
+    dueDay: 25,
   },
 ];
 
