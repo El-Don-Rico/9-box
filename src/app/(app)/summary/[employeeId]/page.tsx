@@ -357,20 +357,23 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
         <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Additional Context</h2>
-          </CardHeader>
+          <div className="card-head">
+            <div>
+              <div className="eyebrow">Self-assessment</div>
+              <h2 className="card-title">Additional Context</h2>
+            </div>
+          </div>
           <CardContent className="space-y-4">
             {self.learning && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
-                <p className="text-sm text-visory-navy">{self.learning}</p>
+                <p className="eyebrow mb-1">Learning</p>
+                <p className="text-sm text-ink">{self.learning}</p>
               </div>
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
-                <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
+                <p className="eyebrow mb-1">Goals for Next Quarter</p>
+                <p className="text-sm text-ink">{self.goalsNextMonth}</p>
               </div>
             )}
           </CardContent>
@@ -380,12 +383,14 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {/* Manager Additional Notes */}
       {mgr?.submittedAt && mgr.notes && (
         <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Manager Notes</h2>
-            <p className="text-xs text-gray-500">Assessed by {mgr.manager.name}</p>
-          </CardHeader>
+          <div className="card-head">
+            <div>
+              <div className="eyebrow">Assessed by {mgr.manager.name}</div>
+              <h2 className="card-title">Manager Notes</h2>
+            </div>
+          </div>
           <CardContent>
-            <p className="text-sm text-visory-navy">{mgr.notes}</p>
+            <p className="text-sm text-ink">{mgr.notes}</p>
           </CardContent>
         </Card>
       )}
@@ -393,10 +398,10 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {/* 1:1 meeting — managed from the Dashboard board; runnable once scheduled */}
       {isManagerView && mgr?.submittedAt && (
         <Card>
-          <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium text-visory-navy">1:1 Meeting</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-ink">1:1 Meeting</p>
+              <p className="text-xs text-ink-3">
                 Status: {mgr.meetingStatus ? mgr.meetingStatus.replaceAll("_", " ").toLowerCase() : "not ready"}
               </p>
             </div>
@@ -419,7 +424,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {!self?.submittedAt && !mgr?.submittedAt && (
         <Card>
           <CardContent>
-            <p className="text-sm text-gray-500 py-4 text-center">
+            <p className="text-sm text-ink-3 py-4 text-center">
               No assessments have been submitted for this cycle yet.
             </p>
           </CardContent>
@@ -427,23 +432,24 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       )}
 
       {showSendConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50">
+          <div className="bg-paper border border-line rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="eyebrow mb-1">Confirm</div>
+            <h3 className="serif text-xl text-ink mb-3">Send Results to {employee.name}?</h3>
             {mgr?.meetingStatus !== "MEETING_COMPLETE" && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-                <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
-                <p className="text-sm text-amber-700">
+              <div className="rounded-lg bg-paper-2 border border-amber/40 p-3 mb-4">
+                <p className="text-sm text-ink font-medium mb-1">Important</p>
+                <p className="text-sm text-ink-2">
                   Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-ink-2 mb-4">
               This will make your assessment visible to {employee.name}. This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="secondary" size="sm" onClick={() => setShowSendConfirm(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleSendResults} disabled={sendingResults}>
+              <Button size="sm" variant="magenta" onClick={handleSendResults} disabled={sendingResults}>
                 {sendingResults ? "Sending..." : "Confirm & Send Results"}
               </Button>
             </div>
