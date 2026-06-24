@@ -62,6 +62,17 @@ interface SummaryData {
   } | null;
 }
 
+function ScoreOutOf3({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className={`text-3xl font-bold ${value >= 2 ? "text-green-700" : "text-orange-600"}`}>
+        {value}<span className="text-base font-medium text-gray-400">/3</span>
+      </p>
+    </div>
+  );
+}
+
 export default function SummaryPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const { data: session } = useSession();
@@ -249,28 +260,29 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
       </div>
 
-      {/* Talent Density & Cultural Momentum Scores */}
+      {/* Performance & Growth (Talent Density) and Engagement & Values (Cultural
+          Momentum) shown as separate scores out of 3 — not a combined /9. */}
       {(mgr?.performance && mgr?.growthReadiness) || (mgrValuesAlignment && mgr?.engagement) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mgr?.performance && mgr?.growthReadiness && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Talent Density</p>
-                <p className={`text-3xl font-bold ${mgr.performance * mgr.growthReadiness >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgr.performance * mgr.growthReadiness}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Talent Density</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Performance" value={mgr.performance} />
+                  <ScoreOutOf3 label="Growth Readiness" value={mgr.growthReadiness} />
+                </div>
               </CardContent>
             </Card>
           )}
           {mgrValuesAlignment && mgr?.engagement && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Cultural Momentum</p>
-                <p className={`text-3xl font-bold ${mgrValuesAlignment * mgr.engagement >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgrValuesAlignment * mgr.engagement}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Cultural Momentum</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Engagement" value={mgr.engagement} />
+                  <ScoreOutOf3 label="Values Alignment" value={mgrValuesAlignment} />
+                </div>
               </CardContent>
             </Card>
           )}

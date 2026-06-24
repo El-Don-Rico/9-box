@@ -369,40 +369,71 @@ export default function CalibrationPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <InsightCard
-                label="Talent Density"
-                value={`${currentInsights.avgTD.toFixed(1)}/9`}
-                color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
-                prev={prevInsights?.avgTD}
-                current={currentInsights.avgTD}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Cultural Momentum"
-                value={`${currentInsights.avgCM.toFixed(1)}/9`}
-                color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
-                prev={prevInsights?.avgCM}
-                current={currentInsights.avgCM}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Avg Performance"
-                value={currentInsights.avgPerf.toFixed(1)}
-                color="text-visory-navy"
-                prev={prevInsights?.avgPerf}
-                current={currentInsights.avgPerf}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Avg Growth"
-                value={currentInsights.avgGrowth.toFixed(1)}
-                color="text-visory-navy"
-                prev={prevInsights?.avgGrowth}
-                current={currentInsights.avgGrowth}
-                showTrend={viewMode === "single"}
-              />
+          <CardContent className="space-y-6">
+            {/* Talent Density: performance & growth out of 3, plus rolled-up /9 */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Talent Density</p>
+              <div className="grid grid-cols-3 gap-4">
+                <InsightCard
+                  label="Performance"
+                  value={`${currentInsights.avgPerf.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgPerf}
+                  current={currentInsights.avgPerf}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Growth Readiness"
+                  value={`${currentInsights.avgGrowth.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgGrowth}
+                  current={currentInsights.avgGrowth}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Rolled-up (Talent Density)"
+                  value={`${currentInsights.avgTD.toFixed(1)}/9`}
+                  color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
+                  prev={prevInsights?.avgTD}
+                  current={currentInsights.avgTD}
+                  showTrend={viewMode === "single"}
+                />
+              </div>
+            </div>
+
+            {/* Cultural Momentum: engagement & values out of 3, plus rolled-up /9 */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Cultural Momentum</p>
+              <div className="grid grid-cols-3 gap-4">
+                <InsightCard
+                  label="Engagement"
+                  value={`${currentInsights.avgEngagement.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgEngagement}
+                  current={currentInsights.avgEngagement}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Values Alignment"
+                  value={`${currentInsights.avgValues.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgValues}
+                  current={currentInsights.avgValues}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Rolled-up (Cultural Momentum)"
+                  value={`${currentInsights.avgCM.toFixed(1)}/9`}
+                  color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
+                  prev={prevInsights?.avgCM}
+                  current={currentInsights.avgCM}
+                  showTrend={viewMode === "single"}
+                />
+              </div>
+            </div>
+
+            {/* Population health */}
+            <div className="grid grid-cols-2 gap-4">
               <InsightCard
                 label="Top Talent"
                 value={`${currentInsights.topTalent}/${currentInsights.total}`}
