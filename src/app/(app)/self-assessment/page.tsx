@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 
@@ -108,34 +108,24 @@ export default function SelfAssessmentPage() {
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Skills developed, insights gained..." />,
     },
     {
-      id: "valCustomerFirst",
-      title: "Customer First",
-      description: "How well did you embody the 'Customer First' value?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.self} />,
-    },
-    {
-      id: "valStepIntoArena",
-      title: "Step Into the Arena",
-      description: "How well did you step up and take initiative?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.self} />,
-    },
-    {
-      id: "valFlockToProblems",
-      title: "Flock to Problems",
-      description: "How well did you seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.self} />,
-    },
-    {
-      id: "valGiveEnergy",
-      title: "Give Energy",
-      description: "How well did you energise and support those around you?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.self} />,
-    },
-    {
-      id: "valuesReflection",
-      title: "Values Reflection",
-      description: "Share examples of how you demonstrated Visory values.",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Give specific examples..." />,
+      id: "values",
+      title: "Values Alignment",
+      description: "Rate yourself against each value, then share overall reflections for the section.",
+      renderMulti: (vals, onChange) => (
+        <MultiRatingStep
+          values={vals}
+          onChange={onChange}
+          commentId="valuesReflection"
+          commentLabel="Values Reflection"
+          commentPlaceholder="Give specific examples of how you demonstrated Visory values..."
+          items={[
+            { id: "valCustomerFirst", label: "Customer First", prompts: assessmentPrompts.valCustomerFirst?.self },
+            { id: "valStepIntoArena", label: "Step Into the Arena", prompts: assessmentPrompts.valStepIntoArena?.self },
+            { id: "valFlockToProblems", label: "Flock to Problems", prompts: assessmentPrompts.valFlockToProblems?.self },
+            { id: "valGiveEnergy", label: "Give Energy", prompts: assessmentPrompts.valGiveEnergy?.self },
+          ]}
+        />
+      ),
     },
     {
       id: "engagement",

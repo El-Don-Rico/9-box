@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 
@@ -102,34 +102,24 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe growth indicators, learning agility..." />,
     },
     {
-      id: "valCustomerFirst",
-      title: "Customer First",
-      description: "How well does this employee embody 'Customer First'?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.manager} />,
-    },
-    {
-      id: "valStepIntoArena",
-      title: "Step Into the Arena",
-      description: "How well does this employee take initiative and show courage?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.manager} />,
-    },
-    {
-      id: "valFlockToProblems",
-      title: "Flock to Problems",
-      description: "How well does this employee seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.manager} />,
-    },
-    {
-      id: "valGiveEnergy",
-      title: "Give Energy",
-      description: "How well does this employee energise and uplift the team?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.manager} />,
-    },
-    {
-      id: "valuesEvidence",
-      title: "Values Evidence",
-      description: "Provide examples of values-aligned behaviour.",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Specific examples..." />,
+      id: "values",
+      title: "Values Alignment",
+      description: "Rate this employee against each value, then add overall comments for the section.",
+      renderMulti: (vals, onChange) => (
+        <MultiRatingStep
+          values={vals}
+          onChange={onChange}
+          commentId="valuesEvidence"
+          commentLabel="Values Evidence"
+          commentPlaceholder="Examples of values-aligned behaviour..."
+          items={[
+            { id: "valCustomerFirst", label: "Customer First", prompts: assessmentPrompts.valCustomerFirst?.manager },
+            { id: "valStepIntoArena", label: "Step Into the Arena", prompts: assessmentPrompts.valStepIntoArena?.manager },
+            { id: "valFlockToProblems", label: "Flock to Problems", prompts: assessmentPrompts.valFlockToProblems?.manager },
+            { id: "valGiveEnergy", label: "Give Energy", prompts: assessmentPrompts.valGiveEnergy?.manager },
+          ]}
+        />
+      ),
     },
     {
       id: "engagement",
