@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -41,10 +42,10 @@ const STATUS_LABELS: Record<ProgressStatus, string> = {
   COMPLETE: "Complete",
 };
 
-const STATUS_COLORS: Record<ProgressStatus, string> = {
-  ON_TRACK: "bg-green-100 text-green-800 border-green-300",
-  OFF_TRACK: "bg-amber-100 text-amber-800 border-amber-300",
-  COMPLETE: "bg-blue-100 text-blue-800 border-blue-300",
+const STATUS_VARIANTS: Record<ProgressStatus, "success" | "warning" | "navy"> = {
+  ON_TRACK: "success",
+  OFF_TRACK: "warning",
+  COMPLETE: "navy",
 };
 
 export function GoalsPanel({
@@ -91,35 +92,29 @@ export function GoalsPanel({
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between rounded-lg border border-line bg-paper-2 px-4 py-3 hover:bg-paper transition-colors"
       >
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <span className="text-sm font-medium text-visory-navy">
+          <Target size={16} strokeWidth={1.6} className="text-ink-2" />
+          <span className="text-sm font-medium text-ink">
             Goals &amp; Key Metrics{editable ? " — Review" : ""}
           </span>
-          <Badge className="bg-gray-200 text-gray-600 border-gray-300 text-xs">
+          <Badge variant="slate" className="mono tnum">
             {goals.length + metrics.length}
           </Badge>
         </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${collapsed ? "" : "rotate-180"}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.6}
+          className={`text-ink-3 transition-transform ${collapsed ? "" : "rotate-180"}`}
+        />
       </button>
 
       {!collapsed && (
-        <div className="border border-t-0 border-gray-200 rounded-b-lg p-4 space-y-4">
+        <div className="border border-t-0 border-line rounded-b-lg p-4 space-y-4">
           {metrics.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Key Metrics</p>
+              <p className="eyebrow mb-2">Key Metrics</p>
               <div className="space-y-2">
                 {metrics.map((m) => (
                   <MetricRow key={m.id} metric={m} cycleId={cycleId} editable={editable} />
@@ -129,7 +124,7 @@ export function GoalsPanel({
           )}
           {goals.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Goals</p>
+              <p className="eyebrow mb-2">Goals</p>
               <div className="space-y-2">
                 {goals.map((g) => (
                   <GoalRow key={g.id} goal={g} cycleId={cycleId} editable={editable} />
@@ -184,11 +179,11 @@ function MetricRow({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 p-3">
+    <div className="rounded-lg border border-line p-3">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-visory-navy font-medium">{metric.name}</span>
-        <span className="text-gray-600">
-          Target: {metric.target}{metric.unit ? ` ${metric.unit}` : ""}
+        <span className="text-ink font-medium">{metric.name}</span>
+        <span className="text-ink-2">
+          Target: <span className="mono tnum">{metric.target}{metric.unit ? ` ${metric.unit}` : ""}</span>
         </span>
       </div>
       {editable ? (
@@ -199,7 +194,7 @@ function MetricRow({
               value={actual}
               onChange={(e) => setActual(e.target.value)}
               placeholder={`Actual result${metric.unit ? ` (${metric.unit})` : ""}`}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className="flex-1 rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
             />
             <Button size="sm" onClick={save} disabled={saving || !actual.trim()}>
               {saving ? "Saving..." : saved ? "Saved ✓" : "Save"}
@@ -210,14 +205,14 @@ function MetricRow({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional)"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+            className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
           />
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-magenta">{error}</p>}
         </div>
       ) : (
         existing && (
-          <p className="mt-1 text-sm text-gray-600">
-            Actual: <span className="font-medium text-visory-navy">{existing.actual}</span>
+          <p className="mt-1 text-sm text-ink-2">
+            Actual: <span className="font-medium text-ink mono tnum">{existing.actual}</span>
             {existing.note ? ` — ${existing.note}` : ""}
           </p>
         )

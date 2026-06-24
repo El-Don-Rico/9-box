@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -101,16 +102,20 @@ export default function MyResultsPage() {
   }, [session?.user?.id]);
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
+    return <div className="text-center py-12 text-ink-3">Loading...</div>;
   }
 
   const cyclesWithResults = cycles.filter((c) => summaries.has(c.id));
 
   if (cyclesWithResults.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-visory-navy mb-2">My Reviews</h1>
-        <p className="text-gray-500">No reviews available yet. Reviews appear after assessments are submitted.</p>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="My Reviews"
+          title={<>Your <em>reviews.</em></>}
+          sub="Your scores, feedback, and prescribed actions"
+        />
+        <p className="text-ink-3">No reviews available yet. Reviews appear after assessments are submitted.</p>
       </div>
     );
   }

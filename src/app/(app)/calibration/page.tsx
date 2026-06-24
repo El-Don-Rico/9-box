@@ -313,27 +313,34 @@ export default function CalibrationPage() {
         <CardContent className="p-4">
           <div className="flex gap-2">
             <div className="flex flex-col justify-between items-center w-8 py-4">
-              <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">High</span>
-              <span className="text-xs font-semibold text-visory-navy -rotate-90 whitespace-nowrap">{yLabel}</span>
-              <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">Low</span>
+              <span className="eyebrow -rotate-90 whitespace-nowrap">High</span>
+              <span className="text-xs font-medium text-ink -rotate-90 whitespace-nowrap">{yLabel}</span>
+              <span className="eyebrow -rotate-90 whitespace-nowrap">Low</span>
             </div>
 
             <div className="flex-1">
               <div className="grid grid-cols-3 gap-2">
                 {grid.map((cell) => {
                   const emps = getEmployeesForCell(cell);
+                  // Top-right "ready" cell (high x, high y) is the scarce magenta highlight.
+                  const isReady = cell.x === 3 && cell.y === 3;
                   return (
                     <div
                       key={`${cell.x}-${cell.y}`}
-                      className={`rounded-lg border-2 p-3 min-h-[100px] ${cell.colorClass}`}
+                      className={`rounded-md border p-3 min-h-[100px] ${
+                        isReady ? "bg-magenta-3 border-magenta" : "bg-paper-2 border-line"
+                      }`}
                     >
-                      <p className="text-xs font-semibold text-visory-navy mb-2">{cell.label}</p>
-                      <div className="flex flex-wrap gap-1">
+                      <p className="eyebrow mb-2">{cell.label}</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {emps.map((emp) => (
-                          <Link key={emp.id} href={`/summary/${emp.id}?cycleId=${selectedCycleId}`}>
-                            <Badge className="bg-white/80 text-gray-800 border-gray-300 text-xs cursor-pointer hover:bg-visory-light hover:border-visory/40 transition-colors">
-                              {emp.name}
-                            </Badge>
+                          <Link
+                            key={emp.id}
+                            href={`/summary/${emp.id}?cycleId=${selectedCycleId}`}
+                            className="flex items-center gap-1.5 rounded-full bg-paper border border-line px-1.5 py-0.5 text-xs text-ink hover:border-magenta transition-colors"
+                          >
+                            <Avatar name={emp.name} size="sm" />
+                            <span className="pr-1">{emp.name}</span>
                           </Link>
                         ))}
                       </div>
@@ -343,15 +350,15 @@ export default function CalibrationPage() {
               </div>
 
               <div className="flex justify-between items-center mt-2 px-4">
-                <span className="text-xs font-medium text-gray-500">Low</span>
-                <span className="text-xs font-semibold text-visory-navy">{xLabel}</span>
-                <span className="text-xs font-medium text-gray-500">High</span>
+                <span className="eyebrow">Low</span>
+                <span className="text-xs font-medium text-ink">{xLabel}</span>
+                <span className="eyebrow">High</span>
               </div>
             </div>
           </div>
 
           {filteredEmployees.length === 0 && (
-            <p className="mt-4 text-center text-sm text-gray-500">
+            <p className="mt-4 text-center text-sm muted">
               {placedEmployees.length === 0 ? "No submitted assessments for this period." : "No employees match the selected filters."}
             </p>
           )}
@@ -362,29 +369,27 @@ export default function CalibrationPage() {
       {currentInsights && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Key Insights</h2>
-              {viewMode === "single" && prevInsights && prevCycleLabel && (
-                <span className="text-xs text-gray-500">
-                  vs. {formatCyclePeriod(prevCycleLabel)}
-                </span>
-              )}
-              {viewMode === "range" && (
-                <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">
-                  Averaged across {rangeAssessments.length} quarters
-                </Badge>
-              )}
-            </div>
+            <h2 className="card-title">Key Insights</h2>
+            {viewMode === "single" && prevInsights && prevCycleLabel && (
+              <span className="text-xs mono tnum muted">
+                vs. {formatCyclePeriod(prevCycleLabel)}
+              </span>
+            )}
+            {viewMode === "range" && (
+              <Badge variant="navy">
+                Averaged across <span className="mono tnum">{rangeAssessments.length}</span> quarters
+              </Badge>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Talent Density: performance & growth out of 3, plus rolled-up /9 */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Talent Density</p>
+              <p className="eyebrow mb-2">Talent Density</p>
               <div className="grid grid-cols-3 gap-4">
                 <InsightCard
                   label="Performance"
                   value={`${currentInsights.avgPerf.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgPerf}
                   current={currentInsights.avgPerf}
                   showTrend={viewMode === "single"}
@@ -392,7 +397,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Growth Readiness"
                   value={`${currentInsights.avgGrowth.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgGrowth}
                   current={currentInsights.avgGrowth}
                   showTrend={viewMode === "single"}
@@ -400,7 +405,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Rolled-up (Talent Density)"
                   value={`${currentInsights.avgTD.toFixed(1)}/9`}
-                  color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
+                  color={currentInsights.avgTD >= 6 ? "text-success" : "text-magenta"}
                   prev={prevInsights?.avgTD}
                   current={currentInsights.avgTD}
                   showTrend={viewMode === "single"}
@@ -410,12 +415,12 @@ export default function CalibrationPage() {
 
             {/* Cultural Momentum: engagement & values out of 3, plus rolled-up /9 */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Cultural Momentum</p>
+              <p className="eyebrow mb-2">Cultural Momentum</p>
               <div className="grid grid-cols-3 gap-4">
                 <InsightCard
                   label="Engagement"
                   value={`${currentInsights.avgEngagement.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgEngagement}
                   current={currentInsights.avgEngagement}
                   showTrend={viewMode === "single"}
@@ -423,7 +428,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Values Alignment"
                   value={`${currentInsights.avgValues.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgValues}
                   current={currentInsights.avgValues}
                   showTrend={viewMode === "single"}
@@ -431,7 +436,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Rolled-up (Cultural Momentum)"
                   value={`${currentInsights.avgCM.toFixed(1)}/9`}
-                  color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
+                  color={currentInsights.avgCM >= 6 ? "text-success" : "text-magenta"}
                   prev={prevInsights?.avgCM}
                   current={currentInsights.avgCM}
                   showTrend={viewMode === "single"}
@@ -444,7 +449,7 @@ export default function CalibrationPage() {
               <InsightCard
                 label="Top Talent"
                 value={`${currentInsights.topTalent}/${currentInsights.total}`}
-                color="text-green-700"
+                color="text-success"
                 prev={prevInsights ? prevInsights.topTalent / prevInsights.total * 100 : undefined}
                 current={currentInsights.topTalent / currentInsights.total * 100}
                 showTrend={viewMode === "single"}
@@ -453,7 +458,7 @@ export default function CalibrationPage() {
               <InsightCard
                 label="At Risk"
                 value={`${currentInsights.atRisk + currentInsights.intervene}`}
-                color={currentInsights.atRisk + currentInsights.intervene > 0 ? "text-red-600" : "text-green-700"}
+                color={currentInsights.atRisk + currentInsights.intervene > 0 ? "text-magenta" : "text-success"}
                 prev={prevInsights ? prevInsights.atRisk + prevInsights.intervene : undefined}
                 current={currentInsights.atRisk + currentInsights.intervene}
                 showTrend={viewMode === "single"}

@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Toggle } from "@/components/ui/toggle";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatCyclePeriod, getCurrentPeriod } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 import type { CycleData } from "@/types";
 
 interface CycleAssessment {
@@ -55,6 +58,9 @@ function formatDate(dateStr: string | null) {
     year: "numeric",
   });
 }
+
+const SELECT_CLASS =
+  "rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20";
 
 export default function AdminCyclesPage() {
   const { data: session } = useSession();
@@ -149,183 +155,173 @@ export default function AdminCyclesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Assessment Cycles</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage quarterly assessment cycles</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedQuarter}
-            onChange={(e) => setSelectedQuarter(Number(e.target.value))}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
-          >
-            {QUARTERS.map((q) => (
-              <option key={q.value} value={q.value}>{q.label}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <Button onClick={createCycle} disabled={creating} size="sm">
-            {creating ? "Creating..." : "Create Cycle"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Admin"
+        title={<>Assessment <em>cycles.</em></>}
+        sub="Manage quarterly assessment cycles."
+        actions={
+          <>
+            <select
+              value={selectedQuarter}
+              onChange={(e) => setSelectedQuarter(Number(e.target.value))}
+              className={SELECT_CLASS}
+            >
+              {QUARTERS.map((q) => (
+                <option key={q.value} value={q.value}>{q.label}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className={SELECT_CLASS}
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <Button onClick={createCycle} disabled={creating} size="sm">
+              {creating ? "Creating..." : "Create Cycle"}
+            </Button>
+          </>
+        }
+      />
 
       {createError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div className="rounded-lg bg-magenta-3 border border-magenta/25 p-3 text-sm text-magenta-2">
           {createError}
         </div>
       )}
 
-      <div className="space-y-4">
+      <Card className="p-0 overflow-hidden">
+        <div
+          className="dt-head grid items-center gap-3 px-4 py-2.5"
+          style={{ gridTemplateColumns: "1fr 140px 120px auto" }}
+        >
+          <span>Period</span>
+          <span>Created</span>
+          <span>Status</span>
+          <span className="text-right">Actions</span>
+        </div>
+
         {cycles.map((cycle) => (
-          <Card key={cycle.id}>
-            <CardContent className="py-0">
-              <div className="py-4 flex items-center justify-between">
-                <button
-                  onClick={() => toggleExpand(cycle.id)}
-                  className="flex items-center gap-3 text-left"
-                >
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${expandedCycleId === cycle.id ? "rotate-90" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-visory-navy">
-                      {formatCyclePeriod(cycle)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Created {formatDate(cycle.createdAt)}
-                    </p>
-                  </div>
-                </button>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    className={
-                      cycle.status === "OPEN"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : "bg-gray-100 text-gray-800 border-gray-300"
-                    }
-                  >
-                    {cycle.status}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => toggleCycle(cycle.id, cycle.status)}
-                  >
-                    {cycle.status === "OPEN" ? "Close" : "Reopen"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => deleteCycle(cycle.id)}
-                    disabled={deletingCycleId === cycle.id}
-                  >
-                    {deletingCycleId === cycle.id ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
+          <div key={cycle.id}>
+            <div
+              className="dt-row grid items-center gap-3 px-4 py-3"
+              style={{ gridTemplateColumns: "1fr 140px 120px auto" }}
+            >
+              <button
+                onClick={() => toggleExpand(cycle.id)}
+                className="flex items-center gap-2.5 text-left"
+              >
+                <ChevronRight
+                  size={16}
+                  strokeWidth={1.6}
+                  className={`text-ink-3 transition-transform ${expandedCycleId === cycle.id ? "rotate-90" : ""}`}
+                />
+                <span className="text-sm font-medium text-ink">{formatCyclePeriod(cycle)}</span>
+              </button>
+              <span className="mono tnum text-xs text-ink-3">{formatDate(cycle.createdAt)}</span>
+              <div>
+                <Badge variant={cycle.status === "OPEN" ? "success" : "slate"}>{cycle.status}</Badge>
               </div>
+              <div className="flex items-center justify-end gap-3">
+                <Toggle
+                  checked={cycle.status === "OPEN"}
+                  onChange={() => toggleCycle(cycle.id, cycle.status)}
+                  label={cycle.status === "OPEN" ? "Close cycle" : "Reopen cycle"}
+                />
+                <Button
+                  size="sm"
+                  variant="magenta"
+                  onClick={() => deleteCycle(cycle.id)}
+                  disabled={deletingCycleId === cycle.id}
+                >
+                  {deletingCycleId === cycle.id ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
 
-              {expandedCycleId === cycle.id && (
-                <div className="border-t border-gray-100 pb-4">
-                  {loadingDetail ? (
-                    <p className="text-center py-4 text-sm text-gray-500">Loading...</p>
-                  ) : cycleDetail ? (
-                    <div className="space-y-4 pt-4">
-                      {/* Stats summary */}
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                        <div className="text-center p-2 rounded-lg bg-visory-grey">
-                          <p className="text-lg font-bold text-visory-navy">{cycleDetail.stats.total}</p>
-                          <p className="text-xs text-gray-500">Total</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-gray-50">
-                          <p className="text-lg font-bold text-gray-600">{cycleDetail.stats.pending}</p>
-                          <p className="text-xs text-gray-500">Pending</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-amber-50">
-                          <p className="text-lg font-bold text-amber-600">{cycleDetail.stats.inProgress}</p>
-                          <p className="text-xs text-gray-500">In Progress</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-blue-50">
-                          <p className="text-lg font-bold text-blue-600">{cycleDetail.stats.readyToSend}</p>
-                          <p className="text-xs text-gray-500">Ready to Send</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-green-50">
-                          <p className="text-lg font-bold text-green-600">{cycleDetail.stats.resultsSent}</p>
-                          <p className="text-xs text-gray-500">Results Sent</p>
-                        </div>
+            {expandedCycleId === cycle.id && (
+              <div className="border-t border-line bg-paper-2 px-4 pb-4">
+                {loadingDetail ? (
+                  <p className="text-center py-4 text-sm text-ink-3">Loading...</p>
+                ) : cycleDetail ? (
+                  <div className="space-y-4 pt-4">
+                    {/* Stats summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      <div className="text-center p-2 rounded-lg border border-line bg-paper">
+                        <p className="mono tnum text-lg text-ink">{cycleDetail.stats.total}</p>
+                        <p className="tiny text-ink-3">Total</p>
                       </div>
-
-                      {/* Assessment kanban by status */}
-                      {cycleDetail.assessments.length === 0 ? (
-                        <p className="text-center text-sm text-gray-500 py-2">
-                          No assessments created for this cycle.
-                        </p>
-                      ) : (
-                        <div className="flex gap-3 overflow-x-auto pb-2">
-                          {ADMIN_COLUMNS.map((col) => {
-                            const items = cycleDetail.assessments.filter((a) => a.overallStatus === col.key);
-                            return (
-                              <div key={col.key} className="flex-shrink-0 w-56">
-                                <div className="flex items-center justify-between mb-2 px-1">
-                                  <span className="text-xs font-semibold text-visory-navy">{col.label}</span>
-                                  <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-[11px]">{items.length}</Badge>
-                                </div>
-                                <div className="space-y-2 rounded-lg bg-gray-50 p-2 min-h-[80px] max-h-[26rem] overflow-y-auto">
-                                  {items.map((a) => (
-                                    <div key={a.id} className="rounded-md border border-gray-200 bg-white p-2.5 shadow-sm">
-                                      <button
-                                        onClick={() => router.push(`/summary/${a.employee.id}?cycleId=${cycle.id}`)}
-                                        className="text-xs font-medium text-visory-navy hover:underline text-left"
-                                      >
-                                        {a.employee.name}
-                                      </button>
-                                      <p className="text-[11px] text-gray-400">Mgr: {a.manager.name}</p>
-                                      <div className="flex items-center gap-2.5 mt-1 text-[11px]">
-                                        <span className={a.selfStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Self">● Self</span>
-                                        <span className={a.managerStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Manager">● Mgr</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {items.length === 0 && <p className="text-[11px] text-gray-400 text-center py-3">None</p>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <div className="text-center p-2 rounded-lg border border-line bg-paper">
+                        <p className="mono tnum text-lg text-ink-2">{cycleDetail.stats.pending}</p>
+                        <p className="tiny text-ink-3">Pending</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg border border-line bg-paper">
+                        <p className="mono tnum text-lg text-amber">{cycleDetail.stats.inProgress}</p>
+                        <p className="tiny text-ink-3">In Progress</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg border border-line bg-paper">
+                        <p className="mono tnum text-lg text-navy">{cycleDetail.stats.readyToSend}</p>
+                        <p className="tiny text-ink-3">Ready to Send</p>
+                      </div>
+                      <div className="text-center p-2 rounded-lg border border-line bg-paper">
+                        <p className="mono tnum text-lg text-success">{cycleDetail.stats.resultsSent}</p>
+                        <p className="tiny text-ink-3">Results Sent</p>
+                      </div>
                     </div>
-                  ) : null}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+                    {/* Assessment kanban by status */}
+                    {cycleDetail.assessments.length === 0 ? (
+                      <p className="text-center text-sm text-ink-3 py-2">
+                        No assessments created for this cycle.
+                      </p>
+                    ) : (
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {ADMIN_COLUMNS.map((col) => {
+                          const items = cycleDetail.assessments.filter((a) => a.overallStatus === col.key);
+                          return (
+                            <div key={col.key} className="flex-shrink-0 w-56">
+                              <div className="flex items-center justify-between mb-2 px-1">
+                                <span className="eyebrow">{col.label}</span>
+                                <Badge variant="slate">{items.length}</Badge>
+                              </div>
+                              <div className="space-y-2 rounded-lg border border-line bg-paper p-2 min-h-[80px] max-h-[26rem] overflow-y-auto">
+                                {items.map((a) => (
+                                  <div key={a.id} className="rounded-md border border-line bg-paper-2 p-2.5">
+                                    <button
+                                      onClick={() => router.push(`/summary/${a.employee.id}?cycleId=${cycle.id}`)}
+                                      className="text-xs font-medium text-ink hover:text-magenta text-left"
+                                    >
+                                      {a.employee.name}
+                                    </button>
+                                    <p className="tiny text-ink-3">Mgr: {a.manager.name}</p>
+                                    <div className="flex items-center gap-2.5 mt-1 tiny">
+                                      <span className={a.selfStatus === "submitted" ? "text-success" : "text-ink-4"} title="Self">● Self</span>
+                                      <span className={a.managerStatus === "submitted" ? "text-success" : "text-ink-4"} title="Manager">● Mgr</span>
+                                    </div>
+                                  </div>
+                                ))}
+                                {items.length === 0 && <p className="tiny text-ink-3 text-center py-3">None</p>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
         ))}
 
         {cycles.length === 0 && (
-          <Card>
-            <CardContent>
-              <p className="py-4 text-center text-sm text-gray-500">
-                No cycles yet. Create one to start.
-              </p>
-            </CardContent>
-          </Card>
+          <p className="py-8 text-center text-sm text-ink-3">
+            No cycles yet. Create one to start.
+          </p>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
