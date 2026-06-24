@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
+import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
 import {
   getBox1Label,
   getBox2Label,
@@ -26,6 +27,7 @@ interface PlacedEmployee {
   role: string;
   jobTitle: string | null;
   team: string | null;
+  startDate: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -45,6 +47,7 @@ function computePlaced(assessments: ManagerAssessmentData[]): PlacedEmployee[] {
         role: a.employee?.role || "EMPLOYEE",
         jobTitle: a.employee?.jobTitle || null,
         team: a.employee?.team || null,
+        startDate: a.employee?.startDate ?? null,
         box1Label: getBox1Label(a.performance!, a.growthReadiness!),
         box2Label: getBox2Label(va, a.engagement!),
         performance: a.performance!,
@@ -87,6 +90,7 @@ export default function CalibrationPage() {
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedTenures, setSelectedTenures] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"single" | "range">("single");
   const [rangeStartId, setRangeStartId] = useState<string>("");
   const [rangeEndId, setRangeEndId] = useState<string>("");
@@ -94,7 +98,7 @@ export default function CalibrationPage() {
 
   useEffect(() => {
     fetch("/api/cycles").then((r) => r.json()).then((data: CycleData[]) => {
-      const sorted = [...data].sort((a, b) => (b.year - a.year) || (b.month - a.month));
+      const sorted = [...data].sort(comparePeriodDesc);
       setCycles(sorted);
       const open = sorted.find((c) => c.status === "OPEN");
       if (open) setSelectedCycleId(open.id);
@@ -158,6 +162,7 @@ export default function CalibrationPage() {
           role: first.employee?.role || "EMPLOYEE",
           jobTitle: first.employee?.jobTitle || null,
           team: first.employee?.team || null,
+          startDate: first.employee?.startDate ?? null,
           box1Label: getBox1Label(avgPerf, avgGrowth),
           box2Label: getBox2Label(avgVa, avgEng),
           performance: avgPerf,
@@ -176,21 +181,20 @@ export default function CalibrationPage() {
   const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
   const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
 
-  const filteredEmployees = useMemo(() => {
-    return placedEmployees.filter((e) => {
+  const matchesFilters = useMemo(() => {
+    return (e: PlacedEmployee) => {
       if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
       if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      if (selectedTenures.length > 0) {
+        const bucket = getTenureBucket(e.startDate);
+        if (!bucket || !selectedTenures.includes(bucket)) return false;
+      }
       return true;
-    });
-  }, [placedEmployees, selectedTitles, selectedTeams]);
+    };
+  }, [selectedTitles, selectedTeams, selectedTenures]);
 
-  const filteredPrev = useMemo(() => {
-    return prevPlacedEmployees.filter((e) => {
-      if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
-      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
-      return true;
-    });
-  }, [prevPlacedEmployees, selectedTitles, selectedTeams]);
+  const filteredEmployees = useMemo(() => placedEmployees.filter(matchesFilters), [placedEmployees, matchesFilters]);
+  const filteredPrev = useMemo(() => prevPlacedEmployees.filter(matchesFilters), [prevPlacedEmployees, matchesFilters]);
 
   const currentInsights = useMemo(() => computeInsights(filteredEmployees), [filteredEmployees]);
   const prevInsights = useMemo(() => computeInsights(filteredPrev), [filteredPrev]);
@@ -238,7 +242,7 @@ export default function CalibrationPage() {
               onClick={() => setViewMode("single")}
               className={`px-3 py-2 text-xs font-medium ${viewMode === "single" ? "bg-visory-navy text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
             >
-              Single Month
+              Single Quarter
             </button>
             <button
               onClick={() => { setViewMode("range"); if (!rangeStartId && cycles.length > 0) { setRangeStartId(cycles[cycles.length - 1].id); setRangeEndId(cycles[0].id); } }}
@@ -255,7 +259,7 @@ export default function CalibrationPage() {
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
             >
               {cycles.map((c) => (
-                <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
               ))}
             </select>
           ) : (
@@ -266,7 +270,7 @@ export default function CalibrationPage() {
                 className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
               >
                 {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
                 ))}
               </select>
               <span className="text-sm text-gray-500">to</span>
@@ -276,7 +280,7 @@ export default function CalibrationPage() {
                 className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
               >
                 {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
                 ))}
               </select>
             </div>
@@ -284,6 +288,7 @@ export default function CalibrationPage() {
 
           <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
           <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+          <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
               onClick={() => setActiveGrid("box1")}
@@ -359,50 +364,81 @@ export default function CalibrationPage() {
               <h2 className="text-lg font-semibold">Key Insights</h2>
               {viewMode === "single" && prevInsights && prevCycleLabel && (
                 <span className="text-xs text-gray-500">
-                  vs. {formatCyclePeriod(prevCycleLabel.month, prevCycleLabel.year)}
+                  vs. {formatCyclePeriod(prevCycleLabel)}
                 </span>
               )}
               {viewMode === "range" && (
                 <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">
-                  Averaged across {rangeAssessments.length} months
+                  Averaged across {rangeAssessments.length} quarters
                 </Badge>
               )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <InsightCard
-                label="Talent Density"
-                value={`${currentInsights.avgTD.toFixed(1)}/9`}
-                color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
-                prev={prevInsights?.avgTD}
-                current={currentInsights.avgTD}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Cultural Momentum"
-                value={`${currentInsights.avgCM.toFixed(1)}/9`}
-                color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
-                prev={prevInsights?.avgCM}
-                current={currentInsights.avgCM}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Avg Performance"
-                value={currentInsights.avgPerf.toFixed(1)}
-                color="text-visory-navy"
-                prev={prevInsights?.avgPerf}
-                current={currentInsights.avgPerf}
-                showTrend={viewMode === "single"}
-              />
-              <InsightCard
-                label="Avg Growth"
-                value={currentInsights.avgGrowth.toFixed(1)}
-                color="text-visory-navy"
-                prev={prevInsights?.avgGrowth}
-                current={currentInsights.avgGrowth}
-                showTrend={viewMode === "single"}
-              />
+          <CardContent className="space-y-6">
+            {/* Talent Density: performance & growth out of 3, plus rolled-up /9 */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Talent Density</p>
+              <div className="grid grid-cols-3 gap-4">
+                <InsightCard
+                  label="Performance"
+                  value={`${currentInsights.avgPerf.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgPerf}
+                  current={currentInsights.avgPerf}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Growth Readiness"
+                  value={`${currentInsights.avgGrowth.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgGrowth}
+                  current={currentInsights.avgGrowth}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Rolled-up (Talent Density)"
+                  value={`${currentInsights.avgTD.toFixed(1)}/9`}
+                  color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
+                  prev={prevInsights?.avgTD}
+                  current={currentInsights.avgTD}
+                  showTrend={viewMode === "single"}
+                />
+              </div>
+            </div>
+
+            {/* Cultural Momentum: engagement & values out of 3, plus rolled-up /9 */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Cultural Momentum</p>
+              <div className="grid grid-cols-3 gap-4">
+                <InsightCard
+                  label="Engagement"
+                  value={`${currentInsights.avgEngagement.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgEngagement}
+                  current={currentInsights.avgEngagement}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Values Alignment"
+                  value={`${currentInsights.avgValues.toFixed(1)}/3`}
+                  color="text-visory-navy"
+                  prev={prevInsights?.avgValues}
+                  current={currentInsights.avgValues}
+                  showTrend={viewMode === "single"}
+                />
+                <InsightCard
+                  label="Rolled-up (Cultural Momentum)"
+                  value={`${currentInsights.avgCM.toFixed(1)}/9`}
+                  color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
+                  prev={prevInsights?.avgCM}
+                  current={currentInsights.avgCM}
+                  showTrend={viewMode === "single"}
+                />
+              </div>
+            </div>
+
+            {/* Population health */}
+            <div className="grid grid-cols-2 gap-4">
               <InsightCard
                 label="Top Talent"
                 value={`${currentInsights.topTalent}/${currentInsights.total}`}
@@ -429,10 +465,10 @@ export default function CalibrationPage() {
       {viewMode === "single" && prevPlacedEmployees.length > 0 && filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Month-over-Month Movement</h2>
+            <h2 className="text-lg font-semibold">Quarter-over-Quarter Movement</h2>
             <p className="text-xs text-gray-500">
-              {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel.month, selectedCycleLabel.year)} vs.{" "}
-              {prevCycleLabel && formatCyclePeriod(prevCycleLabel.month, prevCycleLabel.year)}
+              {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel)} vs.{" "}
+              {prevCycleLabel && formatCyclePeriod(prevCycleLabel)}
             </p>
           </CardHeader>
           <CardContent>

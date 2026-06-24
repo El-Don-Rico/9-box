@@ -2,14 +2,58 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
   return classes.filter(Boolean).join(" ");
 }
 
-export function formatCyclePeriod(month: number, year: number): string {
-  const date = new Date(year, month - 1);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+export type CyclePeriod = { month?: number | null; quarter?: number | null; year: number };
+
+// Formats an assessment cycle period. New cycles are quarterly (Q1–Q4); legacy
+// cycles only have a month and are still rendered in their original form.
+export function formatCyclePeriod(period: CyclePeriod): string {
+  if (period.quarter) return `Q${period.quarter} ${period.year}`;
+  if (period.month) {
+    const date = new Date(period.year, period.month - 1);
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  }
+  return String(period.year);
 }
 
-export function getCurrentPeriod(): { month: number; year: number } {
+// Numeric ordering value within a year (quarter takes precedence over legacy month).
+export function periodOrder(period: CyclePeriod): number {
+  return period.quarter ?? period.month ?? 0;
+}
+
+// Descending comparator (most recent first) usable in Array.sort.
+export function comparePeriodDesc(a: CyclePeriod, b: CyclePeriod): number {
+  return b.year - a.year || periodOrder(b) - periodOrder(a);
+}
+
+export function getCurrentPeriod(): { quarter: number; year: number } {
   const now = new Date();
-  return { month: now.getMonth() + 1, year: now.getFullYear() };
+  return { quarter: Math.floor(now.getMonth() / 3) + 1, year: now.getFullYear() };
+}
+
+export interface CycleDueDates {
+  readyToMeet: Date; // both assessments submitted, ready for the 1:1
+  meetingComplete: Date; // 1:1 meeting held
+  resultsSent: Date; // results shared & review complete
+}
+
+/**
+ * Target due dates for a cycle's close-out, anchored to the final calendar month
+ * of the period (the last month of the quarter, or a legacy month):
+ *  - Ready to Meet by the 10th
+ *  - Meeting Complete by the 20th
+ *  - Results Sent / Review Complete by the 25th
+ */
+export function getCycleDueDates(period: CyclePeriod): CycleDueDates {
+  const month = period.quarter ? period.quarter * 3 : period.month ?? 12;
+  return {
+    readyToMeet: new Date(period.year, month - 1, 10),
+    meetingComplete: new Date(period.year, month - 1, 20),
+    resultsSent: new Date(period.year, month - 1, 25),
+  };
+}
+
+export function formatDueDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function getRatingLabel(rating: number): string {

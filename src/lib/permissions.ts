@@ -58,6 +58,20 @@ export async function getVisibleEmployeeIds(
 }
 
 /**
+ * True when the user can view/act on the given employee (own record, a managed
+ * report, or leadership/admin). Reuses getVisibleEmployeeIds for the role rules.
+ */
+export async function canManageEmployee(
+  userId: string,
+  role: Role,
+  employeeId: string
+): Promise<boolean> {
+  const visible = await getVisibleEmployeeIds(userId, role);
+  if (visible === "all") return true;
+  return visible.includes(employeeId);
+}
+
+/**
  * Returns Prisma where filter for manager assessments based on role.
  */
 export async function getManagerAssessmentFilter(

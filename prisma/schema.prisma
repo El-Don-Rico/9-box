@@ -31,6 +31,49 @@ enum GoalStatus {
   CANCELLED
 }
 
+enum MeetingStatus {
+  NOT_READY
+  READY_TO_MEET
+  MEETING_SCHEDULED
+  MEETING_COMPLETE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskVisibility {
+  SHARED
+  MANAGER_ONLY
+}
+
+enum TaskType {
+  STANDARD
+  PIP
+}
+
+enum PerformancePlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Per-review-cycle progress status recorded against a goal.
+enum GoalProgressStatus {
+  ON_TRACK
+  OFF_TRACK
+  COMPLETE
+}
+
+enum ReviewNoteKind {
+  NOTE
+  MEETING_LINK
+  TRANSCRIPT
+  SUMMARY
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -42,6 +85,7 @@ model User {
   managerId    String?
   manager      User?    @relation("ManagerReports", fields: [managerId], references: [id])
   reports      User[]   @relation("ManagerReports")
+  startDate    DateTime?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -54,6 +98,18 @@ model User {
   goalsCreated               Goal[]             @relation("GoalCreator")
   keyMetrics                 KeyMetric[]        @relation("EmployeeKeyMetrics")
   keyMetricsCreated          KeyMetric[]        @relation("KeyMetricCreator")
+  tasksAbout                 Task[]             @relation("EmployeeTasks")
+  tasksAssigned              Task[]             @relation("AssignedTasks")
+  tasksCreated               Task[]             @relation("CreatedTasks")
+  taskComments               TaskComment[]
+  performancePlans           PerformancePlan[]  @relation("EmployeePerformancePlans")
+  performancePlansManaged    PerformancePlan[]  @relation("ManagerPerformancePlans")
+  goalUpdatesCreated         GoalUpdate[]       @relation("GoalUpdateCreator")
+  metricResultsCreated       MetricResult[]     @relation("MetricResultCreator")
+  auditLogs                  AuditLog[]         @relation("AuditActor")
+  passwordResetTokens        PasswordResetToken[]
+  reviewNotesAbout           ReviewNote[]       @relation("ReviewNoteEmployee")
+  reviewNotesAuthored        ReviewNote[]       @relation("ReviewNoteAuthor")
 
   @@index([managerId])
   @@index([role])
@@ -77,15 +133,22 @@ model Invitation {
 
 model AssessmentCycle {
   id        String      @id @default(cuid())
-  month     Int
+  // Legacy monthly cycles keep `month`; new quarterly cycles use `quarter` (1-4).
+  // Uniqueness per period is enforced in application code so historical monthly
+  // rows can coexist with quarterly ones.
+  month     Int?
+  quarter   Int?
   year      Int
   status    CycleStatus @default(OPEN)
   createdAt DateTime    @default(now())
 
   managerAssessments ManagerAssessment[]
   selfAssessments    SelfAssessment[]
+  goalUpdates        GoalUpdate[]
+  metricResults      MetricResult[]
+  reviewNotes        ReviewNote[]
 
-  @@unique([month, year])
+  @@index([year])
 }
 
 model ManagerAssessment {
@@ -111,9 +174,8 @@ model ManagerAssessment {
   notes               String?
   submittedAt         DateTime?
   resultsSentAt       DateTime?
-  oneOnOneComplete    Boolean   @default(false)
-  oneOnOneCompletedAt DateTime?
-  oneOnOneNotes       String?
+  meetingStatus       MeetingStatus @default(NOT_READY)
+  meeting             Meeting?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -181,6 +243,7 @@ model Goal {
   status      GoalStatus @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  updates     GoalUpdate[]
 
   @@index([employeeId])
   @@index([createdById])
@@ -198,7 +261,200 @@ model KeyMetric {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  results     MetricResult[]
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+model Meeting {
+  id                  String   @id @default(cuid())
+  managerAssessmentId String   @unique
+  managerAssessment   ManagerAssessment @relation(fields: [managerAssessmentId], references: [id], onDelete: Cascade)
+  notes               String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  tasks               Task[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  employeeId  String
+  employee    User       @relation("EmployeeTasks", fields: [employeeId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  createdById String
+  createdBy   User       @relation("CreatedTasks", fields: [createdById], references: [id])
+  meetingId   String?
+  meeting     Meeting?   @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  dueDate     DateTime?
+  status      TaskStatus     @default(TODO)
+  visibility  TaskVisibility @default(SHARED)
+  type        TaskType       @default(STANDARD)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  comments        TaskComment[]
+  performancePlan PerformancePlan?
+
+  @@index([employeeId])
+  @@index([assigneeId])
+  @@index([meetingId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// A Performance Improvement Plan, triggered from a PIP-type Task. Manager-only.
+model PerformancePlan {
+  id         String                @id @default(cuid())
+  taskId     String                @unique
+  task       Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   User                  @relation("EmployeePerformancePlans", fields: [employeeId], references: [id], onDelete: Cascade)
+  managerId  String
+  manager    User                  @relation("ManagerPerformancePlans", fields: [managerId], references: [id])
+  status     PerformancePlanStatus @default(ACTIVE)
+  summary    String?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  meetings   PerformanceMeeting[]
+
+  @@index([employeeId])
+  @@index([managerId])
+}
+
+model PerformanceMeeting {
+  id          String   @id @default(cuid())
+  planId      String
+  plan        PerformancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  title       String
+  notes       String?
+  meetingDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions     PerformanceAction[]
+
+  @@index([planId])
+}
+
+model PerformanceAction {
+  id        String   @id @default(cuid())
+  meetingId String
+  meeting   PerformanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean  @default(false)
+  dueDate   DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([meetingId])
+}
+
+// Free-form notes, meeting links and transcripts/summaries attached to an
+// employee's review for a given cycle. Both the employee and their manager can
+// contribute.
+model ReviewNote {
+  id         String          @id @default(cuid())
+  cycleId    String
+  cycle      AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   User            @relation("ReviewNoteEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User            @relation("ReviewNoteAuthor", fields: [authorId], references: [id])
+  kind       ReviewNoteKind  @default(NOTE)
+  title      String?
+  body       String?
+  url        String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([cycleId, employeeId])
+  @@index([authorId])
+}
+
+// Single-use, time-limited token backing the self-service password reset flow.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// Append-only audit trail for sensitive changes (e.g. editing a completed
+// assessment before results are sent, sending results, admin password resets).
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  summary    String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
+
+// A goal's progress recorded during a specific review cycle: an off-track /
+// on-track / complete status plus a free-text update.
+model GoalUpdate {
+  id          String             @id @default(cuid())
+  goalId      String
+  goal        Goal               @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  cycleId     String
+  cycle       AssessmentCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  status      GoalProgressStatus
+  note        String?
+  createdById String
+  createdBy   User               @relation("GoalUpdateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([goalId, cycleId])
+  @@index([goalId])
+  @@index([cycleId])
+}
+
+// A key metric's actual result recorded during a specific review cycle.
+model MetricResult {
+  id          String          @id @default(cuid())
+  keyMetricId String
+  keyMetric   KeyMetric       @relation(fields: [keyMetricId], references: [id], onDelete: Cascade)
+  cycleId     String
+  cycle       AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  actual      String
+  note        String?
+  createdById String
+  createdBy   User            @relation("MetricResultCreator", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([keyMetricId, cycleId])
+  @@index([keyMetricId])
+  @@index([cycleId])
 }

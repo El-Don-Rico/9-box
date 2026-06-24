@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
+import { TasksPanel } from "@/components/tasks/tasks-panel";
+import { PerformancePlanCard } from "@/components/performance/performance-plan-card";
 
 interface EmployeeProfile {
   id: string;
@@ -33,7 +35,9 @@ interface AssessmentHistory {
   valGiveEnergy: number | null;
   submittedAt: string | null;
   resultsSentAt: string | null;
-  cycle: { id: string; month: number; year: number };
+  meetingStatus: string;
+  meeting: { id: string } | null;
+  cycle: { id: string; month: number | null; quarter: number | null; year: number };
 }
 
 interface GoalData {
@@ -79,6 +83,13 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [savingMetric, setSavingMetric] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function reportFailure(res: Response, fallback: string) {
+    const data = await res.json().catch(() => ({}));
+    const base = data.error || `${fallback} (error ${res.status})`;
+    setActionError(data.detail ? `${base} — ${data.detail}` : base);
+  }
 
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
@@ -113,6 +124,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   async function handleAddGoal() {
     if (!newGoalTitle.trim()) return;
     setSavingGoal(true);
+    setActionError(null);
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
@@ -131,13 +143,18 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewGoalDesc("");
         setNewGoalDue("");
         setShowGoalForm(false);
+      } else {
+        await reportFailure(res, "Failed to save goal");
       }
+    } catch {
+      setActionError("Network error while saving goal");
     } finally {
       setSavingGoal(false);
     }
   }
 
   async function handleGoalStatus(goalId: string, status: string) {
+    setActionError(null);
     const res = await fetch("/api/goals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -146,12 +163,15 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     if (res.ok) {
       const updated = await res.json();
       setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+    } else {
+      await reportFailure(res, "Failed to update goal");
     }
   }
 
   async function handleAddMetric() {
     if (!newMetricName.trim() || !newMetricTarget.trim()) return;
     setSavingMetric(true);
+    setActionError(null);
     try {
       const res = await fetch("/api/key-metrics", {
         method: "POST",
@@ -172,7 +192,11 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         setNewMetricUnit("");
         setNewMetricNotes("");
         setShowMetricForm(false);
+      } else {
+        await reportFailure(res, "Failed to save metric");
       }
+    } catch {
+      setActionError("Network error while saving metric");
     } finally {
       setSavingMetric(false);
     }
@@ -204,9 +228,17 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
   const completedGoals = goals.filter((g) => g.status !== "ACTIVE");
+  // A 1:1 can be run once the manager marks the meeting as scheduled.
+  const scheduledMeeting = canEdit ? assessments.find((a) => a.meetingStatus === "MEETING_SCHEDULED") : undefined;
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 shrink-0">✕</button>
+        </div>
+      )}
       {/* Profile Header */}
       <div>
         <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
@@ -218,6 +250,21 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         </div>
         <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
       </div>
+
+      {/* Scheduled 1:1 meeting */}
+      {scheduledMeeting && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-visory-navy">1:1 meeting scheduled</p>
+            <p className="text-sm text-gray-600">
+              {formatCyclePeriod(scheduledMeeting.cycle)} cycle
+            </p>
+          </div>
+          <Button onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
+            {scheduledMeeting.meeting ? "Edit Meeting Notes" : "Start Meeting"}
+          </Button>
+        </div>
+      )}
 
       {/* Key Metrics */}
       <Card>
@@ -444,6 +491,26 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         </CardContent>
       </Card>
 
+      {/* Tasks */}
+      <Card>
+        <CardContent className="py-4">
+          <TasksPanel
+            employeeId={employeeId}
+            canManage={!!canEdit}
+            assigneeOptions={[
+              { id: employee.id, name: employee.name },
+              ...(session?.user?.id && session.user.name && session.user.id !== employee.id
+                ? [{ id: session.user.id, name: session.user.name }]
+                : []),
+            ]}
+            emptyText="No tasks yet. Tasks created in 1:1 meetings appear here."
+          />
+        </CardContent>
+      </Card>
+
+      {/* Performance Improvement Plan (manager-only) */}
+      {canEdit && <PerformancePlanCard employeeId={employeeId} employeeName={employee.name} />}
+
       {/* Performance History */}
       <Card>
         <CardHeader>
@@ -476,7 +543,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     return (
                       <tr key={a.id}>
                         <td className="py-2 px-2 font-medium text-visory-navy">
-                          {formatCyclePeriod(a.cycle.month, a.cycle.year)}
+                          {formatCyclePeriod(a.cycle)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (

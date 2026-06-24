@@ -1,14 +1,14 @@
 export const assessmentPrompts: Record<string, { self?: string[]; manager?: string[] }> = {
   performance: {
     self: [
-      "Did you meet your deliverables and deadlines this month?",
+      "Did you meet your deliverables and deadlines this quarter?",
       "How was the quality of your output compared to expectations?",
       "Were you self-sufficient, or did you need significant support?",
     ],
     manager: [
       "Did this person consistently meet deadlines and quality standards?",
       "How did their output compare to peers in a similar role?",
-      "Were there any notable wins or misses this month?",
+      "Were there any notable wins or misses this quarter?",
     ],
   },
   growthReadiness: {
@@ -30,7 +30,7 @@ export const assessmentPrompts: Record<string, { self?: string[]; manager?: stri
   },
   valStepIntoArena: {
     self: [
-      "Did you volunteer for difficult tasks or conversations this month?",
+      "Did you volunteer for difficult tasks or conversations this quarter?",
       "Did you speak up when you disagreed or saw a problem?",
     ],
     manager: [
@@ -41,7 +41,7 @@ export const assessmentPrompts: Record<string, { self?: string[]; manager?: stri
   valFlockToProblems: {
     self: [
       "Did you actively seek out and address problems before they escalated?",
-      "Did you help a colleague or team solve a challenge this month?",
+      "Did you help a colleague or team solve a challenge this quarter?",
     ],
     manager: [
       "Does this person gravitate toward problems rather than away from them?",
@@ -50,7 +50,7 @@ export const assessmentPrompts: Record<string, { self?: string[]; manager?: stri
   },
   valGiveEnergy: {
     self: [
-      "Did you contribute positively to team morale and energy this month?",
+      "Did you contribute positively to team morale and energy this quarter?",
       "Did you support or uplift a colleague who was struggling?",
     ],
     manager: [

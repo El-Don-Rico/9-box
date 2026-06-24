@@ -25,7 +25,7 @@ export default function AdminPage() {
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/cycles")}>
           <CardContent className="py-6">
             <h3 className="text-lg font-semibold text-visory-navy">Assessment Cycles</h3>
-            <p className="text-sm text-gray-600 mt-1">Open, close, and manage monthly cycles</p>
+            <p className="text-sm text-gray-600 mt-1">Open, close, and manage quarterly cycles</p>
           </CardContent>
         </Card>
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/users")}>

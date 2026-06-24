@@ -1,22 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MultiSelect } from "@/components/ui/multi-select";
-import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
-import {
-  getBox1Label,
-  getBox2Label,
-  getValuesAlignment,
-  BOX1_GRID,
-  BOX2_GRID,
-  type GridCellConfig,
-} from "@/lib/nine-box";
+import { TasksPanel } from "@/components/tasks/tasks-panel";
+import { KanbanBoard } from "@/components/meetings/kanban-board";
+import type { CycleData, TeamMemberStatus, TaskData } from "@/types";
+import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
+import { getValuesAlignment } from "@/lib/nine-box";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -29,7 +24,8 @@ export default function DashboardPage() {
 
 interface EmployeeSummary {
   cycleId: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   selfPerformance: number | null;
   mgrPerformance: number | null;
@@ -71,6 +67,7 @@ function EmployeeDashboard() {
               summaries.push({
                 cycleId: cycle.id,
                 month: cycle.month,
+                quarter: cycle.quarter,
                 year: cycle.year,
                 selfPerformance: self?.performance ?? null,
                 mgrPerformance: mgr?.performance ?? null,
@@ -85,8 +82,8 @@ function EmployeeDashboard() {
             } catch { /* skip */ }
           })
         );
-        // Sort by year desc, month desc
-        summaries.sort((a, b) => b.year - a.year || b.month - a.month);
+        // Sort most recent first (quarter/legacy-month aware)
+        summaries.sort(comparePeriodDesc);
         setCycleSummaries(summaries);
         setLoading(false);
       })
@@ -96,6 +93,8 @@ function EmployeeDashboard() {
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
 
   const openCycle = cycles.find((c) => c.status === "OPEN");
+  const openSummary = openCycle ? cycleSummaries.find((s) => s.cycleId === openCycle.id) : undefined;
+  const needsSelfAssessment = !!openCycle && !openSummary?.selfSubmitted;
   const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
 
   // Compute averages from cycles that have manager assessments
@@ -119,6 +118,21 @@ function EmployeeDashboard() {
         <h1 className="text-2xl font-bold text-visory-navy">My Dashboard</h1>
         <p className="text-sm text-gray-600 mt-1">Your performance cycle status</p>
       </div>
+
+      {/* Cycle-open invitation banner */}
+      {needsSelfAssessment && openCycle && (
+        <div className="rounded-lg border border-visory bg-visory-light/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-visory-navy">
+              The {formatCyclePeriod(openCycle)} cycle is open
+            </p>
+            <p className="text-sm text-visory-navy/80">Complete your self-assessment to get started.</p>
+          </div>
+          <Button onClick={() => router.push(`/self-assessment?cycleId=${openCycle.id}`)}>
+            Start Self-Assessment
+          </Button>
+        </div>
+      )}
 
       {/* Summary Card - averages & latest */}
       {latestWithResults && (
@@ -167,7 +181,7 @@ function EmployeeDashboard() {
             </div>
             {completedCycles.length > 1 && (
               <p className="text-xs text-gray-400 mt-3 text-center">
-                Latest: {formatCyclePeriod(latestWithResults.month, latestWithResults.year)} · Averages across {completedCycles.length} cycles
+                Latest: {formatCyclePeriod(latestWithResults)} · Averages across {completedCycles.length} cycles
               </p>
             )}
           </CardContent>
@@ -183,7 +197,7 @@ function EmployeeDashboard() {
             <Card key={summary.cycleId}>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">{formatCyclePeriod(summary.month, summary.year)}</h2>
+                  <h2 className="text-lg font-semibold">{formatCyclePeriod(summary)}</h2>
                   {isOpen && (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
                   )}
@@ -237,7 +251,7 @@ function EmployeeDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{formatCyclePeriod(openCycle.month, openCycle.year)}</h2>
+              <h2 className="text-lg font-semibold">{formatCyclePeriod(openCycle)}</h2>
               <Badge className="bg-green-100 text-green-800 border-green-300">Open</Badge>
             </div>
           </CardHeader>
@@ -256,43 +270,63 @@ function EmployeeDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* My Tasks */}
+      {session?.user?.id && (
+        <Card>
+          <CardContent className="py-4">
+            <TasksPanel
+              employeeId={session.user.id}
+              emptyText="No tasks assigned to you yet. Actions agreed in your 1:1 will appear here."
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-interface PlacedEmployee {
-  id: string;
-  name: string;
-  role: string;
-  jobTitle: string | null;
-  team: string | null;
-  box1Label: string;
-  box2Label: string;
-  performance: number;
-  growthReadiness: number;
-  valuesAlignment: number;
-  engagement: number;
-}
-
-function SendResultsConfirmModal({ memberName, onConfirm, onCancel }: { memberName: string; onConfirm: () => void; onCancel: () => void }) {
+function ManagedTasks({ tasks }: { tasks: TaskData[] }) {
+  const open = tasks.filter((t) => t.status !== "DONE");
+  if (tasks.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 text-center py-2">
+        No tasks yet. Actions agreed in your 1:1 meetings appear here.
+      </p>
+    );
+  }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {memberName}?</h3>
-        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-          <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
-          <p className="text-sm text-amber-700">
-            Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
-          </p>
+    <div className="space-y-2">
+      {open.length === 0 && (
+        <p className="text-sm text-gray-400 text-center py-2">All tasks are done. 🎉</p>
+      )}
+      {open.map((task) => (
+        <div key={task.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-visory-navy truncate">{task.title}</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              {task.employee && (
+                <Link href={`/team/${task.employee.id}`} className="text-visory hover:text-visory-dark font-medium">
+                  {task.employee.name}
+                </Link>
+              )}
+              <span>· {task.assignee?.name ?? "Unassigned"}</span>
+              {task.dueDate && (
+                <span>· due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+              )}
+            </div>
+          </div>
+          <Badge
+            className={
+              task.status === "IN_PROGRESS"
+                ? "bg-amber-100 text-amber-800 border-amber-300"
+                : "bg-gray-100 text-gray-600 border-gray-300"
+            }
+          >
+            {task.status === "IN_PROGRESS" ? "In Progress" : "To Do"}
+          </Badge>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
-          This will make your assessment visible to {memberName}. This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-          <Button size="sm" onClick={onConfirm}>Confirm &amp; Send Results</Button>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -303,94 +337,28 @@ function ManagerDashboard() {
   const role = session?.user?.role;
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
-  const [assessments, setAssessments] = useState<ManagerAssessmentData[]>([]);
-  const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
-  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [sendConfirm, setSendConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
-  const [sendingResults, setSendingResults] = useState(false);
+  const [tasks, setTasks] = useState<TaskData[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles")
       .then((r) => r.json())
       .then((cycles: CycleData[]) => {
-        const recent = cycles[0];
-        if (recent) {
-          setCycle(recent);
-          fetch(`/api/team?cycleId=${recent.id}`)
+        // Use the most active cycle (open if any, else most recent).
+        const current = cycles.find((c) => c.status === "OPEN") || cycles[0];
+        if (current) {
+          setCycle(current);
+          fetch(`/api/team?cycleId=${current.id}`)
             .then((r) => r.json())
-            .then(setTeam);
-          fetch(`/api/assessments/manager?cycleId=${recent.id}`)
-            .then((r) => r.json())
-            .then(setAssessments);
+            .then((t) => setTeam(Array.isArray(t) ? t : []));
         }
       });
+    fetch("/api/tasks?scope=managed")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((t) => setTasks(Array.isArray(t) ? t : []));
   }, []);
 
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
-
-  const placedEmployees = useMemo<PlacedEmployee[]>(() => {
-    return assessments
-      .filter((a) => a.submittedAt && a.performance && a.growthReadiness && a.engagement && a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy)
-      .map((a) => {
-        const va = getValuesAlignment(a.valCustomerFirst!, a.valStepIntoArena!, a.valFlockToProblems!, a.valGiveEnergy!);
-        return {
-          id: a.employeeId,
-          name: a.employee?.name || "Unknown",
-          role: a.employee?.role || "EMPLOYEE",
-          jobTitle: a.employee?.jobTitle || null,
-          team: a.employee?.team || null,
-          box1Label: getBox1Label(a.performance!, a.growthReadiness!),
-          box2Label: getBox2Label(va, a.engagement!),
-          performance: a.performance!,
-          growthReadiness: a.growthReadiness!,
-          valuesAlignment: va,
-          engagement: a.engagement!,
-        };
-      });
-  }, [assessments]);
-
-  const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
-  const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
-
-  const filteredEmployees = useMemo(() => {
-    return placedEmployees.filter((e) => {
-      if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
-      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
-      return true;
-    });
-  }, [placedEmployees, selectedTitles, selectedTeams]);
-
-  const grid = activeGrid === "box1" ? BOX1_GRID : BOX2_GRID;
-  const xLabel = activeGrid === "box1" ? "Performance" : "Values Alignment";
-  const yLabel = activeGrid === "box1" ? "Growth Readiness" : "Engagement";
-
-  async function handleSendResults(memberId: string) {
-    const assessment = assessments.find((a) => a.employeeId === memberId);
-    if (!assessment) return;
-    setSendingResults(true);
-    try {
-      const res = await fetch("/api/assessments/manager/send-results", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId: assessment.id }),
-      });
-      if (res.ok) {
-        setTeam((prev) => prev.map((m) => m.id === memberId ? { ...m, resultsSentAt: new Date().toISOString() } : m));
-      }
-    } finally {
-      setSendingResults(false);
-      setSendConfirm(null);
-    }
-  }
-
-  function getEmployeesForCell(cell: GridCellConfig) {
-    return filteredEmployees.filter((e) => {
-      if (activeGrid === "box1") return e.performance === cell.x && e.growthReadiness === cell.y;
-      return e.valuesAlignment === cell.x && e.engagement === cell.y;
-    });
-  }
 
   return (
     <div className="space-y-6">
@@ -398,7 +366,7 @@ function ManagerDashboard() {
         <h1 className="text-2xl font-bold text-visory-navy">Dashboard</h1>
         {cycle && (
           <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-gray-600">{formatCyclePeriod(cycle.month, cycle.year)}</p>
+            <p className="text-sm text-gray-600">{formatCyclePeriod(cycle)}</p>
             <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
               {cycle.status === "OPEN" ? "Open" : "Closed"}
             </Badge>
@@ -412,7 +380,7 @@ function ManagerDashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/cycles")}>
             <CardContent className="py-4">
               <h3 className="text-sm font-semibold text-visory-navy">Assessment Cycles</h3>
-              <p className="text-xs text-gray-600 mt-1">Open, close, and manage monthly cycles</p>
+              <p className="text-xs text-gray-600 mt-1">Open, close, and manage quarterly cycles</p>
             </CardContent>
           </Card>
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push("/admin/users")}>
@@ -442,155 +410,37 @@ function ManagerDashboard() {
             </Card>
           </div>
 
-          {/* 9-Box Grid */}
-          {placedEmployees.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold">9-Box Grid</h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
-                    <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
-                    <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-                      <button
-                        onClick={() => setActiveGrid("box1")}
-                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-                      >
-                        Talent Density
-                      </button>
-                      <button
-                        onClick={() => setActiveGrid("box2")}
-                        className={`px-3 py-1.5 text-xs font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-                      >
-                        Cultural Momentum
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="flex gap-2">
-                  <div className="flex flex-col justify-between items-center w-8 py-4">
-                    <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">High</span>
-                    <span className="text-xs font-semibold text-visory-navy -rotate-90 whitespace-nowrap">{yLabel}</span>
-                    <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">Low</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="grid grid-cols-3 gap-2">
-                      {grid.map((cell) => {
-                        const emps = getEmployeesForCell(cell);
-                        return (
-                          <div
-                            key={`${cell.x}-${cell.y}`}
-                            className={`rounded-lg border-2 p-3 min-h-[80px] ${cell.colorClass}`}
-                          >
-                            <p className="text-xs font-semibold text-visory-navy mb-1">{cell.label}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {emps.map((emp) => (
-                                <span
-                                  key={emp.id}
-                                  onClick={() => router.push(`/team/${emp.id}`)}
-                                  className="cursor-pointer"
-                                >
-                                  <Badge className="bg-white/80 text-gray-800 border-gray-300 text-xs hover:bg-white">
-                                    {emp.name}
-                                  </Badge>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between items-center mt-2 px-4">
-                      <span className="text-xs font-medium text-gray-500">Low</span>
-                      <span className="text-xs font-semibold text-visory-navy">{xLabel}</span>
-                      <span className="text-xs font-medium text-gray-500">High</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Team Roster */}
+          {/* Meeting Kanban board */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold">Team Roster</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Current Cycle</h2>
+                <p className="text-xs text-gray-500">
+                  Track each report against the cycle due dates. Drag a card between columns to update meeting status.
+                </p>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="divide-y divide-gray-100">
-                {team.map((member) => (
-                  <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div
-                      className="cursor-pointer hover:opacity-80"
-                      onClick={() => router.push(`/team/${member.id}`)}
-                    >
-                      <p className="text-sm font-medium text-visory-navy hover:underline">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.email}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        className={
-                          member.selfAssessmentStatus === "submitted"
-                            ? "bg-green-100 text-green-800 border-green-300"
-                            : member.selfAssessmentStatus === "draft"
-                              ? "bg-amber-100 text-amber-800 border-amber-300"
-                              : "bg-gray-100 text-gray-800 border-gray-300"
-                        }
-                      >
-                        Self: {member.selfAssessmentStatus === "submitted" ? "Done" : member.selfAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                      </Badge>
-                      <Badge
-                        className={
-                          member.managerAssessmentStatus === "submitted"
-                            ? "bg-green-100 text-green-800 border-green-300"
-                            : member.managerAssessmentStatus === "draft"
-                              ? "bg-amber-100 text-amber-800 border-amber-300"
-                              : "bg-gray-100 text-gray-800 border-gray-300"
-                        }
-                      >
-                        Mgr: {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}
-                        onClick={() => router.push(`/assess/${member.id}?cycleId=${cycle.id}`)}
-                      >
-                        {member.managerAssessmentStatus === "submitted" ? "View" : "Assess"}
-                      </Button>
-                      {member.managerAssessmentStatus === "submitted" && member.selfAssessmentStatus === "submitted" && !member.resultsSentAt && (
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          onClick={() => setSendConfirm({ memberId: member.id, memberName: member.name })}
-                        >
-                          Send Results
-                        </Button>
-                      )}
-                      {member.resultsSentAt && (
-                        <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {team.length === 0 && (
-                  <p className="py-4 text-center text-sm text-gray-500">
-                    No team members found. Ask your admin to assign employees to you.
-                  </p>
-                )}
-              </div>
+              {team.length === 0 ? (
+                <p className="py-4 text-center text-sm text-gray-500">
+                  No direct reports found. Ask your admin to assign employees to you.
+                </p>
+              ) : (
+                <KanbanBoard members={team} cycle={cycle} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tasks across the team */}
+          <Card>
+            <CardHeader>
+              <h2 className="text-lg font-semibold">Team Tasks</h2>
+            </CardHeader>
+            <CardContent>
+              <ManagedTasks tasks={tasks} />
             </CardContent>
           </Card>
         </>
-      )}
-
-      {sendConfirm && (
-        <SendResultsConfirmModal
-          memberName={sendConfirm.memberName}
-          onConfirm={() => handleSendResults(sendConfirm.memberId)}
-          onCancel={() => setSendConfirm(null)}
-        />
       )}
     </div>
   );

@@ -36,7 +36,20 @@ export async function GET(request: Request) {
     }),
     prisma.managerAssessment.findFirst({
       where: { cycleId, employeeId },
-      include: { manager: { select: { id: true, name: true } } },
+      include: {
+        manager: { select: { id: true, name: true } },
+        meeting: {
+          include: {
+            tasks: {
+              include: {
+                assignee: { select: { id: true, name: true } },
+                createdBy: { select: { id: true, name: true } },
+              },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        },
+      },
     }),
     prisma.assessmentCycle.findUnique({ where: { id: cycleId } }),
   ]);
@@ -50,10 +63,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const isRequesterManager = managerAssessment?.managerId === session.user.id;
+  // Meeting notes are only exposed to a manager who can act on this employee.
+  const canSeeMeeting = isManagerRole || isLeadershipOrAdmin;
   const mgrData = managerAssessment ? {
     ...managerAssessment,
-    oneOnOneNotes: isRequesterManager ? managerAssessment.oneOnOneNotes : null,
+    meeting: canSeeMeeting ? managerAssessment.meeting : null,
   } : null;
 
   return NextResponse.json({

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCyclePeriod } from "@/lib/utils";
@@ -16,12 +16,16 @@ interface TeamMember {
   team: string | null;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  meetingStatus?: string;
+  meetingStarted?: boolean;
+  managerAssessmentId?: string | null;
   resultsSentAt: string | null;
 }
 
 interface CycleData {
   id: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   status: "OPEN" | "CLOSED";
 }
@@ -68,7 +72,7 @@ export default function MyTeamPage() {
         <h1 className="text-2xl font-bold text-visory-navy">My Team</h1>
         {cycle && (
           <p className="text-sm text-gray-600 mt-1">
-            Current cycle: {formatCyclePeriod(cycle.month, cycle.year)}
+            Current cycle: {formatCyclePeriod(cycle)}
             {cycle.status === "OPEN" && (
               <Badge className="ml-2 bg-green-100 text-green-800 border-green-300">Open</Badge>
             )}
@@ -99,12 +103,11 @@ export default function MyTeamPage() {
                         {member.jobTitle && member.team && <span className="text-xs text-gray-300">&middot;</span>}
                         {member.team && <span className="text-xs text-gray-500">{member.team}</span>}
                       </div>
-                      <button
-                        onClick={() => router.push(`/team/${member.id}`)}
-                        className="text-xs text-visory hover:text-visory-dark font-medium mt-1"
-                      >
-                        View Profile
-                      </button>
+                      <div className="mt-2">
+                        <Button size="sm" variant="secondary" onClick={() => router.push(`/team/${member.id}`)}>
+                          View Profile
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +144,7 @@ export default function MyTeamPage() {
                         <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
                       )}
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {cycle && member.managerAssessmentStatus !== "submitted" && (
                           <Button
                             size="sm"
@@ -166,6 +169,14 @@ export default function MyTeamPage() {
                             onClick={() => router.push(`/summary/${member.id}?cycleId=${cycle.id}`)}
                           >
                             View
+                          </Button>
+                        )}
+                        {member.meetingStatus === "MEETING_SCHEDULED" && member.managerAssessmentId && (
+                          <Button
+                            size="sm"
+                            onClick={() => window.open(`/meeting/${member.managerAssessmentId}`, "_blank", "noopener")}
+                          >
+                            {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
                           </Button>
                         )}
                       </div>

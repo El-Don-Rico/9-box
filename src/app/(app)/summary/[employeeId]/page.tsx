@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,12 @@ import {
   getBox2Color,
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
-  cycle: { id: string; month: number; year: number; status: string } | null;
+  cycle: { id: string; month: number | null; quarter: number | null; year: number; status: string } | null;
   selfAssessment: {
     performance: number | null;
     performanceJustification: string | null;
@@ -54,25 +56,77 @@ interface SummaryData {
     notes: string | null;
     submittedAt: string | null;
     resultsSentAt: string | null;
-    oneOnOneComplete: boolean;
-    oneOnOneNotes: string | null;
-    oneOnOneCompletedAt: string | null;
+    meetingStatus: string;
     manager: { id: string; name: string };
   } | null;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  summary: string | null;
+  createdAt: string;
+  actor: { id: string; name: string };
+}
+
+function AuditTrail({ assessmentId }: { assessmentId: string }) {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  useEffect(() => {
+    fetch(`/api/audit?entityType=ManagerAssessment&entityId=${assessmentId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setLogs(Array.isArray(d) ? d : []))
+      .catch(() => setLogs([]));
+  }, [assessmentId]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Audit Trail</h2>
+        <p className="text-xs text-gray-500">Changes to this assessment</p>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          {logs.map((log) => (
+            <li key={log.id} className="text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+              </span>
+              <span>
+                <span className="font-medium text-visory-navy">{log.actor.name}</span>
+                {" — "}
+                {log.summary || log.action}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScoreOutOf3({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className={`text-3xl font-bold ${value >= 2 ? "text-green-700" : "text-orange-600"}`}>
+        {value}<span className="text-base font-medium text-gray-400">/3</span>
+      </p>
+    </div>
+  );
 }
 
 export default function SummaryPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const cycleId = searchParams.get("cycleId");
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [sendingResults, setSendingResults] = useState(false);
-  const [meetingNotes, setMeetingNotes] = useState("");
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -80,9 +134,6 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       .then((r) => r.json())
       .then((d) => {
         setData(d);
-        if (d.managerAssessment?.oneOnOneNotes) {
-          setMeetingNotes(d.managerAssessment.oneOnOneNotes);
-        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -106,32 +157,6 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     } finally {
       setSendingResults(false);
       setShowSendConfirm(false);
-    }
-  }
-
-  async function handleSaveMeetingNotes() {
-    if (!data?.managerAssessment?.id) return;
-    setSavingNotes(true);
-    try {
-      const res = await fetch("/api/assessments/manager/meeting-notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId: data.managerAssessment.id, notes: meetingNotes }),
-      });
-      if (res.ok) {
-        setData((prev) => prev ? {
-          ...prev,
-          managerAssessment: prev.managerAssessment ? {
-            ...prev.managerAssessment,
-            oneOnOneComplete: true,
-            oneOnOneNotes: meetingNotes,
-            oneOnOneCompletedAt: new Date().toISOString(),
-          } : null,
-        } : null);
-        setEditingNotes(false);
-      }
-    } finally {
-      setSavingNotes(false);
     }
   }
 
@@ -235,7 +260,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
         <div className="flex items-center gap-3 mt-1">
           <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
+            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle)}` : ""}
           </p>
           {mgr?.resultsSentAt && (
             <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
@@ -248,28 +273,29 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
       </div>
 
-      {/* Talent Density & Cultural Momentum Scores */}
+      {/* Performance & Growth (Talent Density) and Engagement & Values (Cultural
+          Momentum) shown as separate scores out of 3 — not a combined /9. */}
       {(mgr?.performance && mgr?.growthReadiness) || (mgrValuesAlignment && mgr?.engagement) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mgr?.performance && mgr?.growthReadiness && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Talent Density</p>
-                <p className={`text-3xl font-bold ${mgr.performance * mgr.growthReadiness >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgr.performance * mgr.growthReadiness}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Talent Density</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Performance" value={mgr.performance} />
+                  <ScoreOutOf3 label="Growth Readiness" value={mgr.growthReadiness} />
+                </div>
               </CardContent>
             </Card>
           )}
           {mgrValuesAlignment && mgr?.engagement && (
             <Card>
-              <CardContent className="py-4 text-center">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Cultural Momentum</p>
-                <p className={`text-3xl font-bold ${mgrValuesAlignment * mgr.engagement >= 6 ? "text-green-700" : "text-orange-600"}`}>
-                  {mgrValuesAlignment * mgr.engagement}/9
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Target: 6/9</p>
+              <CardContent className="py-4">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Cultural Momentum</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <ScoreOutOf3 label="Engagement" value={mgr.engagement} />
+                  <ScoreOutOf3 label="Values Alignment" value={mgrValuesAlignment} />
+                </div>
               </CardContent>
             </Card>
           )}
@@ -307,6 +333,18 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </CardContent>
       </Card>
 
+      {/* Goals & metrics reviewed this cycle (read-only) */}
+      {cycle && <GoalsPanel employeeId={employeeId} cycleId={cycle.id} />}
+
+      {/* Review notes & meeting records */}
+      {cycle && (
+        <Card>
+          <CardContent className="py-4">
+            <ReviewNotesPanel employeeId={employeeId} cycleId={cycle.id} currentUserId={session?.user?.id} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
         <Card>
@@ -322,7 +360,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                 <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
               </div>
             )}
@@ -343,62 +381,31 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
-      {/* 1:1 Meeting Notes (manager-only) */}
+      {/* 1:1 meeting — managed from the Dashboard board; runnable once scheduled */}
       {isManagerView && mgr?.submittedAt && (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">1:1 Meeting Notes</h2>
-                {mgr.oneOnOneCompletedAt && (
-                  <p className="text-xs text-gray-500">
-                    Completed {new Date(mgr.oneOnOneCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
-                )}
-              </div>
-              {mgr.oneOnOneComplete && !editingNotes && (
-                <Button variant="ghost" size="sm" onClick={() => setEditingNotes(true)}>
-                  Edit
-                </Button>
-              )}
+          <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium text-visory-navy">1:1 Meeting</p>
+              <p className="text-xs text-gray-500">
+                Status: {mgr.meetingStatus ? mgr.meetingStatus.replaceAll("_", " ").toLowerCase() : "not ready"}
+              </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {mgr.oneOnOneComplete && !editingNotes ? (
-              <div>
-                {mgr.oneOnOneNotes ? (
-                  <p className="text-sm text-visory-navy whitespace-pre-wrap">{mgr.oneOnOneNotes}</p>
-                ) : (
-                  <p className="text-sm text-gray-400 italic">No notes recorded.</p>
-                )}
-              </div>
+            {mgr.meetingStatus === "MEETING_SCHEDULED" ? (
+              <Button size="sm" onClick={() => window.open(`/meeting/${mgr.id}`, "_blank", "noopener")}>
+                Open Meeting
+              </Button>
             ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600">
-                  Record any context from your 1:1 meeting. Scores will not be changed.
-                </p>
-                <textarea
-                  value={meetingNotes}
-                  onChange={(e) => setMeetingNotes(e.target.value)}
-                  placeholder="Key takeaways, context shared, actions agreed..."
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveMeetingNotes} disabled={savingNotes}>
-                    {savingNotes ? "Saving..." : "Save Meeting Notes"}
-                  </Button>
-                  {editingNotes && (
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingNotes(false); setMeetingNotes(mgr.oneOnOneNotes || ""); }}>
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <Button size="sm" variant="secondary" onClick={() => router.push("/dashboard")}>
+                Go to Board
+              </Button>
             )}
           </CardContent>
         </Card>
       )}
+
+      {/* Audit trail (manager/admin only) */}
+      {isManagerView && mgr?.id && <AuditTrail assessmentId={mgr.id} />}
 
       {!self?.submittedAt && !mgr?.submittedAt && (
         <Card>
@@ -414,11 +421,11 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
-            {!mgr?.oneOnOneComplete && (
+            {mgr?.meetingStatus !== "MEETING_COMPLETE" && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
                 <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
                 <p className="text-sm text-amber-700">
-                  Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+                  Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}
