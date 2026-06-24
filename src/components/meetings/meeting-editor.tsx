@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Plus, X } from "lucide-react";
 import type { MeetingData, TaskData } from "@/types";
+
+const fieldClass =
+  "w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-magenta focus:ring-2 focus:ring-magenta/20";
 
 interface AssigneeOption {
   id: string;

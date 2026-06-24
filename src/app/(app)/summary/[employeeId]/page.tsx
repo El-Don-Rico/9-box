@@ -330,10 +330,13 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
 
       {/* Side-by-side Comparison */}
       <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Assessment Comparison</h2>
-          <p className="text-xs text-gray-500">Click a dimension to expand and compare notes</p>
-        </CardHeader>
+        <div className="card-head">
+          <div>
+            <div className="eyebrow">Self vs manager</div>
+            <h2 className="card-title">Assessment Comparison</h2>
+          </div>
+          <p className="text-xs text-ink-3">Click a dimension to expand and compare notes</p>
+        </div>
         <CardContent>
           <DimensionComparison sections={comparisonSections} />
         </CardContent>
