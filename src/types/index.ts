@@ -77,6 +77,7 @@ export interface TeamMemberStatus {
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
   meetingStatus?: MeetingStatus;
+  meetingStarted?: boolean;
   managerAssessmentId?: string | null;
   resultsSentAt: string | null;
 }

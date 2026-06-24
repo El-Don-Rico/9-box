@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, canManageEmployee } from "@/lib/permissions";
+import { isManager, canManageEmployee, getVisibleEmployeeIds } from "@/lib/permissions";
 
 const taskInclude = {
   employee: { select: { id: true, name: true } },
@@ -9,7 +9,8 @@ const taskInclude = {
   createdBy: { select: { id: true, name: true } },
 };
 
-// GET ?employeeId= (tasks about an employee) or ?assigneeId= (tasks assigned to a user)
+// GET ?employeeId= (tasks about an employee), ?assigneeId= (tasks assigned to a
+// user), or ?scope=managed (all open tasks across the manager's reports).
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -19,9 +20,21 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const employeeId = searchParams.get("employeeId");
   const assigneeId = searchParams.get("assigneeId");
+  const scope = searchParams.get("scope");
+
+  if (scope === "managed") {
+    const visible = await getVisibleEmployeeIds(session.user.id, session.user.role);
+    const where = visible === "all" ? {} : { employeeId: { in: visible } };
+    const tasks = await prisma.task.findMany({
+      where,
+      include: taskInclude,
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    });
+    return NextResponse.json(tasks);
+  }
 
   if (!employeeId && !assigneeId) {
-    return NextResponse.json({ error: "employeeId or assigneeId is required" }, { status: 400 });
+    return NextResponse.json({ error: "employeeId, assigneeId, or scope is required" }, { status: 400 });
   }
 
   const target = employeeId ?? assigneeId!;

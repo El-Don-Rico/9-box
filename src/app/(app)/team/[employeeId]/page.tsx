@@ -34,6 +34,8 @@ interface AssessmentHistory {
   valGiveEnergy: number | null;
   submittedAt: string | null;
   resultsSentAt: string | null;
+  meetingStatus: string;
+  meeting: { id: string } | null;
   cycle: { id: string; month: number; year: number };
 }
 
@@ -205,6 +207,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
   const completedGoals = goals.filter((g) => g.status !== "ACTIVE");
+  // A 1:1 can be run once the manager marks the meeting as scheduled.
+  const scheduledMeeting = canEdit ? assessments.find((a) => a.meetingStatus === "MEETING_SCHEDULED") : undefined;
 
   return (
     <div className="space-y-6">
@@ -219,6 +223,21 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         </div>
         <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
       </div>
+
+      {/* Scheduled 1:1 meeting */}
+      {scheduledMeeting && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-visory-navy">1:1 meeting scheduled</p>
+            <p className="text-sm text-gray-600">
+              {formatCyclePeriod(scheduledMeeting.cycle.month, scheduledMeeting.cycle.year)} cycle
+            </p>
+          </div>
+          <Button onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
+            {scheduledMeeting.meeting ? "Edit Meeting Notes" : "Start Meeting"}
+          </Button>
+        </div>
+      )}
 
       {/* Key Metrics */}
       <Card>

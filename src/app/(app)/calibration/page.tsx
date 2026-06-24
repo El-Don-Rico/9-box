@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod } from "@/lib/utils";
+import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
 import {
   getBox1Label,
   getBox2Label,
@@ -26,6 +27,7 @@ interface PlacedEmployee {
   role: string;
   jobTitle: string | null;
   team: string | null;
+  startDate: string | null;
   box1Label: string;
   box2Label: string;
   performance: number;
@@ -45,6 +47,7 @@ function computePlaced(assessments: ManagerAssessmentData[]): PlacedEmployee[] {
         role: a.employee?.role || "EMPLOYEE",
         jobTitle: a.employee?.jobTitle || null,
         team: a.employee?.team || null,
+        startDate: a.employee?.startDate ?? null,
         box1Label: getBox1Label(a.performance!, a.growthReadiness!),
         box2Label: getBox2Label(va, a.engagement!),
         performance: a.performance!,
@@ -87,6 +90,7 @@ export default function CalibrationPage() {
   const [activeGrid, setActiveGrid] = useState<"box1" | "box2">("box1");
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedTenures, setSelectedTenures] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"single" | "range">("single");
   const [rangeStartId, setRangeStartId] = useState<string>("");
   const [rangeEndId, setRangeEndId] = useState<string>("");
@@ -158,6 +162,7 @@ export default function CalibrationPage() {
           role: first.employee?.role || "EMPLOYEE",
           jobTitle: first.employee?.jobTitle || null,
           team: first.employee?.team || null,
+          startDate: first.employee?.startDate ?? null,
           box1Label: getBox1Label(avgPerf, avgGrowth),
           box2Label: getBox2Label(avgVa, avgEng),
           performance: avgPerf,
@@ -176,21 +181,20 @@ export default function CalibrationPage() {
   const titleOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.jobTitle).filter(Boolean) as string[])].sort(), [placedEmployees]);
   const teamOptions = useMemo(() => [...new Set(placedEmployees.map((e) => e.team).filter(Boolean) as string[])].sort(), [placedEmployees]);
 
-  const filteredEmployees = useMemo(() => {
-    return placedEmployees.filter((e) => {
+  const matchesFilters = useMemo(() => {
+    return (e: PlacedEmployee) => {
       if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
       if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
+      if (selectedTenures.length > 0) {
+        const bucket = getTenureBucket(e.startDate);
+        if (!bucket || !selectedTenures.includes(bucket)) return false;
+      }
       return true;
-    });
-  }, [placedEmployees, selectedTitles, selectedTeams]);
+    };
+  }, [selectedTitles, selectedTeams, selectedTenures]);
 
-  const filteredPrev = useMemo(() => {
-    return prevPlacedEmployees.filter((e) => {
-      if (selectedTitles.length > 0 && (!e.jobTitle || !selectedTitles.includes(e.jobTitle))) return false;
-      if (selectedTeams.length > 0 && (!e.team || !selectedTeams.includes(e.team))) return false;
-      return true;
-    });
-  }, [prevPlacedEmployees, selectedTitles, selectedTeams]);
+  const filteredEmployees = useMemo(() => placedEmployees.filter(matchesFilters), [placedEmployees, matchesFilters]);
+  const filteredPrev = useMemo(() => prevPlacedEmployees.filter(matchesFilters), [prevPlacedEmployees, matchesFilters]);
 
   const currentInsights = useMemo(() => computeInsights(filteredEmployees), [filteredEmployees]);
   const prevInsights = useMemo(() => computeInsights(filteredPrev), [filteredPrev]);
@@ -284,6 +288,7 @@ export default function CalibrationPage() {
 
           <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
           <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+          <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button
               onClick={() => setActiveGrid("box1")}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCyclePeriod } from "@/lib/utils";
@@ -16,7 +16,33 @@ interface TeamMember {
   team: string | null;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  meetingStatus?: string;
+  meetingStarted?: boolean;
+  managerAssessmentId?: string | null;
   resultsSentAt: string | null;
+}
+
+function SendResultsConfirmModal({ memberName, onConfirm, onCancel }: { memberName: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {memberName}?</h3>
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
+          <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
+          <p className="text-sm text-amber-700">
+            Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+          </p>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          This will make your assessment visible to {memberName}. This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={onConfirm}>Confirm &amp; Send Results</Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 interface CycleData {
@@ -32,6 +58,27 @@ export default function MyTeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sendConfirm, setSendConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
+  const [sendingResults, setSendingResults] = useState(false);
+
+  async function handleSendResults(memberId: string) {
+    const member = team.find((m) => m.id === memberId);
+    if (!member?.managerAssessmentId) { setSendConfirm(null); return; }
+    setSendingResults(true);
+    try {
+      const res = await fetch("/api/assessments/manager/send-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId: member.managerAssessmentId }),
+      });
+      if (res.ok) {
+        setTeam((prev) => prev.map((m) => m.id === memberId ? { ...m, resultsSentAt: new Date().toISOString() } : m));
+      }
+    } finally {
+      setSendingResults(false);
+      setSendConfirm(null);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -99,12 +146,11 @@ export default function MyTeamPage() {
                         {member.jobTitle && member.team && <span className="text-xs text-gray-300">&middot;</span>}
                         {member.team && <span className="text-xs text-gray-500">{member.team}</span>}
                       </div>
-                      <button
-                        onClick={() => router.push(`/team/${member.id}`)}
-                        className="text-xs text-visory hover:text-visory-dark font-medium mt-1"
-                      >
-                        View Profile
-                      </button>
+                      <div className="mt-2">
+                        <Button size="sm" variant="secondary" onClick={() => router.push(`/team/${member.id}`)}>
+                          View Profile
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +187,7 @@ export default function MyTeamPage() {
                         <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
                       )}
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {cycle && member.managerAssessmentStatus !== "submitted" && (
                           <Button
                             size="sm"
@@ -168,6 +214,22 @@ export default function MyTeamPage() {
                             View
                           </Button>
                         )}
+                        {member.meetingStatus === "MEETING_SCHEDULED" && member.managerAssessmentId && (
+                          <Button
+                            size="sm"
+                            onClick={() => window.open(`/meeting/${member.managerAssessmentId}`, "_blank", "noopener")}
+                          >
+                            {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
+                          </Button>
+                        )}
+                        {bothSubmitted && !member.resultsSentAt && (
+                          <Button
+                            size="sm"
+                            onClick={() => setSendConfirm({ memberId: member.id, memberName: member.name })}
+                          >
+                            Send Results
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -176,6 +238,14 @@ export default function MyTeamPage() {
             );
           })}
         </div>
+      )}
+
+      {sendConfirm && (
+        <SendResultsConfirmModal
+          memberName={sendConfirm.memberName}
+          onConfirm={() => { if (!sendingResults) handleSendResults(sendConfirm.memberId); }}
+          onCancel={() => setSendConfirm(null)}
+        />
       )}
     </div>
   );

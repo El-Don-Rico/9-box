@@ -16,7 +16,6 @@ function getNavLinks(role: string) {
 
   if (["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"].includes(role)) {
     links.push({ href: "/team", label: "My Team" });
-    links.push({ href: "/meetings", label: "Meetings" });
     links.push({ href: "/calibration", label: "Analysis" });
   }
 

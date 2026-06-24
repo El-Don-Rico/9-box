@@ -310,19 +310,25 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
-      {/* 1:1 meetings are now managed on the Meetings board */}
+      {/* 1:1 meeting — managed from the Dashboard board; runnable once scheduled */}
       {isManagerView && mgr?.submittedAt && (
         <Card>
           <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-visory-navy">1:1 Meeting</p>
               <p className="text-xs text-gray-500">
-                Status: {mgr.meetingStatus ? mgr.meetingStatus.replaceAll("_", " ").toLowerCase() : "not ready"} · manage notes and actions on the Meetings board
+                Status: {mgr.meetingStatus ? mgr.meetingStatus.replaceAll("_", " ").toLowerCase() : "not ready"}
               </p>
             </div>
-            <Button size="sm" variant="secondary" onClick={() => router.push("/meetings")}>
-              Go to Meetings
-            </Button>
+            {mgr.meetingStatus === "MEETING_SCHEDULED" ? (
+              <Button size="sm" onClick={() => window.open(`/meeting/${mgr.id}`, "_blank", "noopener")}>
+                Open Meeting
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" onClick={() => router.push("/dashboard")}>
+                Go to Board
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
