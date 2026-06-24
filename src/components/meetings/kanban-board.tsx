@@ -132,7 +132,9 @@ function MemberCard({
 }) {
   const closed = column === "REVIEW_COMPLETE";
   const settable = MANAGER_SETTABLE_STATUSES.includes(column as MeetingStatus);
-  const draggable = settable && !closed;
+  // NOT_READY cards are draggable too, but only into Ready to Meet (override);
+  // dropping elsewhere is ignored in handleDragEnd.
+  const draggable = (settable || column === "NOT_READY") && !closed;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: member.id,
@@ -271,6 +273,49 @@ function SendResultsModal({ memberName, onConfirm, onCancel, busy }: { memberNam
   );
 }
 
+function OverrideModal({
+  memberName,
+  reason,
+  onConfirm,
+  onCancel,
+}: {
+  memberName: string;
+  reason: "incomplete" | "no-mgr-assessment";
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const blocked = reason === "no-mgr-assessment";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4">
+      <div className="card max-w-md w-full p-6 shadow-xl">
+        <div className="eyebrow mb-2">{blocked ? "Can’t move yet" : "Override"}</div>
+        <h3 className="serif text-xl mb-2">Move {memberName} to Ready to Meet?</h3>
+        {blocked ? (
+          <p className="text-sm muted-2 mb-4">
+            No manager assessment has been started for {memberName} yet, so there’s no meeting to
+            schedule. Start the manager assessment first, then move the card.
+          </p>
+        ) : (
+          <p className="text-sm muted-2 mb-4">
+            The self-assessment and/or manager assessment for {memberName} hasn’t been completed.
+            Normally a card only reaches Ready to Meet once both are submitted. Move it anyway?
+          </p>
+        )}
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" size="sm" onClick={onCancel}>
+            {blocked ? "Close" : "Cancel"}
+          </Button>
+          {!blocked && (
+            <Button variant="magenta" size="sm" onClick={onConfirm}>
+              Override &amp; Move
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CycleTimeline({ due }: { due: CycleDueDates }) {
   // Lazy init so "now" is sampled once, off the render path.
   const [now] = useState(() => Date.now());
@@ -309,6 +354,10 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sendTarget, setSendTarget] = useState<TeamMemberStatus | null>(null);
   const [sending, setSending] = useState(false);
+  const [overrideTarget, setOverrideTarget] = useState<{
+    member: TeamMemberStatus;
+    reason: "incomplete" | "no-mgr-assessment";
+  } | null>(null);
 
   useEffect(() => {
     setItems(members);
@@ -343,7 +392,7 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     return map;
   }, [filtered]);
 
-  async function changeStatus(employeeId: string, status: MeetingStatus) {
+  async function changeStatus(employeeId: string, status: MeetingStatus, override = false) {
     const member = items.find((m) => m.id === employeeId);
     if (!member?.managerAssessmentId || member.resultsSentAt || member.meetingStatus === status) return;
     const prev = member.meetingStatus;
@@ -351,7 +400,7 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     const res = await fetch("/api/meetings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assessmentId: member.managerAssessmentId, meetingStatus: status }),
+      body: JSON.stringify({ assessmentId: member.managerAssessmentId, meetingStatus: status, override }),
     });
     if (!res.ok) setItems((ms) => ms.map((m) => (m.id === employeeId ? { ...m, meetingStatus: prev } : m)));
   }
@@ -383,6 +432,29 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     const { active, over } = event;
     if (!over) return;
     const target = over.id as ColumnKey;
+    const member = items.find((m) => m.id === active.id);
+    if (!member) return;
+
+    // Override path: a card still in NOT_READY ("In Assessment") may only be
+    // pulled into Ready to Meet, and only with confirmation / guards.
+    if (memberColumn(member) === "NOT_READY") {
+      if (target !== "READY_TO_MEET") return;
+      if (!member.managerAssessmentId) {
+        setOverrideTarget({ member, reason: "no-mgr-assessment" });
+        return;
+      }
+      const bothSubmitted =
+        member.selfAssessmentStatus === "submitted" &&
+        member.managerAssessmentStatus === "submitted";
+      if (bothSubmitted) {
+        // Should have auto-advanced already; just move it.
+        changeStatus(member.id, "READY_TO_MEET", true);
+      } else {
+        setOverrideTarget({ member, reason: "incomplete" });
+      }
+      return;
+    }
+
     if (!MANAGER_SETTABLE_STATUSES.includes(target as MeetingStatus)) return;
     changeStatus(active.id as string, target as MeetingStatus);
   }
@@ -438,6 +510,18 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
           busy={sending}
           onConfirm={confirmSendResults}
           onCancel={() => setSendTarget(null)}
+        />
+      )}
+
+      {overrideTarget && (
+        <OverrideModal
+          memberName={overrideTarget.member.name}
+          reason={overrideTarget.reason}
+          onCancel={() => setOverrideTarget(null)}
+          onConfirm={() => {
+            changeStatus(overrideTarget.member.id, "READY_TO_MEET", true);
+            setOverrideTarget(null);
+          }}
         />
       )}
     </div>
