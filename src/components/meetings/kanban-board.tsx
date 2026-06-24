@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { MEETING_STATUS_LABELS, MANAGER_SETTABLE_STATUSES, meetingStatusColor } from "@/lib/meeting";
-import { getTenureBucket, getTenureMonths, TENURE_BUCKETS } from "@/lib/tenure";
+import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
 import type { TeamMemberStatus, MeetingStatus } from "@/types";
 
 // The board adds a terminal "Review Complete" column beyond the meeting
@@ -44,24 +44,33 @@ function memberColumn(m: TeamMemberStatus): ColumnKey {
   return m.meetingStatus ?? "NOT_READY";
 }
 
-function tenureLabel(startDate: string | null | undefined): string {
-  const months = getTenureMonths(startDate);
-  if (months === null) return "No start date";
-  return `${months} mo`;
-}
+// Compact, low-emphasis style shared by the card action buttons (meeting
+// notes / send results) so they read as secondary to the card itself.
+const CARD_ACTION_CLASS =
+  "inline-flex items-center justify-center rounded-md border border-visory/40 bg-white px-2 py-1 text-xs font-medium text-visory transition-colors hover:bg-visory-light/50 focus:outline-none focus:ring-2 focus:ring-visory";
 
 function openMeeting(assessmentId: string) {
   window.open(`/meeting/${assessmentId}`, "_blank", "noopener");
 }
 
-function CardBody({ member }: { member: TeamMemberStatus }) {
+function CardBody({ member, onOpenProfile }: { member: TeamMemberStatus; onOpenProfile?: (id: string) => void }) {
   return (
     <>
-      <p className="text-sm font-medium text-visory-navy">{member.name}</p>
+      {onOpenProfile ? (
+        <button
+          type="button"
+          // Stop the pointer event from reaching the drag handle so the name
+          // acts as a plain link to the profile instead of starting a drag.
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onOpenProfile(member.id)}
+          className="text-left text-sm font-medium text-visory-navy hover:text-visory hover:underline"
+        >
+          {member.name}
+        </button>
+      ) : (
+        <p className="text-sm font-medium text-visory-navy">{member.name}</p>
+      )}
       {member.jobTitle && <p className="text-xs text-gray-500">{member.jobTitle}</p>}
-      <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-xs mt-1">
-        {tenureLabel(member.startDate)}
-      </Badge>
     </>
   );
 }
@@ -69,13 +78,11 @@ function CardBody({ member }: { member: TeamMemberStatus }) {
 function MemberCard({
   member,
   column,
-  onChangeStatus,
   onOpenProfile,
   onSendResults,
 }: {
   member: TeamMemberStatus;
   column: ColumnKey;
-  onChangeStatus: (id: string, status: MeetingStatus) => void;
   onOpenProfile: (id: string) => void;
   onSendResults: (member: TeamMemberStatus) => void;
 }) {
@@ -98,37 +105,29 @@ function MemberCard({
         {...(draggable ? { ...attributes, ...listeners } : {})}
         className={draggable ? "cursor-grab active:cursor-grabbing touch-none" : ""}
       >
-        <CardBody member={member} />
+        <CardBody member={member} onOpenProfile={onOpenProfile} />
       </div>
 
       {closed ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3">
           <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Closed · Results Sent</Badge>
-          <Button size="sm" variant="secondary" onClick={() => onOpenProfile(member.id)}>Profile</Button>
         </div>
       ) : (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="secondary" onClick={() => onOpenProfile(member.id)}>Profile</Button>
-          {column === "MEETING_SCHEDULED" && member.managerAssessmentId && (
-            <Button size="sm" onClick={() => openMeeting(member.managerAssessmentId!)}>
-              {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
-            </Button>
-          )}
-          {column === "MEETING_COMPLETE" && member.managerAssessmentId && (
-            <Button size="sm" onClick={() => onSendResults(member)}>Send Results</Button>
-          )}
-          {settable && (
-            <select
-              value={member.meetingStatus}
-              onChange={(e) => onChangeStatus(member.id, e.target.value as MeetingStatus)}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory"
-            >
-              {MANAGER_SETTABLE_STATUSES.map((s) => (
-                <option key={s} value={s}>{MEETING_STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        (column === "MEETING_SCHEDULED" || column === "MEETING_COMPLETE") &&
+        member.managerAssessmentId && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {column === "MEETING_SCHEDULED" && (
+              <button type="button" className={CARD_ACTION_CLASS} onClick={() => openMeeting(member.managerAssessmentId!)}>
+                {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
+              </button>
+            )}
+            {column === "MEETING_COMPLETE" && (
+              <button type="button" className={CARD_ACTION_CLASS} onClick={() => onSendResults(member)}>
+                Send Results
+              </button>
+            )}
+          </div>
+        )
       )}
     </div>
   );
@@ -138,14 +137,12 @@ function Column({
   column,
   label,
   members,
-  onChangeStatus,
   onOpenProfile,
   onSendResults,
 }: {
   column: ColumnKey;
   label: string;
   members: TeamMemberStatus[];
-  onChangeStatus: (id: string, status: MeetingStatus) => void;
   onOpenProfile: (id: string) => void;
   onSendResults: (member: TeamMemberStatus) => void;
 }) {
@@ -171,7 +168,6 @@ function Column({
             key={m.id}
             member={m}
             column={column}
-            onChangeStatus={onChangeStatus}
             onOpenProfile={onOpenProfile}
             onSendResults={onSendResults}
           />
@@ -301,7 +297,6 @@ export function KanbanBoard({ members }: { members: TeamMemberStatus[] }) {
               column={key}
               label={label}
               members={byColumn[key]}
-              onChangeStatus={changeStatus}
               onOpenProfile={(id) => router.push(`/team/${id}`)}
               onSendResults={(m) => setSendTarget(m)}
             />
