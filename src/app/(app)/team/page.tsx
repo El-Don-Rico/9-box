@@ -22,29 +22,6 @@ interface TeamMember {
   resultsSentAt: string | null;
 }
 
-function SendResultsConfirmModal({ memberName, onConfirm, onCancel }: { memberName: string; onConfirm: () => void; onCancel: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {memberName}?</h3>
-        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-          <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
-          <p className="text-sm text-amber-700">
-            Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
-          </p>
-        </div>
-        <p className="text-sm text-gray-600 mb-4">
-          This will make your assessment visible to {memberName}. This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-          <Button size="sm" onClick={onConfirm}>Confirm &amp; Send Results</Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface CycleData {
   id: string;
   month: number;
@@ -58,27 +35,6 @@ export default function MyTeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [cycle, setCycle] = useState<CycleData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sendConfirm, setSendConfirm] = useState<{ memberId: string; memberName: string } | null>(null);
-  const [sendingResults, setSendingResults] = useState(false);
-
-  async function handleSendResults(memberId: string) {
-    const member = team.find((m) => m.id === memberId);
-    if (!member?.managerAssessmentId) { setSendConfirm(null); return; }
-    setSendingResults(true);
-    try {
-      const res = await fetch("/api/assessments/manager/send-results", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId: member.managerAssessmentId }),
-      });
-      if (res.ok) {
-        setTeam((prev) => prev.map((m) => m.id === memberId ? { ...m, resultsSentAt: new Date().toISOString() } : m));
-      }
-    } finally {
-      setSendingResults(false);
-      setSendConfirm(null);
-    }
-  }
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -222,14 +178,6 @@ export default function MyTeamPage() {
                             {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
                           </Button>
                         )}
-                        {bothSubmitted && !member.resultsSentAt && (
-                          <Button
-                            size="sm"
-                            onClick={() => setSendConfirm({ memberId: member.id, memberName: member.name })}
-                          >
-                            Send Results
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -238,14 +186,6 @@ export default function MyTeamPage() {
             );
           })}
         </div>
-      )}
-
-      {sendConfirm && (
-        <SendResultsConfirmModal
-          memberName={sendConfirm.memberName}
-          onConfirm={() => { if (!sendingResults) handleSendResults(sendConfirm.memberId); }}
-          onCancel={() => setSendConfirm(null)}
-        />
       )}
     </div>
   );
