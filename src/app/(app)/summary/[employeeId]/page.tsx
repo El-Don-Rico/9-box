@@ -162,8 +162,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     }
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  if (!data || !data.employee) return <div className="text-center py-12 text-gray-500">Summary not found.</div>;
+  if (loading) return <div className="text-center py-12 text-ink-3">Loading...</div>;
+  if (!data || !data.employee) return <div className="text-center py-12 text-ink-3">Summary not found.</div>;
 
   const { employee, cycle, selfAssessment: self, managerAssessment: mgr } = data;
   const isManagerView = mgr?.manager?.id === session?.user?.id;

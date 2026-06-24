@@ -117,29 +117,29 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   if (!editor) return null;
 
   return (
-    <div className="border border-visory-border rounded-lg overflow-hidden">
-      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-visory-border bg-visory-grey">
+    <div className="border border-line-2 rounded-lg overflow-hidden bg-paper">
+      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-line-2 bg-paper-2">
         {/* Headings */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           active={editor.isActive("heading", { level: 1 })}
           title="Heading 1"
         >
-          H1
+          <Heading1 size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive("heading", { level: 2 })}
           title="Heading 2"
         >
-          H2
+          <Heading2 size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           active={editor.isActive("heading", { level: 3 })}
           title="Heading 3"
         >
-          H3
+          <Heading3 size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -150,28 +150,28 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           active={editor.isActive("bold")}
           title="Bold"
         >
-          <strong>B</strong>
+          <Bold size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
           title="Italic"
         >
-          <em>I</em>
+          <Italic size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           active={editor.isActive("underline")}
           title="Underline"
         >
-          <u>U</u>
+          <UnderlineIcon size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           active={editor.isActive("strike")}
           title="Strikethrough"
         >
-          <s>S</s>
+          <Strikethrough size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -182,14 +182,14 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           active={editor.isActive("bulletList")}
           title="Bullet List"
         >
-          &bull; List
+          <List size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
           title="Numbered List"
         >
-          1. List
+          <ListOrdered size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -200,34 +200,34 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           active={editor.isActive({ textAlign: "left" })}
           title="Align Left"
         >
-          Left
+          <AlignLeft size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           active={editor.isActive({ textAlign: "center" })}
           title="Align Center"
         >
-          Center
+          <AlignCenter size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
           active={editor.isActive({ textAlign: "right" })}
           title="Align Right"
         >
-          Right
+          <AlignRight size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
 
         {/* Insert */}
         <ToolbarButton onClick={addLink} active={editor.isActive("link")} title="Add Link">
-          Link
+          <Link2 size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton onClick={addImage} title="Insert Image">
-          Image
+          <ImageIcon size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton onClick={addTable} title="Insert Table">
-          Table
+          <TableIcon size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -238,20 +238,20 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           active={editor.isActive("blockquote")}
           title="Blockquote"
         >
-          Quote
+          <Quote size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           active={editor.isActive("codeBlock")}
           title="Code Block"
         >
-          Code
+          <Code size={16} strokeWidth={1.6} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           title="Horizontal Rule"
         >
-          &#8212;
+          <Minus size={16} strokeWidth={1.6} />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -263,31 +263,31 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
               onClick={() => editor.chain().focus().addColumnAfter().run()}
               title="Add Column"
             >
-              +Col
+              <Columns3 size={16} strokeWidth={1.6} />
             </ToolbarButton>
             <ToolbarButton
               onClick={() => editor.chain().focus().deleteColumn().run()}
               title="Delete Column"
             >
-              -Col
+              <Columns3 size={16} strokeWidth={1.6} className="opacity-50" />
             </ToolbarButton>
             <ToolbarButton
               onClick={() => editor.chain().focus().addRowAfter().run()}
               title="Add Row"
             >
-              +Row
+              <Rows3 size={16} strokeWidth={1.6} />
             </ToolbarButton>
             <ToolbarButton
               onClick={() => editor.chain().focus().deleteRow().run()}
               title="Delete Row"
             >
-              -Row
+              <Rows3 size={16} strokeWidth={1.6} className="opacity-50" />
             </ToolbarButton>
             <ToolbarButton
               onClick={() => editor.chain().focus().deleteTable().run()}
               title="Delete Table"
             >
-              Del Table
+              <Trash2 size={16} strokeWidth={1.6} />
             </ToolbarButton>
           </>
         )}
@@ -298,13 +298,13 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
             onClick={() => editor.chain().focus().undo().run()}
             title="Undo"
           >
-            Undo
+            <Undo2 size={16} strokeWidth={1.6} />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().redo().run()}
             title="Redo"
           >
-            Redo
+            <Redo2 size={16} strokeWidth={1.6} />
           </ToolbarButton>
         </div>
       </div>

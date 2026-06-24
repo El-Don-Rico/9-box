@@ -1,6 +1,8 @@
 "use client";
 
 import { getRoleDisplayName } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/toggle";
+import { Badge } from "@/components/ui/badge";
 
 const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"] as const;
 
