@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/toggle";
 import { RichTextEditor } from "@/components/resources/rich-text-editor";
 import { RoleSelector } from "@/components/resources/role-selector";
+import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 

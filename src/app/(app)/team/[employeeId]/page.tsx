@@ -501,7 +501,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
       {/* Tasks */}
       <Card>
-        <CardContent className="py-4">
+        <CardContent>
           <TasksPanel
             employeeId={employeeId}
             canManage={!!canEdit}

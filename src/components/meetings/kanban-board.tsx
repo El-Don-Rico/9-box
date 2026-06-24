@@ -17,17 +17,18 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
   MEETING_STATUS_LABELS,
   MANAGER_SETTABLE_STATUSES,
-  meetingStatusColor,
   getColumnTracking,
-  TRACKING_META,
 } from "@/lib/meeting";
 import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
 import { getCycleDueDates, formatDueDate, type CyclePeriod, type CycleDueDates } from "@/lib/utils";
 import type { TeamMemberStatus, MeetingStatus } from "@/types";
+
+type ChipVariant = "default" | "magenta" | "navy" | "success" | "slate" | "warning";
 
 // The board adds a terminal "Review Complete" column beyond the meeting
 // statuses: a card lands there once results have been sent (cycle closed).
@@ -41,20 +42,40 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "REVIEW_COMPLETE", label: "Review Complete" },
 ];
 
-function columnColor(key: ColumnKey): string {
-  if (key === "REVIEW_COMPLETE") return "bg-visory-light text-visory-dark border-visory/30";
-  return meetingStatusColor(key);
+// Map each column to a design-token badge variant (magenta carries "critical";
+// no second loud color). Used for the per-column count chip.
+function columnVariant(key: ColumnKey): ChipVariant {
+  switch (key) {
+    case "READY_TO_MEET":
+      return "navy";
+    case "MEETING_SCHEDULED":
+      return "warning";
+    case "MEETING_COMPLETE":
+      return "success";
+    case "REVIEW_COMPLETE":
+      return "success";
+    case "NOT_READY":
+    default:
+      return "slate";
+  }
 }
+
+// Tracking indicator (on track / due soon / overdue / done) rendered in tokens.
+// Magenta doubles as the danger/overdue accent — no separate red.
+const TRACKING_DISPLAY: Record<
+  ReturnType<typeof getColumnTracking>,
+  { label: string; icon: string; className: string }
+> = {
+  on_track: { label: "On track", icon: "●", className: "text-success" },
+  due_soon: { label: "Due soon", icon: "◐", className: "text-amber" },
+  overdue: { label: "Overdue", icon: "▲", className: "text-magenta" },
+  done: { label: "Complete", icon: "✓", className: "text-success" },
+};
 
 function memberColumn(m: TeamMemberStatus): ColumnKey {
   if (m.resultsSentAt) return "REVIEW_COMPLETE";
   return m.meetingStatus ?? "NOT_READY";
 }
-
-// Compact, low-emphasis style shared by the card action buttons (meeting
-// notes / send results) so they read as secondary to the card itself.
-const CARD_ACTION_CLASS =
-  "inline-flex items-center justify-center rounded-md border border-visory/40 bg-white px-2 py-1 text-xs font-medium text-visory transition-colors hover:bg-visory-light/50 focus:outline-none focus:ring-2 focus:ring-visory";
 
 function openMeeting(assessmentId: string) {
   window.open(`/meeting/${assessmentId}`, "_blank", "noopener");
@@ -62,32 +83,35 @@ function openMeeting(assessmentId: string) {
 
 function CompletionDot({ done, label }: { done: boolean; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[11px]" title={`${label}: ${done ? "Done" : "Pending"}`}>
-      <span className={done ? "text-green-600" : "text-gray-300"}>{done ? "●" : "○"}</span>
-      <span className="text-gray-500">{label}</span>
+    <span className="inline-flex items-center gap-1 tiny" title={`${label}: ${done ? "Done" : "Pending"}`}>
+      <span className={done ? "text-success" : "text-line-2"}>{done ? "●" : "○"}</span>
+      <span className="muted">{label}</span>
     </span>
   );
 }
 
 function CardBody({ member, onOpenProfile }: { member: TeamMemberStatus; onOpenProfile?: (id: string) => void }) {
   return (
-    <>
-      {onOpenProfile ? (
-        <button
-          type="button"
-          // Stop the pointer event from reaching the drag handle so the name
-          // acts as a plain link to the profile instead of starting a drag.
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onOpenProfile(member.id)}
-          className="text-left text-sm font-medium text-visory-navy hover:text-visory hover:underline"
-        >
-          {member.name}
-        </button>
-      ) : (
-        <p className="text-sm font-medium text-visory-navy">{member.name}</p>
-      )}
-      {member.jobTitle && <p className="text-xs text-gray-500">{member.jobTitle}</p>}
-    </>
+    <div className="flex items-start gap-2 min-w-0">
+      <Avatar name={member.name} size="sm" />
+      <div className="min-w-0">
+        {onOpenProfile ? (
+          <button
+            type="button"
+            // Stop the pointer event from reaching the drag handle so the name
+            // acts as a plain link to the profile instead of starting a drag.
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onOpenProfile(member.id)}
+            className="text-left text-sm font-medium text-ink hover:text-magenta hover:underline"
+          >
+            {member.name}
+          </button>
+        ) : (
+          <p className="text-sm font-medium text-ink">{member.name}</p>
+        )}
+        {member.jobTitle && <p className="tiny muted">{member.jobTitle}</p>}
+      </div>
+    </div>
   );
 }
 
@@ -116,13 +140,13 @@ function MemberCard({
   });
 
   const tracking = due ? getColumnTracking(column, due, new Date(now)) : null;
-  const tMeta = tracking ? TRACKING_META[tracking] : null;
+  const tMeta = tracking ? TRACKING_DISPLAY[tracking] : null;
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
-      className={`rounded-lg border p-2.5 shadow-sm ${closed ? "border-gray-200 bg-gray-50 opacity-70" : "border-gray-200 bg-white"}`}
+      className={`card ${draggable ? "card-hover" : ""} p-2.5 ${closed ? "opacity-70" : ""}`}
     >
       <div className="flex items-start justify-between gap-1.5">
         <div
@@ -148,21 +172,21 @@ function MemberCard({
 
       {closed ? (
         <div className="mt-3">
-          <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">Closed · Results Sent</Badge>
+          <Badge variant="success">Closed · Results Sent</Badge>
         </div>
       ) : (
         (column === "MEETING_SCHEDULED" || column === "MEETING_COMPLETE") &&
         member.managerAssessmentId && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {column === "MEETING_SCHEDULED" && (
-              <button type="button" className={CARD_ACTION_CLASS} onClick={() => openMeeting(member.managerAssessmentId!)}>
+              <Button variant="secondary" size="sm" onClick={() => openMeeting(member.managerAssessmentId!)}>
                 {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
-              </button>
+              </Button>
             )}
             {column === "MEETING_COMPLETE" && (
-              <button type="button" className={CARD_ACTION_CLASS} onClick={() => onSendResults(member)}>
+              <Button variant="magenta" size="sm" onClick={() => onSendResults(member)}>
                 Send Results
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -201,16 +225,16 @@ function Column({
     <div className="flex-1 min-w-[210px]">
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="min-w-0">
-          <span className="text-sm font-semibold text-visory-navy">{label}</span>
-          {dueDate && <p className="text-[11px] text-gray-400">by {formatDueDate(dueDate)}</p>}
+          <span className="eyebrow">{label}</span>
+          {dueDate && <p className="tiny muted mono tnum">by {formatDueDate(dueDate)}</p>}
         </div>
-        <Badge className={columnColor(column)}>{members.length}</Badge>
+        <Badge variant={columnVariant(column)}><span className="mono tnum">{members.length}</span></Badge>
       </div>
       <div
         ref={setNodeRef}
-        className={`rounded-lg p-2 space-y-2 min-h-[140px] transition-colors ${
+        className={`rounded-lg p-2 space-y-2 min-h-[140px] border transition-colors ${
           scroll ? "max-h-[26rem] overflow-y-auto" : ""
-        } ${isOver && droppable ? "bg-visory-light/60 ring-2 ring-visory" : "bg-gray-50"}`}
+        } ${isOver && droppable ? "bg-magenta/5 border-magenta" : "bg-paper-2 border-line"}`}
       >
         {members.map((m) => (
           <MemberCard
@@ -223,7 +247,7 @@ function Column({
             onSendResults={onSendResults}
           />
         ))}
-        {members.length === 0 && <p className="text-xs text-gray-400 text-center py-4">None</p>}
+        {members.length === 0 && <p className="tiny muted text-center py-4">None</p>}
       </div>
     </div>
   );
@@ -231,15 +255,16 @@ function Column({
 
 function SendResultsModal({ memberName, onConfirm, onCancel, busy }: { memberName: string; onConfirm: () => void; onCancel: () => void; busy: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {memberName}?</h3>
-        <p className="text-sm text-gray-600 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4">
+      <div className="card max-w-md w-full p-6 shadow-xl">
+        <div className="eyebrow mb-2">Confirm</div>
+        <h3 className="serif text-xl mb-2">Send results to {memberName}?</h3>
+        <p className="text-sm muted-2 mb-4">
           This closes out the cycle for {memberName}: the manager assessment becomes visible to them and the card moves to Review Complete. This cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
-          <Button size="sm" onClick={onConfirm} disabled={busy}>{busy ? "Sending…" : "Confirm & Send"}</Button>
+          <Button variant="magenta" size="sm" onClick={onConfirm} disabled={busy}>{busy ? "Sending…" : "Confirm & Send"}</Button>
         </div>
       </div>
     </div>
@@ -254,19 +279,19 @@ function CycleTimeline({ due }: { due: CycleDueDates }) {
     { label: "Results & Review", date: due.resultsSent },
   ];
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-      <p className="text-xs font-medium text-gray-500 uppercase mb-3">Cycle Timeline</p>
+    <div className="rounded-lg border border-line bg-paper px-4 py-3">
+      <p className="eyebrow mb-3">Cycle Timeline</p>
       <div className="flex items-center">
         {milestones.map((m, i) => {
           const passed = now > m.date.getTime();
           return (
             <div key={m.label} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center text-center">
-                <span className={`w-3 h-3 rounded-full ${passed ? "bg-green-500" : "bg-visory"}`} />
-                <span className="text-xs font-medium text-visory-navy mt-1 whitespace-nowrap">{m.label}</span>
-                <span className="text-[11px] text-gray-500">by {formatDueDate(m.date)}</span>
+                <span className={`w-3 h-3 rounded-full ${passed ? "bg-success" : "bg-magenta"}`} />
+                <span className="text-xs font-medium text-ink mt-1 whitespace-nowrap">{m.label}</span>
+                <span className="tiny muted mono tnum">by {formatDueDate(m.date)}</span>
               </div>
-              {i < milestones.length - 1 && <div className="flex-1 h-0.5 bg-gray-200 mx-2 mt-[-22px]" />}
+              {i < milestones.length - 1 && <div className="flex-1 h-0.5 bg-line mx-2 mt-[-22px]" />}
             </div>
           );
         })}
@@ -399,7 +424,7 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
         </div>
         <DragOverlay>
           {activeMember ? (
-            <div className="rounded-lg border border-visory bg-white p-3 shadow-lg w-[210px]">
+            <div className="card border-magenta p-3 shadow-lg w-[210px]">
               <CardBody member={activeMember} />
             </div>
           ) : null}

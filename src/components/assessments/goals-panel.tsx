@@ -262,19 +262,19 @@ function GoalRow({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 p-3">
+    <div className="rounded-lg border border-line p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <p className="text-sm font-medium text-visory-navy">{goal.title}</p>
-          {goal.description && <p className="text-gray-500 text-xs mt-0.5">{goal.description}</p>}
+          <p className="text-sm font-medium text-ink">{goal.title}</p>
+          {goal.description && <p className="text-ink-3 text-xs mt-0.5">{goal.description}</p>}
           {goal.dueDate && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              Due: {new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            <p className="text-xs text-ink-3 mt-0.5">
+              Due: <span className="mono tnum">{new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
             </p>
           )}
         </div>
         {!editable && existing && (
-          <Badge className={STATUS_COLORS[existing.status]}>{STATUS_LABELS[existing.status]}</Badge>
+          <Badge variant={STATUS_VARIANTS[existing.status]}>{STATUS_LABELS[existing.status]}</Badge>
         )}
       </div>
       {editable ? (
@@ -283,7 +283,7 @@ function GoalRow({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as ProgressStatus)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className="rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
             >
               <option value="ON_TRACK">On track</option>
               <option value="OFF_TRACK">Off track</option>
@@ -298,12 +298,12 @@ function GoalRow({
             onChange={(e) => setNote(e.target.value)}
             placeholder="Progress update (optional)"
             rows={2}
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+            className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
           />
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-magenta">{error}</p>}
         </div>
       ) : (
-        existing?.note && <p className="mt-1 text-sm text-gray-600">{existing.note}</p>
+        existing?.note && <p className="mt-1 text-sm text-ink-2">{existing.note}</p>
       )}
     </div>
   );

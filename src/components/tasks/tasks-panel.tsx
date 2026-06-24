@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/toggle";
 import { TaskSourceBadge, TaskVisibilityBadge } from "@/components/tasks/task-meta";
 import type { TaskData, TaskCommentData, TaskStatus } from "@/types";
 
@@ -14,16 +17,8 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 
 const STATUS_ORDER: TaskStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 
-function statusColor(status: TaskStatus): string {
-  switch (status) {
-    case "DONE":
-      return "bg-green-100 text-green-800 border-green-300";
-    case "IN_PROGRESS":
-      return "bg-amber-100 text-amber-800 border-amber-300";
-    default:
-      return "bg-gray-100 text-gray-600 border-gray-300";
-  }
-}
+const FIELD =
+  "w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-magenta focus:ring-2 focus:ring-magenta/20 focus:outline-none";
 
 interface AssigneeOption {
   id: string;
@@ -74,17 +69,17 @@ function TaskComments({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
+    <div className="mt-3 border-t border-line pt-3 space-y-2">
       {loading ? (
-        <p className="text-xs text-gray-400">Loading comments…</p>
+        <p className="text-xs muted-2">Loading comments…</p>
       ) : (
         comments.map((c) => (
           <div key={c.id} className="text-sm">
-            <span className="font-medium text-visory-navy">{c.author?.name ?? "Someone"}</span>{" "}
-            <span className="text-xs text-gray-400">
+            <span className="font-medium text-ink">{c.author?.name ?? "Someone"}</span>{" "}
+            <span className="mono tnum text-xs muted-2">
               {new Date(c.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
-            <p className="text-gray-600">{c.body}</p>
+            <p className="muted">{c.body}</p>
           </div>
         ))
       )}
@@ -94,7 +89,7 @@ function TaskComments({ taskId }: { taskId: string }) {
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") add(); }}
           placeholder="Add a comment or update…"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+          className={`flex-1 ${FIELD} py-1.5`}
         />
         <Button size="sm" variant="secondary" onClick={add} disabled={saving || !body.trim()}>Post</Button>
       </div>
@@ -164,11 +159,11 @@ export function TasksPanel({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="card-title">{title}</h2>
           {tasks.length > 0 && (
-            <Badge className="bg-gray-200 text-gray-600 border-gray-300 text-xs">{tasks.length}</Badge>
+            <Badge variant="slate"><span className="mono tnum">{tasks.length}</span></Badge>
           )}
         </div>
         {canManage && !showForm && (
@@ -177,19 +172,19 @@ export function TasksPanel({
       </div>
 
       {showForm && (
-        <div className="rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
+        <div className="rounded-lg border border-line p-4 mb-4 space-y-3">
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             placeholder="Task"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+            className={FIELD}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select
               value={form.assigneeId}
               onChange={(e) => setForm((f) => ({ ...f, assigneeId: e.target.value }))}
-              className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className={FIELD}
             >
               <option value="">Unassigned</option>
               {assigneeOptions.map((o) => (
@@ -200,7 +195,7 @@ export function TasksPanel({
               type="date"
               value={form.dueDate}
               onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-              className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className={`mono tnum ${FIELD}`}
             />
           </div>
           <div className="flex gap-2">
@@ -213,20 +208,25 @@ export function TasksPanel({
       )}
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-2">{emptyText}</p>
+        <p className="text-sm muted-2 text-center py-2">{emptyText}</p>
       ) : (
-        <div className="space-y-2">
-          {tasks.map((task) => (
-            <div key={task.id} className="rounded-lg border border-gray-200 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <p className={`text-sm font-medium text-visory-navy ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
+        <Card className="p-0 overflow-hidden">
+          {tasks.map((task, i) => (
+            <div key={task.id} className={`p-4 ${i > 0 ? "border-t border-line" : ""}`}>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={task.status === "DONE"}
+                  onChange={(v) => updateStatus(task.id, v ? "DONE" : "TODO")}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium text-ink ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
                     {task.title}
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-500">{task.assignee?.name ?? "Unassigned"}</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span className="text-xs muted">{task.assignee?.name ?? "Unassigned"}</span>
                     {task.dueDate && (
-                      <span className="text-xs text-gray-400">
+                      <span className="mono tnum text-xs muted-2">
                         Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     )}
@@ -237,7 +237,7 @@ export function TasksPanel({
                 <select
                   value={task.status}
                   onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
-                  className={`rounded-lg border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory ${statusColor(task.status)}`}
+                  className="rounded-lg border border-line-2 bg-paper px-2 py-1 text-xs text-ink focus:border-magenta focus:outline-none"
                 >
                   {STATUS_ORDER.map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -246,14 +246,15 @@ export function TasksPanel({
               </div>
               <button
                 onClick={() => setExpanded(expanded === task.id ? null : task.id)}
-                className="text-xs text-visory hover:text-visory-dark font-medium mt-2"
+                className="inline-flex items-center gap-1 text-xs muted hover:text-ink mt-2 ml-8"
               >
                 {expanded === task.id ? "Hide updates" : "Comments & updates"}
+                <ChevronRight size={14} strokeWidth={1.6} className={expanded === task.id ? "rotate-90 transition-transform" : "transition-transform"} />
               </button>
-              {expanded === task.id && <TaskComments taskId={task.id} />}
+              {expanded === task.id && <div className="ml-8"><TaskComments taskId={task.id} /></div>}
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );
