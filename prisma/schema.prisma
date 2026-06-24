@@ -38,6 +38,13 @@ enum GoalProgressStatus {
   COMPLETE
 }
 
+enum ReviewNoteKind {
+  NOTE
+  MEETING_LINK
+  TRANSCRIPT
+  SUMMARY
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -65,6 +72,8 @@ model User {
   metricResultsCreated       MetricResult[]     @relation("MetricResultCreator")
   auditLogs                  AuditLog[]         @relation("AuditActor")
   passwordResetTokens        PasswordResetToken[]
+  reviewNotesAbout           ReviewNote[]       @relation("ReviewNoteEmployee")
+  reviewNotesAuthored        ReviewNote[]       @relation("ReviewNoteAuthor")
 
   @@index([managerId])
   @@index([role])
@@ -101,6 +110,7 @@ model AssessmentCycle {
   selfAssessments    SelfAssessment[]
   goalUpdates        GoalUpdate[]
   metricResults      MetricResult[]
+  reviewNotes        ReviewNote[]
 
   @@index([year])
 }
@@ -220,6 +230,28 @@ model KeyMetric {
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+// Free-form notes, meeting links and transcripts/summaries attached to an
+// employee's review for a given cycle. Both the employee and their manager can
+// contribute.
+model ReviewNote {
+  id         String          @id @default(cuid())
+  cycleId    String
+  cycle      AssessmentCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   User            @relation("ReviewNoteEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User            @relation("ReviewNoteAuthor", fields: [authorId], references: [id])
+  kind       ReviewNoteKind  @default(NOTE)
+  title      String?
+  body       String?
+  url        String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([cycleId, employeeId])
+  @@index([authorId])
 }
 
 // Single-use, time-limited token backing the self-service password reset flow.

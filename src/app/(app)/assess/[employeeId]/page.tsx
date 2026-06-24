@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const cycleId = searchParams.get("cycleId");
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
@@ -162,6 +165,10 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         </div>
       </div>
       <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
+
+      <div className="max-w-2xl mx-auto mb-6">
+        <ReviewNotesPanel employeeId={employeeId} cycleId={cycleId} currentUserId={session?.user?.id} />
+      </div>
 
       {resultsSent ? (
         <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600">

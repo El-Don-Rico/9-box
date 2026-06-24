@@ -18,6 +18,7 @@ import {
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
@@ -367,6 +368,15 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
 
       {/* Goals & metrics reviewed this cycle (read-only) */}
       {cycle && <GoalsPanel employeeId={employeeId} cycleId={cycle.id} />}
+
+      {/* Review notes & meeting records */}
+      {cycle && (
+        <Card>
+          <CardContent className="py-4">
+            <ReviewNotesPanel employeeId={employeeId} cycleId={cycle.id} currentUserId={session?.user?.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (

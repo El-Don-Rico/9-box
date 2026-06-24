@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -174,6 +175,11 @@ export default function SelfAssessmentPage() {
         </div>
       )}
       {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
+      {session?.user?.id && cycleId && (
+        <div className="max-w-2xl mx-auto mb-6">
+          <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
+        </div>
+      )}
       <StepForm
         steps={steps}
         values={values}
