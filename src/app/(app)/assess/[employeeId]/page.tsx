@@ -7,7 +7,9 @@ import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
 import { PageHeader } from "@/components/ui/page-header";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
@@ -168,6 +170,21 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
 
       <div className="max-w-2xl mx-auto mb-6">
         <ReviewNotesPanel employeeId={employeeId} cycleId={cycleId} currentUserId={session?.user?.id} />
+      </div>
+
+      <div className="max-w-2xl mx-auto mb-6">
+        <Card>
+          <ActionsEditor
+            employeeId={employeeId}
+            readOnly={resultsSent}
+            assigneeOptions={[
+              { id: employeeId, name: employeeName || "Employee" },
+              ...(session?.user?.id && session.user.id !== employeeId
+                ? [{ id: session.user.id, name: session.user.name || "You" }]
+                : []),
+            ]}
+          />
+        </Card>
       </div>
 
       {resultsSent ? (

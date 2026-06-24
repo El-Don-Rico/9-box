@@ -19,6 +19,7 @@ import {
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
@@ -353,6 +354,20 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
           </CardContent>
         </Card>
       )}
+
+      {/* Actions (follow-up tasks) */}
+      <Card>
+        <ActionsEditor
+          employeeId={employee.id}
+          readOnly={!isManagerView}
+          assigneeOptions={[
+            { id: employee.id, name: employee.name },
+            ...(mgr?.manager && mgr.manager.id !== employee.id
+              ? [{ id: mgr.manager.id, name: mgr.manager.name }]
+              : []),
+          ]}
+        />
+      </Card>
 
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (

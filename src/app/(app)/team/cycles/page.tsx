@@ -40,12 +40,15 @@ export default function TeamCyclesPage() {
 
   useEffect(() => {
     if (!selectedId) return;
+    // Standard client fetch-then-set on cycle change.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setLoadingTeam(true);
     fetch(`/api/team?cycleId=${selectedId}`)
       .then((r) => r.json())
       .then((t) => setTeam(Array.isArray(t) ? t : []))
       .catch(() => setTeam([]))
       .finally(() => setLoadingTeam(false));
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [selectedId]);
 
   const selectedCycle = cycles.find((c) => c.id === selectedId) ?? null;

@@ -93,8 +93,8 @@ export function ReviewNotesPanel({
     <div className="rounded-lg border border-line bg-paper">
       <div className="flex items-center justify-between px-4 py-3 border-b border-line">
         <div>
-          <div className="eyebrow">Records</div>
-          <p className="text-sm font-medium text-ink">Review Notes &amp; Meeting Records</p>
+          <div className="eyebrow">Notes</div>
+          <p className="text-sm font-medium text-ink">Notes</p>
           <p className="text-xs text-ink-3">Notes, meeting links, transcripts or summaries</p>
         </div>
         {!showForm && (
