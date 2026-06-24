@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { computeStage, STAGE_ORDER, type AssessmentStage } from "@/lib/assessment-stage";
 
 export async function GET(
   _request: Request,
@@ -24,11 +25,12 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [managerAssessments, selfAssessments] = await Promise.all([
+  const [managerAssessments, selfAssessments, meetings] = await Promise.all([
     prisma.managerAssessment.findMany({
       where: { cycleId: id },
       select: {
         id: true,
+        startedAt: true,
         createdAt: true,
         submittedAt: true,
         resultsSentAt: true,
@@ -39,52 +41,59 @@ export async function GET(
     }),
     prisma.selfAssessment.findMany({
       where: { cycleId: id },
-      select: {
-        id: true,
-        employeeId: true,
-        submittedAt: true,
-      },
+      select: { id: true, employeeId: true, submittedAt: true },
+    }),
+    prisma.meeting.findMany({
+      where: { cycleId: id, type: "ONE_ON_ONE" },
+      select: { employeeId: true, status: true, completedAt: true },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
   const selfMap = new Map(selfAssessments.map((s) => [s.employeeId, s]));
+  const meetingMap = new Map<string, (typeof meetings)[number]>();
+  for (const m of meetings) {
+    if (!meetingMap.has(m.employeeId)) meetingMap.set(m.employeeId, m);
+  }
 
   const assessments = managerAssessments.map((ma) => {
     const selfA = selfMap.get(ma.employee.id);
-    const selfStatus = selfA?.submittedAt ? "submitted" : "pending";
-    const mgrStatus = ma.submittedAt ? "submitted" : "pending";
+    const meeting = meetingMap.get(ma.employee.id) ?? null;
+    const selfSubmitted = !!selfA?.submittedAt;
+    const managerSubmitted = !!ma.submittedAt;
 
-    let overallStatus: string;
-    if (ma.resultsSentAt) {
-      overallStatus = "results_sent";
-    } else if (mgrStatus === "submitted" && selfStatus === "submitted") {
-      overallStatus = "ready_to_send";
-    } else if (mgrStatus === "submitted" || selfStatus === "submitted") {
-      overallStatus = "in_progress";
-    } else {
-      overallStatus = "pending";
-    }
+    const stage = computeStage({
+      startedAt: ma.startedAt,
+      selfSubmitted,
+      managerSubmitted,
+      meetingComplete: meeting?.status === "COMPLETE",
+      resultsSent: !!ma.resultsSentAt,
+    });
 
     return {
       id: ma.id,
       employee: ma.employee,
       manager: ma.manager,
-      selfStatus,
-      managerStatus: mgrStatus,
-      overallStatus,
+      selfStatus: selfSubmitted ? "submitted" : "pending",
+      managerStatus: managerSubmitted ? "submitted" : "pending",
+      stage,
       createdAt: ma.createdAt,
       submittedAt: ma.submittedAt,
       resultsSentAt: ma.resultsSentAt,
     };
   });
 
+  const byStage = (s: AssessmentStage) => assessments.filter((a) => a.stage === s).length;
   const stats = {
     total: assessments.length,
-    pending: assessments.filter((a) => a.overallStatus === "pending").length,
-    inProgress: assessments.filter((a) => a.overallStatus === "in_progress").length,
-    readyToSend: assessments.filter((a) => a.overallStatus === "ready_to_send").length,
-    resultsSent: assessments.filter((a) => a.overallStatus === "results_sent").length,
+    notStarted: byStage("NOT_STARTED"),
+    inProgress: byStage("IN_PROGRESS"),
+    readyToMeet: byStage("READY_TO_MEET"),
+    meetingComplete: byStage("MEETING_COMPLETE"),
+    complete: byStage("COMPLETE"),
+    selfDone: assessments.filter((a) => a.selfStatus === "submitted").length,
+    managerDone: assessments.filter((a) => a.managerStatus === "submitted").length,
   };
 
-  return NextResponse.json({ cycle, assessments, stats });
+  return NextResponse.json({ cycle, assessments, stats, stageOrder: STAGE_ORDER });
 }

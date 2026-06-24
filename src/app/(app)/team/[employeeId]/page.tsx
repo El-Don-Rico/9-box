@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
+import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCycleQuarter, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
 
@@ -80,6 +80,10 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState("");
 
+  const [openCycleId, setOpenCycleId] = useState<string | null>(null);
+  const [hasOneOnOne, setHasOneOnOne] = useState(false);
+  const [hasPip, setHasPip] = useState(false);
+
   const canEdit = session?.user?.role && checkIsManager(session.user.role as "MANAGER" | "AREA_LEAD" | "LEADERSHIP" | "ADMIN" | "EMPLOYEE");
 
   useEffect(() => {
@@ -102,13 +106,26 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         ]);
         setGoals(Array.isArray(goalsData) ? goalsData : []);
         setMetrics(Array.isArray(metricsData) ? metricsData : []);
+
+        // Managers: resolve the open cycle and whether meetings already exist.
+        if (checkIsManager((session?.user?.role || "EMPLOYEE") as never)) {
+          const cycles = await fetch("/api/cycles").then((r) => (r.ok ? r.json() : [])).catch(() => []);
+          const open = Array.isArray(cycles) ? cycles.find((c: { status: string }) => c.status === "OPEN") : null;
+          if (open) setOpenCycleId(open.id);
+          const [oneOnOnes, pips] = await Promise.all([
+            fetch(`/api/meetings?employeeId=${employeeId}&type=ONE_ON_ONE`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+            fetch(`/api/meetings?employeeId=${employeeId}&type=PIP`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+          ]);
+          setHasOneOnOne(Array.isArray(oneOnOnes) && oneOnOnes.length > 0);
+          setHasPip(Array.isArray(pips) && pips.length > 0);
+        }
       } catch {
         setError("Failed to load employee data");
       }
       setLoading(false);
     }
     loadData();
-  }, [employeeId]);
+  }, [employeeId, session?.user?.role]);
 
   async function handleAddGoal() {
     if (!newGoalTitle.trim()) return;
@@ -218,6 +235,36 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
         </div>
         <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
       </div>
+
+      {/* Meetings (manager only) */}
+      {canEdit && (
+        <Card>
+          <CardHeader>
+            <div>
+              <h2 className="text-lg font-semibold">Meetings</h2>
+              <p className="text-xs text-gray-500">1:1 notes and performance plans open in their own window</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => router.push(`/meeting/${employeeId}?type=ONE_ON_ONE${openCycleId ? `&cycleId=${openCycleId}` : ""}`)}
+              >
+                {hasOneOnOne ? "Edit Meeting Notes" : "Start Meeting"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => router.push(`/meeting/${employeeId}?type=PIP`)}
+              >
+                {hasPip ? "Edit PIP Notes" : "Start PIP Meeting"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Key Metrics */}
       <Card>
@@ -476,7 +523,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     return (
                       <tr key={a.id}>
                         <td className="py-2 px-2 font-medium text-visory-navy">
-                          {formatCyclePeriod(a.cycle.month, a.cycle.year)}
+                          {formatCycleQuarter(a.cycle.month, a.cycle.year)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (

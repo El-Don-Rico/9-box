@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCycleQuarter } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -255,7 +255,7 @@ export default function CalibrationPage() {
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
             >
               {cycles.map((c) => (
-                <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                <option key={c.id} value={c.id}>{formatCycleQuarter(c.month, c.year)}</option>
               ))}
             </select>
           ) : (
@@ -266,7 +266,7 @@ export default function CalibrationPage() {
                 className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
               >
                 {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                  <option key={c.id} value={c.id}>{formatCycleQuarter(c.month, c.year)}</option>
                 ))}
               </select>
               <span className="text-sm text-gray-500">to</span>
@@ -276,7 +276,7 @@ export default function CalibrationPage() {
                 className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
               >
                 {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+                  <option key={c.id} value={c.id}>{formatCycleQuarter(c.month, c.year)}</option>
                 ))}
               </select>
             </div>
@@ -359,7 +359,7 @@ export default function CalibrationPage() {
               <h2 className="text-lg font-semibold">Key Insights</h2>
               {viewMode === "single" && prevInsights && prevCycleLabel && (
                 <span className="text-xs text-gray-500">
-                  vs. {formatCyclePeriod(prevCycleLabel.month, prevCycleLabel.year)}
+                  vs. {formatCycleQuarter(prevCycleLabel.month, prevCycleLabel.year)}
                 </span>
               )}
               {viewMode === "range" && (
@@ -431,8 +431,8 @@ export default function CalibrationPage() {
           <CardHeader>
             <h2 className="text-lg font-semibold">Month-over-Month Movement</h2>
             <p className="text-xs text-gray-500">
-              {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel.month, selectedCycleLabel.year)} vs.{" "}
-              {prevCycleLabel && formatCyclePeriod(prevCycleLabel.month, prevCycleLabel.year)}
+              {selectedCycleLabel && formatCycleQuarter(selectedCycleLabel.month, selectedCycleLabel.year)} vs.{" "}
+              {prevCycleLabel && formatCycleQuarter(prevCycleLabel.month, prevCycleLabel.year)}
             </p>
           </CardHeader>
           <CardContent>

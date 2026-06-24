@@ -35,14 +35,17 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, title, description, dueDate } = await request.json();
 
   if (!employeeId || !title) {
     return NextResponse.json({ error: "employeeId and title are required" }, { status: 400 });
+  }
+
+  // Employees may set their own goals; managers may set goals for their reports.
+  const isOwnGoal = employeeId === session.user.id;
+  if (!isOwnGoal && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const goal = await prisma.goal.create({
@@ -76,8 +79,8 @@ export async function PATCH(request: Request) {
   }
 
   const isCreator = goal.createdById === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  const isOwner = goal.employeeId === session.user.id;
+  if (!isCreator && !isOwner && !isManager(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

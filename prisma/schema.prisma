@@ -31,6 +31,23 @@ enum GoalStatus {
   CANCELLED
 }
 
+enum MeetingType {
+  ONE_ON_ONE
+  PIP
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETE
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -54,6 +71,10 @@ model User {
   goalsCreated               Goal[]             @relation("GoalCreator")
   keyMetrics                 KeyMetric[]        @relation("EmployeeKeyMetrics")
   keyMetricsCreated          KeyMetric[]        @relation("KeyMetricCreator")
+  meetingsAsEmployee         Meeting[]          @relation("MeetingEmployee")
+  meetingsAsManager          Meeting[]          @relation("MeetingManager")
+  tasksAssigned              Task[]             @relation("TaskAssignee")
+  tasksCreated               Task[]             @relation("TaskCreator")
 
   @@index([managerId])
   @@index([role])
@@ -84,6 +105,7 @@ model AssessmentCycle {
 
   managerAssessments ManagerAssessment[]
   selfAssessments    SelfAssessment[]
+  meetings           Meeting[]
 
   @@unique([month, year])
 }
@@ -109,11 +131,9 @@ model ManagerAssessment {
   engagementEvidence  String?
   trend               TrendDirection?
   notes               String?
+  startedAt           DateTime?
   submittedAt         DateTime?
   resultsSentAt       DateTime?
-  oneOnOneComplete    Boolean   @default(false)
-  oneOnOneCompletedAt DateTime?
-  oneOnOneNotes       String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -201,4 +221,50 @@ model KeyMetric {
 
   @@index([employeeId])
   @@index([createdById])
+}
+
+model Meeting {
+  id          String        @id @default(cuid())
+  type        MeetingType   @default(ONE_ON_ONE)
+  status      MeetingStatus @default(SCHEDULED)
+  employeeId  String
+  employee    User          @relation("MeetingEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  managerId   String
+  manager     User          @relation("MeetingManager", fields: [managerId], references: [id], onDelete: Cascade)
+  cycleId     String?
+  cycle       AssessmentCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  notes       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tasks       Task[]
+
+  @@index([employeeId])
+  @@index([managerId])
+  @@index([cycleId])
+  @@index([type])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  category    String?
+  assigneeId  String
+  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User       @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  dueDate     DateTime?
+  meetingId   String?
+  meeting     Meeting?   @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([assigneeId])
+  @@index([createdById])
+  @@index([meetingId])
+  @@index([status])
 }

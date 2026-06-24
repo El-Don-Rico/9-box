@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatCyclePeriod, getCurrentPeriod } from "@/lib/utils";
+import { formatCycleQuarter, getCurrentPeriod } from "@/lib/utils";
+import { STAGE_ORDER, STAGE_LABELS, type AssessmentStage } from "@/lib/assessment-stage";
 import type { CycleData } from "@/types";
 
 interface CycleAssessment {
@@ -15,22 +16,27 @@ interface CycleAssessment {
   manager: { id: string; name: string };
   selfStatus: "pending" | "submitted";
   managerStatus: "pending" | "submitted";
-  overallStatus: "pending" | "in_progress" | "ready_to_send" | "results_sent";
+  stage: AssessmentStage;
   createdAt: string;
   submittedAt: string | null;
   resultsSentAt: string | null;
 }
 
+interface CycleStats {
+  total: number;
+  notStarted: number;
+  inProgress: number;
+  readyToMeet: number;
+  meetingComplete: number;
+  complete: number;
+  selfDone: number;
+  managerDone: number;
+}
+
 interface CycleDetail {
   cycle: CycleData;
   assessments: CycleAssessment[];
-  stats: {
-    total: number;
-    pending: number;
-    inProgress: number;
-    readyToSend: number;
-    resultsSent: number;
-  };
+  stats: CycleStats;
 }
 
 const MONTHS = [
@@ -38,26 +44,9 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "results_sent":
-      return <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>;
-    case "ready_to_send":
-      return <Badge className="bg-blue-100 text-blue-800 border-blue-300">Ready to Send</Badge>;
-    case "in_progress":
-      return <Badge className="bg-amber-100 text-amber-800 border-amber-300">In Progress</Badge>;
-    default:
-      return <Badge className="bg-gray-100 text-gray-600 border-gray-300">Pending</Badge>;
-  }
-}
-
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(dateStr).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function AdminCyclesPage() {
@@ -70,7 +59,6 @@ export default function AdminCyclesPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deletingCycleId, setDeletingCycleId] = useState<string | null>(null);
 
-  // Create cycle form
   const { month: curMonth, year: curYear } = getCurrentPeriod();
   const [selectedMonth, setSelectedMonth] = useState(curMonth);
   const [selectedYear, setSelectedYear] = useState(curYear);
@@ -148,15 +136,23 @@ export default function AdminCyclesPage() {
     }
   }
 
-  // Generate year options: current year -1 to +1
   const yearOptions = [curYear - 1, curYear, curYear + 1];
+
+  const STAT_CARDS: { key: keyof CycleStats; label: string; color: string }[] = [
+    { key: "total", label: "Total", color: "bg-visory-grey text-visory-navy" },
+    { key: "notStarted", label: "Not Started", color: "bg-gray-50 text-gray-600" },
+    { key: "inProgress", label: "In Progress", color: "bg-amber-50 text-amber-600" },
+    { key: "readyToMeet", label: "Ready to Meet", color: "bg-blue-50 text-blue-600" },
+    { key: "meetingComplete", label: "Meeting Done", color: "bg-indigo-50 text-indigo-600" },
+    { key: "complete", label: "Complete", color: "bg-green-50 text-green-600" },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-visory-navy">Assessment Cycles</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage monthly assessment cycles</p>
+          <p className="text-sm text-gray-600 mt-1">Manage quarterly assessment cycles</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -194,42 +190,23 @@ export default function AdminCyclesPage() {
           <Card key={cycle.id}>
             <CardContent className="py-0">
               <div className="py-4 flex items-center justify-between">
-                <button
-                  onClick={() => toggleExpand(cycle.id)}
-                  className="flex items-center gap-3 text-left"
-                >
+                <button onClick={() => toggleExpand(cycle.id)} className="flex items-center gap-3 text-left">
                   <svg
                     className={`w-4 h-4 text-gray-400 transition-transform ${expandedCycleId === cycle.id ? "rotate-90" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                   <div>
-                    <p className="text-sm font-medium text-visory-navy">
-                      {formatCyclePeriod(cycle.month, cycle.year)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Created {formatDate(cycle.createdAt)}
-                    </p>
+                    <p className="text-sm font-medium text-visory-navy">{formatCycleQuarter(cycle.month, cycle.year)}</p>
+                    <p className="text-xs text-gray-500">Created {formatDate(cycle.createdAt)}</p>
                   </div>
                 </button>
                 <div className="flex items-center gap-3">
-                  <Badge
-                    className={
-                      cycle.status === "OPEN"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : "bg-gray-100 text-gray-800 border-gray-300"
-                    }
-                  >
+                  <Badge className={cycle.status === "OPEN" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-800 border-gray-300"}>
                     {cycle.status}
                   </Badge>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => toggleCycle(cycle.id, cycle.status)}
-                  >
+                  <Button size="sm" variant="secondary" onClick={() => toggleCycle(cycle.id, cycle.status)}>
                     {cycle.status === "OPEN" ? "Close" : "Reopen"}
                   </Button>
                   <Button
@@ -250,78 +227,57 @@ export default function AdminCyclesPage() {
                     <p className="text-center py-4 text-sm text-gray-500">Loading...</p>
                   ) : cycleDetail ? (
                     <div className="space-y-4 pt-4">
-                      {/* Stats summary */}
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                        <div className="text-center p-2 rounded-lg bg-visory-grey">
-                          <p className="text-lg font-bold text-visory-navy">{cycleDetail.stats.total}</p>
-                          <p className="text-xs text-gray-500">Total</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-gray-50">
-                          <p className="text-lg font-bold text-gray-600">{cycleDetail.stats.pending}</p>
-                          <p className="text-xs text-gray-500">Pending</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-amber-50">
-                          <p className="text-lg font-bold text-amber-600">{cycleDetail.stats.inProgress}</p>
-                          <p className="text-xs text-gray-500">In Progress</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-blue-50">
-                          <p className="text-lg font-bold text-blue-600">{cycleDetail.stats.readyToSend}</p>
-                          <p className="text-xs text-gray-500">Ready to Send</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-green-50">
-                          <p className="text-lg font-bold text-green-600">{cycleDetail.stats.resultsSent}</p>
-                          <p className="text-xs text-gray-500">Results Sent</p>
-                        </div>
+                      {/* Key statistics */}
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                        {STAT_CARDS.map((s) => (
+                          <div key={s.key} className={`text-center p-2 rounded-lg ${s.color}`}>
+                            <p className="text-lg font-bold">{cycleDetail.stats[s.key]}</p>
+                            <p className="text-xs">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                        <span>Self-assessments submitted: <span className="font-semibold text-visory-navy">{cycleDetail.stats.selfDone}/{cycleDetail.stats.total}</span></span>
+                        <span>Manager assessments submitted: <span className="font-semibold text-visory-navy">{cycleDetail.stats.managerDone}/{cycleDetail.stats.total}</span></span>
                       </div>
 
-                      {/* Assessment table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-200">
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Employee</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Manager</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Self</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Manager</th>
-                              <th className="text-center py-2 px-2 font-medium text-gray-500">Status</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Created</th>
-                              <th className="text-left py-2 px-2 font-medium text-gray-500">Sent</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {cycleDetail.assessments.map((a) => (
-                              <tr key={a.id}>
-                                <td className="py-2 px-2 text-visory-navy">{a.employee.name}</td>
-                                <td className="py-2 px-2 text-gray-600">{a.manager.name}</td>
-                                <td className="py-2 px-2 text-center">
-                                  {a.selfStatus === "submitted" ? (
-                                    <span className="text-green-600">Done</span>
-                                  ) : (
-                                    <span className="text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-center">
-                                  {a.managerStatus === "submitted" ? (
-                                    <span className="text-green-600">Done</span>
-                                  ) : (
-                                    <span className="text-gray-400">—</span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-2 text-center">
-                                  {getStatusBadge(a.overallStatus)}
-                                </td>
-                                <td className="py-2 px-2 text-gray-500 text-xs">{formatDate(a.createdAt)}</td>
-                                <td className="py-2 px-2 text-gray-500 text-xs">{formatDate(a.resultsSentAt)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      {/* Kanban by lifecycle stage */}
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {STAGE_ORDER.map((stage) => {
+                          const items = cycleDetail.assessments.filter((a) => a.stage === stage);
+                          return (
+                            <div key={stage} className="flex-shrink-0 w-56">
+                              <div className="flex items-center justify-between mb-2 px-1">
+                                <p className="text-xs font-semibold text-visory-navy">{STAGE_LABELS[stage]}</p>
+                                <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-[11px]">{items.length}</Badge>
+                              </div>
+                              <div className="space-y-2 rounded-lg bg-gray-50 p-2 min-h-[80px] max-h-[26rem] overflow-y-auto">
+                                {items.map((a) => (
+                                  <div key={a.id} className="rounded-md border border-gray-200 bg-white p-2.5 shadow-sm">
+                                    <button
+                                      onClick={() => router.push(`/summary/${a.employee.id}?cycleId=${cycle.id}`)}
+                                      className="text-xs font-medium text-visory-navy hover:underline text-left"
+                                    >
+                                      {a.employee.name}
+                                    </button>
+                                    <p className="text-[11px] text-gray-400">Mgr: {a.manager.name}</p>
+                                    <div className="flex items-center gap-2 mt-1 text-[11px]">
+                                      <span className={a.selfStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Self">● Self</span>
+                                      <span className={a.managerStatus === "submitted" ? "text-green-600" : "text-gray-300"} title="Manager">● Mgr</span>
+                                    </div>
+                                  </div>
+                                ))}
+                                {items.length === 0 && (
+                                  <p className="text-[11px] text-gray-400 text-center py-3">None</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {cycleDetail.assessments.length === 0 && (
-                        <p className="text-center text-sm text-gray-500 py-2">
-                          No assessments created for this cycle.
-                        </p>
+                        <p className="text-center text-sm text-gray-500 py-2">No assessments created for this cycle.</p>
                       )}
                     </div>
                   ) : null}
@@ -334,9 +290,7 @@ export default function AdminCyclesPage() {
         {cycles.length === 0 && (
           <Card>
             <CardContent>
-              <p className="py-4 text-center text-sm text-gray-500">
-                No cycles yet. Create one to start.
-              </p>
+              <p className="py-4 text-center text-sm text-gray-500">No cycles yet. Create one to start.</p>
             </CardContent>
           </Card>
         )}

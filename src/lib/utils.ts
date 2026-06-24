@@ -7,9 +7,42 @@ export function formatCyclePeriod(month: number, year: number): string {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+export function getQuarter(month: number): number {
+  return Math.ceil(month / 3);
+}
+
+/** Formats a cycle period as a quarter label, e.g. "Q2 2026". */
+export function formatCycleQuarter(month: number, year: number): string {
+  return `Q${getQuarter(month)} ${year}`;
+}
+
 export function getCurrentPeriod(): { month: number; year: number } {
   const now = new Date();
   return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
+
+export interface CycleDueDates {
+  readyToMeet: Date; // both assessments submitted, ready for the 1:1
+  meetingComplete: Date; // 1:1 meeting held
+  resultsSent: Date; // results shared & review complete
+}
+
+/**
+ * Target due dates for a cycle, anchored to the cycle's calendar month:
+ *  - Ready to Meet by the 10th
+ *  - Meeting Complete by the 20th
+ *  - Results Sent / Review Complete by the 25th
+ */
+export function getCycleDueDates(month: number, year: number): CycleDueDates {
+  return {
+    readyToMeet: new Date(year, month - 1, 10),
+    meetingComplete: new Date(year, month - 1, 20),
+    resultsSent: new Date(year, month - 1, 25),
+  };
+}
+
+export function formatDueDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function getRatingLabel(rating: number): string {

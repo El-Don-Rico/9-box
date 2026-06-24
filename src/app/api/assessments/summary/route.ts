@@ -51,15 +51,21 @@ export async function GET(request: Request) {
   }
 
   const isRequesterManager = managerAssessment?.managerId === session.user.id;
-  const mgrData = managerAssessment ? {
-    ...managerAssessment,
-    oneOnOneNotes: isRequesterManager ? managerAssessment.oneOnOneNotes : null,
-  } : null;
+
+  // The 1:1 meeting (notes + completion) is manager-only context.
+  const meeting = isRequesterManager
+    ? await prisma.meeting.findFirst({
+        where: { cycleId, employeeId, managerId: session.user.id, type: "ONE_ON_ONE" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true, completedAt: true, notes: true },
+      })
+    : null;
 
   return NextResponse.json({
     employee,
     cycle,
     selfAssessment,
-    managerAssessment: mgrData,
+    managerAssessment,
+    meeting,
   });
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
+import { getGrowthReadinessLabel, formatCycleQuarter } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -188,7 +188,7 @@ export default function MyResultsPage() {
             </div>
             {completedSummaries.length > 1 && (
               <p className="text-xs text-gray-400 mt-3 text-center">
-                Latest: {formatCyclePeriod(latest.month, latest.year)} · Averages across {completedSummaries.length} cycles
+                Latest: {formatCycleQuarter(latest.month, latest.year)} · Averages across {completedSummaries.length} cycles
               </p>
             )}
           </CardContent>
@@ -287,7 +287,7 @@ export default function MyResultsPage() {
           <Card key={cycle.id}>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle.month, cycle.year)}</h2>
+                <h2 className="text-lg font-semibold">{formatCycleQuarter(cycle.month, cycle.year)}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   {self?.submittedAt && (
                     <Badge className="bg-green-100 text-green-800 border-green-300">Self-Assessment Submitted</Badge>
@@ -342,7 +342,7 @@ export default function MyResultsPage() {
                     )}
                     {self.goalsNextMonth && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                         <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
                       </div>
                     )}

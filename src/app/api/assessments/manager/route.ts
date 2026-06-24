@@ -78,6 +78,8 @@ export async function POST(request: Request) {
       cycleId,
       managerId: session.user.id,
       employeeId,
+      // Any manager activity counts as the assessment being started.
+      startedAt: new Date(),
       ...data,
     },
   });

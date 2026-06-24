@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -70,9 +71,8 @@ export default function SelfAssessmentPage() {
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
-        if (data.bothComplete) {
-          router.push(`/summary/${data.employeeId}?cycleId=${cycleId}`);
-        }
+        // Always return to the dashboard after submitting.
+        router.push("/dashboard");
       }
     } finally {
       setSaving(false);
@@ -83,7 +83,7 @@ export default function SelfAssessmentPage() {
   const steps: StepConfig[] = [
     {
       id: "performance",
-      title: "How would you rate your performance this month?",
+      title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
     },
@@ -94,7 +94,7 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "achievements",
-      title: "What are your key achievements this month?",
+      title: "What are your key achievements this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="List your main accomplishments..." />,
     },
     {
@@ -104,7 +104,7 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "learning",
-      title: "What did you learn this month?",
+      title: "What did you learn this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Skills developed, insights gained..." />,
     },
     {
@@ -154,9 +154,10 @@ export default function SelfAssessmentPage() {
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Resources, guidance, feedback..." />,
     },
     {
-      id: "goalsNextMonth",
-      title: "What are your goals for next month?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Key priorities and objectives..." />,
+      id: "goals",
+      title: "What are your goals for next quarter?",
+      description: "Add each goal individually. They are saved to your profile and tracked over time.",
+      render: () => (session?.user?.id ? <SelfGoalsEditor employeeId={session.user.id} /> : null),
     },
   ];
 
@@ -179,7 +180,7 @@ export default function SelfAssessmentPage() {
       {prefilled && (
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-6 max-w-2xl mx-auto">
           <p className="text-sm text-blue-800">
-            Text responses have been pre-filled from last month. Review and update as needed.
+            Text responses have been pre-filled from last quarter. Review and update as needed.
           </p>
         </div>
       )}

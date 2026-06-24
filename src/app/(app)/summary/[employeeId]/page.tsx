@@ -2,11 +2,11 @@
 
 import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
+import { getGrowthReadinessLabel, formatCycleQuarter } from "@/lib/utils";
 import {
   getBox1Label,
   getBox2Label,
@@ -54,10 +54,13 @@ interface SummaryData {
     notes: string | null;
     submittedAt: string | null;
     resultsSentAt: string | null;
-    oneOnOneComplete: boolean;
-    oneOnOneNotes: string | null;
-    oneOnOneCompletedAt: string | null;
     manager: { id: string; name: string };
+  } | null;
+  meeting: {
+    id: string;
+    status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETE";
+    completedAt: string | null;
+    notes: string | null;
   } | null;
 }
 
@@ -65,14 +68,12 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
   const { employeeId } = use(params);
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const cycleId = searchParams.get("cycleId");
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [sendingResults, setSendingResults] = useState(false);
-  const [meetingNotes, setMeetingNotes] = useState("");
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -80,9 +81,6 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       .then((r) => r.json())
       .then((d) => {
         setData(d);
-        if (d.managerAssessment?.oneOnOneNotes) {
-          setMeetingNotes(d.managerAssessment.oneOnOneNotes);
-        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -109,36 +107,10 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     }
   }
 
-  async function handleSaveMeetingNotes() {
-    if (!data?.managerAssessment?.id) return;
-    setSavingNotes(true);
-    try {
-      const res = await fetch("/api/assessments/manager/meeting-notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId: data.managerAssessment.id, notes: meetingNotes }),
-      });
-      if (res.ok) {
-        setData((prev) => prev ? {
-          ...prev,
-          managerAssessment: prev.managerAssessment ? {
-            ...prev.managerAssessment,
-            oneOnOneComplete: true,
-            oneOnOneNotes: meetingNotes,
-            oneOnOneCompletedAt: new Date().toISOString(),
-          } : null,
-        } : null);
-        setEditingNotes(false);
-      }
-    } finally {
-      setSavingNotes(false);
-    }
-  }
-
   if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
   if (!data || !data.employee) return <div className="text-center py-12 text-gray-500">Summary not found.</div>;
 
-  const { employee, cycle, selfAssessment: self, managerAssessment: mgr } = data;
+  const { employee, cycle, selfAssessment: self, managerAssessment: mgr, meeting } = data;
   const isManagerView = mgr?.manager?.id === session?.user?.id;
   const canSendResults = isManagerView && mgr?.submittedAt && self?.submittedAt && !mgr?.resultsSentAt;
 
@@ -235,7 +207,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         )}
         <div className="flex items-center gap-3 mt-1">
           <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle.month, cycle.year)}` : ""}
+            Assessment Summary {cycle ? `— ${formatCycleQuarter(cycle.month, cycle.year)}` : ""}
           </p>
           {mgr?.resultsSentAt && (
             <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
@@ -322,7 +294,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Month</p>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
                 <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
               </div>
             )}
@@ -343,60 +315,35 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
-      {/* 1:1 Meeting Notes (manager-only) */}
+      {/* 1:1 Meeting (manager-only) — notes live in their own dedicated page */}
       {isManagerView && mgr?.submittedAt && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">1:1 Meeting Notes</h2>
-                {mgr.oneOnOneCompletedAt && (
+                <h2 className="text-lg font-semibold">1:1 Meeting</h2>
+                {meeting?.completedAt ? (
                   <p className="text-xs text-gray-500">
-                    Completed {new Date(mgr.oneOnOneCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    Completed {new Date(meeting.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
+                ) : (
+                  <p className="text-xs text-gray-500">Notes and actions open in their own window.</p>
                 )}
               </div>
-              {mgr.oneOnOneComplete && !editingNotes && (
-                <Button variant="ghost" size="sm" onClick={() => setEditingNotes(true)}>
-                  Edit
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(`/meeting/${employeeId}?cycleId=${cycle?.id ?? ""}`)}
+              >
+                {meeting ? "Edit Meeting Notes" : "Start Meeting"}
+              </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            {mgr.oneOnOneComplete && !editingNotes ? (
-              <div>
-                {mgr.oneOnOneNotes ? (
-                  <p className="text-sm text-visory-navy whitespace-pre-wrap">{mgr.oneOnOneNotes}</p>
-                ) : (
-                  <p className="text-sm text-gray-400 italic">No notes recorded.</p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600">
-                  Record any context from your 1:1 meeting. Scores will not be changed.
-                </p>
-                <textarea
-                  value={meetingNotes}
-                  onChange={(e) => setMeetingNotes(e.target.value)}
-                  placeholder="Key takeaways, context shared, actions agreed..."
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveMeetingNotes} disabled={savingNotes}>
-                    {savingNotes ? "Saving..." : "Save Meeting Notes"}
-                  </Button>
-                  {editingNotes && (
-                    <Button variant="ghost" size="sm" onClick={() => { setEditingNotes(false); setMeetingNotes(mgr.oneOnOneNotes || ""); }}>
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
+          {meeting?.notes && (
+            <CardContent>
+              <p className="text-sm text-visory-navy whitespace-pre-wrap">{meeting.notes}</p>
+            </CardContent>
+          )}
         </Card>
       )}
 
@@ -414,11 +361,11 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
-            {!mgr?.oneOnOneComplete && (
+            {meeting?.status !== "COMPLETE" && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
                 <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
                 <p className="text-sm text-amber-700">
-                  Manager reviews should only be sent after the monthly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
+                  Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}

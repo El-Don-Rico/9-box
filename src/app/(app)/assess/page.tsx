@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CycleData, TeamMemberStatus } from "@/types";
-import { formatCyclePeriod } from "@/lib/utils";
+import { formatCycleQuarter } from "@/lib/utils";
 
 export default function AssessTeamPage() {
   const { data: session } = useSession();
@@ -52,7 +52,7 @@ export default function AssessTeamPage() {
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
         >
           {cycles.map((c) => (
-            <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
+            <option key={c.id} value={c.id}>{formatCycleQuarter(c.month, c.year)}</option>
           ))}
         </select>
       </div>
