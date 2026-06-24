@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { canManageEmployee } from "@/lib/permissions";
+import { canManageEmployee, isManager } from "@/lib/permissions";
 
 async function loadTaskIfPermitted(taskId: string, userId: string, role: import("@prisma/client").Role) {
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) return { error: "Task not found", status: 404 as const };
 
+  const canManage = isManager(role) && (await canManageEmployee(userId, role, task.employeeId));
+  if (task.visibility === "MANAGER_ONLY" && !canManage) return { error: "Forbidden", status: 403 as const };
+
   const isParticipant =
     task.employeeId === userId || task.assigneeId === userId || task.createdById === userId;
-  const canManage = await canManageEmployee(userId, role, task.employeeId);
   if (!isParticipant && !canManage) return { error: "Forbidden", status: 403 as const };
 
   return { task };

@@ -44,6 +44,22 @@ enum TaskStatus {
   DONE
 }
 
+enum TaskVisibility {
+  SHARED
+  MANAGER_ONLY
+}
+
+enum TaskType {
+  STANDARD
+  PIP
+}
+
+enum PerformancePlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -72,6 +88,8 @@ model User {
   tasksAssigned              Task[]             @relation("AssignedTasks")
   tasksCreated               Task[]             @relation("CreatedTasks")
   taskComments               TaskComment[]
+  performancePlans           PerformancePlan[]  @relation("EmployeePerformancePlans")
+  performancePlansManaged    PerformancePlan[]  @relation("ManagerPerformancePlans")
 
   @@index([managerId])
   @@index([role])
@@ -246,11 +264,14 @@ model Task {
   meetingId   String?
   meeting     Meeting?   @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   dueDate     DateTime?
-  status      TaskStatus @default(TODO)
+  status      TaskStatus     @default(TODO)
+  visibility  TaskVisibility @default(SHARED)
+  type        TaskType       @default(STANDARD)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  comments    TaskComment[]
+  comments        TaskComment[]
+  performancePlan PerformancePlan?
 
   @@index([employeeId])
   @@index([assigneeId])
@@ -267,4 +288,51 @@ model TaskComment {
   createdAt DateTime @default(now())
 
   @@index([taskId])
+}
+
+// A Performance Improvement Plan, triggered from a PIP-type Task. Manager-only.
+model PerformancePlan {
+  id         String                @id @default(cuid())
+  taskId     String                @unique
+  task       Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   User                  @relation("EmployeePerformancePlans", fields: [employeeId], references: [id], onDelete: Cascade)
+  managerId  String
+  manager    User                  @relation("ManagerPerformancePlans", fields: [managerId], references: [id])
+  status     PerformancePlanStatus @default(ACTIVE)
+  summary    String?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  meetings   PerformanceMeeting[]
+
+  @@index([employeeId])
+  @@index([managerId])
+}
+
+model PerformanceMeeting {
+  id          String   @id @default(cuid())
+  planId      String
+  plan        PerformancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  title       String
+  notes       String?
+  meetingDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actions     PerformanceAction[]
+
+  @@index([planId])
+}
+
+model PerformanceAction {
+  id        String   @id @default(cuid())
+  meetingId String
+  meeting   PerformanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean  @default(false)
+  dueDate   DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([meetingId])
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TaskSourceBadge, TaskVisibilityBadge } from "@/components/tasks/task-meta";
 import type { TaskData, TaskCommentData, TaskStatus } from "@/types";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -229,6 +230,8 @@ export function TasksPanel({
                         Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     )}
+                    <TaskSourceBadge task={task} canSeeMeeting={canManage} />
+                    <TaskVisibilityBadge task={task} />
                   </div>
                 </div>
                 <select

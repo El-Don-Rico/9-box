@@ -1,5 +1,5 @@
-export type { Role, MeetingStatus, TaskStatus } from "@prisma/client";
-import type { MeetingStatus, TaskStatus } from "@prisma/client";
+export type { Role, MeetingStatus, TaskStatus, TaskVisibility, TaskType, PerformancePlanStatus } from "@prisma/client";
+import type { MeetingStatus, TaskStatus, TaskVisibility, TaskType, PerformancePlanStatus } from "@prisma/client";
 
 export interface UserProfile {
   id: string;
@@ -101,11 +101,14 @@ export interface TaskData {
   meetingId: string | null;
   dueDate: string | null;
   status: TaskStatus;
+  visibility: TaskVisibility;
+  type: TaskType;
   createdAt: string;
   updatedAt: string;
   employee?: { id: string; name: string };
   assignee?: { id: string; name: string } | null;
   createdBy?: { id: string; name: string };
+  meeting?: { managerAssessmentId: string } | null;
   comments?: TaskCommentData[];
 }
 
@@ -116,4 +119,36 @@ export interface MeetingData {
   startedAt: string | null;
   completedAt: string | null;
   tasks?: TaskData[];
+}
+
+export interface PerformanceActionData {
+  id: string;
+  meetingId: string;
+  title: string;
+  done: boolean;
+  dueDate: string | null;
+  createdAt: string;
+}
+
+export interface PerformanceMeetingData {
+  id: string;
+  planId: string;
+  title: string;
+  notes: string | null;
+  meetingDate: string | null;
+  createdAt: string;
+  actions?: PerformanceActionData[];
+}
+
+export interface PerformancePlanData {
+  id: string;
+  taskId: string;
+  employeeId: string;
+  managerId: string;
+  status: PerformancePlanStatus;
+  summary: string | null;
+  createdAt: string;
+  updatedAt: string;
+  task?: TaskData;
+  meetings?: PerformanceMeetingData[];
 }

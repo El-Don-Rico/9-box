@@ -7,10 +7,13 @@ const taskInclude = {
   employee: { select: { id: true, name: true } },
   assignee: { select: { id: true, name: true } },
   createdBy: { select: { id: true, name: true } },
+  meeting: { select: { managerAssessmentId: true } },
 };
 
-// GET ?employeeId= (tasks about an employee), ?assigneeId= (tasks assigned to a
-// user), or ?scope=managed (all open tasks across the manager's reports).
+// GET ?employeeId= (tasks about an employee), ?assigneeId= (assigned to a user),
+// ?scope=managed (all tasks across the manager's reports), or ?scope=mine
+// (the current user's own shared tasks). Manager-only tasks are hidden from
+// the employee they are about.
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -21,12 +24,27 @@ export async function GET(request: Request) {
   const employeeId = searchParams.get("employeeId");
   const assigneeId = searchParams.get("assigneeId");
   const scope = searchParams.get("scope");
+  const userId = session.user.id;
+  const manages = isManager(session.user.role);
 
   if (scope === "managed") {
-    const visible = await getVisibleEmployeeIds(session.user.id, session.user.role);
+    const visible = await getVisibleEmployeeIds(userId, session.user.role);
     const where = visible === "all" ? {} : { employeeId: { in: visible } };
     const tasks = await prisma.task.findMany({
       where,
+      include: taskInclude,
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    });
+    return NextResponse.json(tasks);
+  }
+
+  if (scope === "mine") {
+    // Shared tasks the current user is the subject of, or is assigned.
+    const tasks = await prisma.task.findMany({
+      where: {
+        visibility: "SHARED",
+        OR: [{ employeeId: userId }, { assigneeId: userId }],
+      },
       include: taskInclude,
       orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
     });
@@ -38,13 +56,18 @@ export async function GET(request: Request) {
   }
 
   const target = employeeId ?? assigneeId!;
-  const isOwn = target === session.user.id;
-  if (!isOwn && !(await canManageEmployee(session.user.id, session.user.role, target))) {
+  const isOwn = target === userId;
+  const canManage = manages && (await canManageEmployee(userId, session.user.role, target));
+  if (!isOwn && !canManage) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const tasks = await prisma.task.findMany({
-    where: employeeId ? { employeeId } : { assigneeId },
+    where: {
+      ...(employeeId ? { employeeId } : { assigneeId }),
+      // Hide manager-only tasks unless the requester is a manager of this employee.
+      ...(canManage ? {} : { visibility: "SHARED" }),
+    },
     include: taskInclude,
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
   });
@@ -52,23 +75,33 @@ export async function GET(request: Request) {
   return NextResponse.json(tasks);
 }
 
-// POST: create a task (managers only).
+// POST: create a task. Managers can create for any managed employee and may
+// set visibility / mark it as a PIP. Employees can create shared tasks about
+// themselves.
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
+
+  const body = await request.json();
+  const { title, description, assigneeId, dueDate, meetingId } = body;
+  const employeeId = body.employeeId || session.user.id;
+  if (!title) {
+    return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+
+  const manages = isManager(session.user.role);
+  const canManage = manages && (await canManageEmployee(session.user.id, session.user.role, employeeId));
+  const isOwn = employeeId === session.user.id;
+
+  if (!isOwn && !canManage) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { employeeId, title, description, assigneeId, dueDate, meetingId } = await request.json();
-  if (!employeeId || !title) {
-    return NextResponse.json({ error: "employeeId and title are required" }, { status: 400 });
-  }
-  if (!(await canManageEmployee(session.user.id, session.user.role, employeeId))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  // Only managers may set manager-only visibility or reassign. PIP tasks are
+  // created via /api/performance-plans, not here.
+  const visibility = canManage && body.visibility === "MANAGER_ONLY" ? "MANAGER_ONLY" : "SHARED";
 
   const task = await prisma.task.create({
     data: {
@@ -76,9 +109,10 @@ export async function POST(request: Request) {
       createdById: session.user.id,
       title,
       description: description || null,
-      assigneeId: assigneeId || null,
+      assigneeId: canManage ? (assigneeId || null) : session.user.id,
       dueDate: dueDate ? new Date(dueDate) : null,
-      meetingId: meetingId || null,
+      meetingId: canManage ? (meetingId || null) : null,
+      visibility,
     },
     include: taskInclude,
   });
@@ -86,15 +120,15 @@ export async function POST(request: Request) {
   return NextResponse.json(task);
 }
 
-// PATCH: update a task (status/assignee/due/title). The task's employee, its
-// assignee, the creator, or a manager who can view the employee may update.
+// PATCH: update a task. The task's employee, its assignee, the creator, or a
+// manager of the employee may update. Employees cannot touch manager-only tasks.
 export async function PATCH(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { taskId, title, description, assigneeId, dueDate, status } = await request.json();
+  const { taskId, title, description, assigneeId, dueDate, status, visibility } = await request.json();
   if (!taskId) {
     return NextResponse.json({ error: "taskId is required" }, { status: 400 });
   }
@@ -104,11 +138,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
+  const canManage = isManager(session.user.role) && (await canManageEmployee(session.user.id, session.user.role, task.employeeId));
   const isParticipant =
     task.employeeId === session.user.id ||
     task.assigneeId === session.user.id ||
     task.createdById === session.user.id;
-  const canManage = await canManageEmployee(session.user.id, session.user.role, task.employeeId);
+  // Employees must never see or edit manager-only tasks.
+  if (task.visibility === "MANAGER_ONLY" && !canManage) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!isParticipant && !canManage) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -117,10 +155,11 @@ export async function PATCH(request: Request) {
   if (title !== undefined) data.title = title;
   if (description !== undefined) data.description = description || null;
   if (status !== undefined) data.status = status;
-  // Only managers may reassign or change due dates.
+  // Only managers may reassign, change due dates, or change visibility.
   if (canManage) {
     if (assigneeId !== undefined) data.assigneeId = assigneeId || null;
     if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
+    if (visibility !== undefined) data.visibility = visibility;
   }
 
   const updated = await prisma.task.update({

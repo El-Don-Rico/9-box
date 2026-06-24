@@ -10,6 +10,7 @@ import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePer
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
+import { PerformancePlanCard } from "@/components/performance/performance-plan-card";
 
 interface EmployeeProfile {
   id: string;
@@ -480,6 +481,9 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           />
         </CardContent>
       </Card>
+
+      {/* Performance Improvement Plan (manager-only) */}
+      {canEdit && <PerformancePlanCard employeeId={employeeId} employeeName={employee.name} />}
 
       {/* Performance History */}
       <Card>
