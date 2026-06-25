@@ -20,6 +20,7 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resultsSent, setResultsSent] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
   // Whether every key metric has a saved actual result (gates step 1).
@@ -83,6 +84,24 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       setSubmitting(false);
     }
   }, [cycleId, employeeId, values]);
+
+  const unlockAndEdit = useCallback(async () => {
+    if (!assessmentId) return;
+    setUnlocking(true);
+    try {
+      const res = await fetch("/api/assessments/manager/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId }),
+      });
+      if (res.ok) {
+        setResultsSent(false);
+        setEditing(true);
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  }, [assessmentId]);
 
   // Locked once results are sent, or after submit until the manager re-opens
   // it for editing. While locked the form is read-only and never gates Next.
@@ -188,8 +207,19 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         sub={employeeName ? `Rate ${employeeName} across performance, growth, values and engagement.` : undefined}
       />
       {resultsSent ? (
-        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-paper-2 border border-line p-4 text-sm text-ink-2">
-          Results have been sent to the employee. This assessment is locked and can no longer be edited.
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-line p-4">
+          <p className="text-sm text-ink-2">
+            Results have been sent to the employee. Unlock to edit this assessment — changes are recorded in the audit log, and you can re-send results afterward.
+          </p>
+          <Button
+            size="sm"
+            variant="magenta"
+            className="shrink-0"
+            disabled={unlocking}
+            onClick={unlockAndEdit}
+          >
+            {unlocking ? "Unlocking..." : "Unlock & edit"}
+          </Button>
         </div>
       ) : isSubmitted && !editing ? (
         <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">
