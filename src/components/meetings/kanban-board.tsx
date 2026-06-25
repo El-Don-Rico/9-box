@@ -25,8 +25,8 @@ import {
   getColumnTracking,
 } from "@/lib/meeting";
 import { getTenureBucket, TENURE_BUCKETS } from "@/lib/tenure";
-import { getCycleDueDates, formatDueDate, type CyclePeriod, type CycleDueDates } from "@/lib/utils";
-import type { TeamMemberStatus, MeetingStatus } from "@/types";
+import { getCycleDueDates, formatDueDate, type CycleDueDates } from "@/lib/utils";
+import type { TeamMemberStatus, MeetingStatus, CycleData } from "@/types";
 
 type ChipVariant = "default" | "magenta" | "navy" | "success" | "slate" | "warning";
 
@@ -122,6 +122,7 @@ function MemberCard({
   now,
   onOpenProfile,
   onSendResults,
+  onAssess,
 }: {
   member: TeamMemberStatus;
   column: ColumnKey;
@@ -129,12 +130,19 @@ function MemberCard({
   now: number;
   onOpenProfile: (id: string) => void;
   onSendResults: (member: TeamMemberStatus) => void;
+  onAssess: (member: TeamMemberStatus) => void;
 }) {
   const closed = column === "REVIEW_COMPLETE";
   const settable = MANAGER_SETTABLE_STATUSES.includes(column as MeetingStatus);
   // NOT_READY cards are draggable too, but only into Ready to Meet (override);
   // dropping elsewhere is ignored in handleDragEnd.
   const draggable = (settable || column === "NOT_READY") && !closed;
+
+  // Surface the manager-assessment CTA while it still needs doing: always in the
+  // In-Assessment column, and also on a Ready-to-Meet card that was advanced by
+  // override before the assessment was finished (so it isn't stranded mid-cycle).
+  const mgrSubmitted = member.managerAssessmentStatus === "submitted";
+  const showAssess = !closed && (column === "NOT_READY" || (column === "READY_TO_MEET" && !mgrSubmitted));
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: member.id,
@@ -167,11 +175,28 @@ function MemberCard({
         )}
       </div>
 
-      {/* Self / manager completion icons while the assessment is still underway */}
+      {/* Self / manager completion icons while still in assessment */}
       {column === "NOT_READY" && (
         <div className="mt-1.5 flex items-center gap-2.5">
           <CompletionDot done={member.selfAssessmentStatus === "submitted"} label="Self" />
           <CompletionDot done={member.managerAssessmentStatus === "submitted"} label="Mgr" />
+        </div>
+      )}
+
+      {/* Assess CTA — kick off or continue the manager assessment from the board */}
+      {showAssess && (
+        <div className="mt-3">
+          <Button
+            variant={mgrSubmitted ? "secondary" : "magenta"}
+            size="sm"
+            onClick={() => onAssess(member)}
+          >
+            {mgrSubmitted
+              ? "View assessment"
+              : member.managerAssessmentStatus === "draft"
+                ? "Continue assessment"
+                : "Assess"}
+          </Button>
         </div>
       )}
 
@@ -209,6 +234,7 @@ function Column({
   dueDate,
   onOpenProfile,
   onSendResults,
+  onAssess,
 }: {
   column: ColumnKey;
   label: string;
@@ -218,6 +244,7 @@ function Column({
   dueDate: Date | null;
   onOpenProfile: (id: string) => void;
   onSendResults: (member: TeamMemberStatus) => void;
+  onAssess: (member: TeamMemberStatus) => void;
 }) {
   // Only the three meeting statuses accept drops; NOT_READY and the terminal
   // REVIEW_COMPLETE column do not.
@@ -250,6 +277,7 @@ function Column({
             now={now}
             onOpenProfile={onOpenProfile}
             onSendResults={onSendResults}
+            onAssess={onAssess}
           />
         ))}
         {members.length === 0 && <p className="tiny muted text-center py-4">None</p>}
@@ -349,8 +377,9 @@ function CycleTimeline({ due }: { due: CycleDueDates }) {
   );
 }
 
-export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; cycle?: CyclePeriod | null }) {
+export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; cycle?: CycleData | null }) {
   const router = useRouter();
+  const cycleId = cycle?.id ?? null;
   const [items, setItems] = useState<TeamMemberStatus[]>(members);
   const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
   const [selectedTenures, setSelectedTenures] = useState<string[]>([]);
@@ -432,6 +461,14 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     }
   }
 
+  // Jump straight into the manager assessment for this report ("kick off the
+  // cycle"). The assess page is keyed on employee + cycle and upserts the row,
+  // so we only need the cycle id, not an existing managerAssessmentId.
+  function openAssessment(member: TeamMemberStatus) {
+    if (!cycleId) return;
+    router.push(`/assess/${member.id}?cycleId=${cycleId}`);
+  }
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
   }
@@ -500,6 +537,7 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
               dueDate={columnDue[key] ?? null}
               onOpenProfile={(id) => router.push(`/team/${id}`)}
               onSendResults={(m) => setSendTarget(m)}
+              onAssess={openAssessment}
             />
           ))}
         </div>
