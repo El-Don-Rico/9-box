@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
 import { KanbanBoard } from "@/components/meetings/kanban-board";
 import type { CycleData, TeamMemberStatus, TaskData } from "@/types";
-import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
+import { formatCyclePeriod, comparePeriodDesc, pickDefaultCycle } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 
 export default function DashboardPage() {
@@ -321,28 +321,33 @@ function ManagerDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
   const role = session?.user?.role;
-  const [cycle, setCycle] = useState<CycleData | null>(null);
+  const [cycles, setCycles] = useState<CycleData[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles")
       .then((r) => r.json())
-      .then((cycles: CycleData[]) => {
-        // Use the most active cycle (open if any, else most recent).
-        const current = cycles.find((c) => c.status === "OPEN") || cycles[0];
-        if (current) {
-          setCycle(current);
-          fetch(`/api/team?cycleId=${current.id}`)
-            .then((r) => r.json())
-            .then((t) => setTeam(Array.isArray(t) ? t : []));
-        }
+      .then((cs: CycleData[]) => {
+        const sorted = [...cs].sort(comparePeriodDesc);
+        setCycles(sorted);
+        // Default to the most recently opened cycle; managers can toggle below.
+        setSelectedCycleId(pickDefaultCycle(sorted)?.id ?? "");
       });
     fetch("/api/tasks?scope=managed")
       .then((r) => (r.ok ? r.json() : []))
       .then((t) => setTasks(Array.isArray(t) ? t : []));
   }, []);
 
+  useEffect(() => {
+    if (!selectedCycleId) return;
+    fetch(`/api/team?cycleId=${selectedCycleId}`)
+      .then((r) => r.json())
+      .then((t) => setTeam(Array.isArray(t) ? t : []));
+  }, [selectedCycleId]);
+
+  const cycle = cycles.find((c) => c.id === selectedCycleId) ?? null;
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
 
@@ -362,6 +367,23 @@ function ManagerDashboard() {
           ) : (
             "Track your team through the current cycle"
           )
+        }
+        actions={
+          cycles.length > 0 ? (
+            <select
+              value={selectedCycleId}
+              onChange={(e) => setSelectedCycleId(e.target.value)}
+              aria-label="Select cycle"
+              className="rounded-lg border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20"
+            >
+              {cycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatCyclePeriod(c)}
+                  {c.status === "OPEN" ? " · Open" : ""}
+                </option>
+              ))}
+            </select>
+          ) : undefined
         }
       />
 

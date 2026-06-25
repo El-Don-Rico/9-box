@@ -25,6 +25,23 @@ export function comparePeriodDesc(a: CyclePeriod, b: CyclePeriod): number {
   return b.year - a.year || periodOrder(b) - periodOrder(a);
 }
 
+// Choose the cycle to show by default: the most recently *opened* cycle — i.e.
+// the OPEN cycle created most recently. Cycles are created in the OPEN state, so
+// createdAt is our best "opened at" signal. With no open cycle, fall back to the
+// most recent cycle by period.
+export function pickDefaultCycle<T extends CyclePeriod & { status: string; createdAt: string }>(
+  cycles: T[]
+): T | null {
+  if (cycles.length === 0) return null;
+  const open = cycles.filter((c) => c.status === "OPEN");
+  if (open.length > 0) {
+    return [...open].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0];
+  }
+  return [...cycles].sort(comparePeriodDesc)[0];
+}
+
 export function getCurrentPeriod(): { quarter: number; year: number } {
   const now = new Date();
   return { quarter: Math.floor(now.getMonth() / 3) + 1, year: now.getFullYear() };
