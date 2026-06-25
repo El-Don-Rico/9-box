@@ -21,8 +21,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        // Email is case-insensitive, but it is stored with whatever casing was
+        // used at invite/registration time (e.g. "Oscar.Sims@Visory.com.au").
+        // A case-sensitive lookup would reject a user who types their address in
+        // a different case, so match insensitively — mirroring the registration
+        // route's invitation lookup.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email.trim(), mode: "insensitive" } },
         });
 
         if (!user || !user.isActive) return null;
