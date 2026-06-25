@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, TextStep, MultiRatingStep, RatingWithComment, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ActionsEditor } from "@/components/meetings/actions-editor";
@@ -105,7 +105,16 @@ export default function SelfAssessmentPage() {
       id: "performance",
       title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="performance"
+          commentId="performanceJustification"
+          prompts={assessmentPrompts.performance?.self}
+          commentPlaceholder="Describe your key contributions and the evidence behind your rating..."
+        />
+      ),
       // Mirror what the manager sees under their Performance step: the
       // goals & key-metrics panel plus the tasks/actions list. (No review
       // notes — those stay manager-only, as on the manager flow.)
@@ -119,11 +128,6 @@ export default function SelfAssessmentPage() {
           />
         </>
       ) : undefined,
-    },
-    {
-      id: "performanceJustification",
-      title: "What evidence supports your performance rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe your key contributions and results..." />,
     },
     {
       id: "achievements",
@@ -164,12 +168,16 @@ export default function SelfAssessmentPage() {
       id: "engagement",
       title: "How engaged do you feel at work?",
       description: "Consider your motivation, energy, and connection to the team.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.self} />,
-    },
-    {
-      id: "engagementDriver",
-      title: "What's driving your engagement level?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="What energises or drains you at work..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="engagement"
+          commentId="engagementDriver"
+          prompts={assessmentPrompts.engagement?.self}
+          commentPlaceholder="What's driving your engagement level — what energises or drains you..."
+        />
+      ),
     },
     {
       id: "supportNeeded",

@@ -206,6 +206,48 @@ interface MultiRatingStepProps {
   labels?: Record<number, string>;
 }
 
+// Renders a single rating together with a free-text comments box beneath it,
+// each bound to its own field in the shared values map. Lets a rating and its
+// "general comments" live in one step instead of two.
+export function RatingWithComment({
+  values,
+  onChange,
+  ratingId,
+  commentId,
+  prompts,
+  labels,
+  commentLabel = "Comments",
+  commentPlaceholder,
+}: {
+  values: Record<string, unknown>;
+  onChange: (key: string, val: unknown) => void;
+  ratingId: string;
+  commentId: string;
+  prompts?: string[];
+  labels?: Record<number, string>;
+  commentLabel?: string;
+  commentPlaceholder?: string;
+}) {
+  return (
+    <div className="space-y-6">
+      <RatingStep
+        value={(values[ratingId] as number | null) ?? null}
+        onChange={(v) => onChange(ratingId, v)}
+        prompts={prompts}
+        labels={labels}
+      />
+      <div>
+        <p className="text-base font-semibold text-ink mb-3">{commentLabel}</p>
+        <TextStep
+          value={(values[commentId] as string) || ""}
+          onChange={(v) => onChange(commentId, v)}
+          placeholder={commentPlaceholder}
+        />
+      </div>
+    </div>
+  );
+}
+
 // Renders several ratings (one per value) plus a single shared comment box,
 // all within one step.
 export function MultiRatingStep({

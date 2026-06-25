@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, TextStep, MultiRatingStep, RatingWithComment, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ActionsEditor } from "@/components/meetings/actions-editor";
@@ -112,7 +112,16 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "performance",
       title: `Performance Rating${employeeName ? ` for ${employeeName}` : ""}`,
       description: "Rate this employee's performance against objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.manager} />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="performance"
+          commentId="performanceEvidence"
+          prompts={assessmentPrompts.performance?.manager}
+          commentPlaceholder="Describe specific examples of performance..."
+        />
+      ),
       // Block advancing past Performance Rating until every key metric has a
       // saved actual result — it's the second most important thing to complete.
       blockNext: !locked && !metricsComplete,
@@ -134,22 +143,20 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       ),
     },
     {
-      id: "performanceEvidence",
-      title: "Performance Evidence",
-      description: "What evidence supports this rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe specific examples of performance..." />,
-    },
-    {
       id: "growthReadiness",
       title: "Growth Readiness Rating",
       description: "Rate this employee's readiness for growth and advancement.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }} prompts={assessmentPrompts.growthReadiness?.manager} />,
-    },
-    {
-      id: "growthReadinessEvidence",
-      title: "Growth Readiness Evidence",
-      description: "What evidence supports this growth readiness rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe growth indicators, learning agility..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="growthReadiness"
+          commentId="growthReadinessEvidence"
+          labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }}
+          prompts={assessmentPrompts.growthReadiness?.manager}
+          commentPlaceholder="Describe growth indicators, learning agility..."
+        />
+      ),
     },
     {
       id: "values",
@@ -175,13 +182,16 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "engagement",
       title: "Engagement Rating",
       description: "How engaged does this employee appear?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.manager} />,
-    },
-    {
-      id: "engagementEvidence",
-      title: "Engagement Evidence",
-      description: "What observations support this engagement rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Observable behaviours..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="engagement"
+          commentId="engagementEvidence"
+          prompts={assessmentPrompts.engagement?.manager}
+          commentPlaceholder="Observable behaviours that support this rating..."
+        />
+      ),
     },
     {
       id: "notes",
