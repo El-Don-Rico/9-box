@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { maybeMarkReadyToMeet } from "@/lib/meeting-server";
+import { logAudit, diffFields } from "@/lib/audit";
+
+const AUDITED_FIELDS = [
+  "performance", "performanceEvidence",
+  "growthReadiness", "growthReadinessEvidence",
+  "valCustomerFirst", "valStepIntoArena", "valFlockToProblems", "valGiveEnergy",
+  "valuesEvidence", "engagement", "engagementEvidence", "trend", "notes",
+];
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -25,7 +34,7 @@ export async function GET(request: Request) {
   const assessments = await prisma.managerAssessment.findMany({
     where,
     include: {
-      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true } },
+      employee: { select: { id: true, name: true, email: true, role: true, team: true, jobTitle: true, startDate: true } },
       manager: { select: { id: true, name: true } },
       cycle: true,
     },
@@ -51,18 +60,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "cycleId and employeeId are required" }, { status: 400 });
   }
 
-  // Verify cycle is open
-  const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
-  if (!cycle || cycle.status !== "OPEN") {
-    return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
-  }
-
   // Verify employee is a direct report
   const employee = await prisma.user.findFirst({
     where: { id: employeeId, managerId: session.user.id },
   });
   if (!employee) {
     return NextResponse.json({ error: "Employee not found or not your direct report" }, { status: 404 });
+  }
+
+  const existing = await prisma.managerAssessment.findUnique({
+    where: {
+      cycleId_managerId_employeeId: { cycleId, managerId: session.user.id, employeeId },
+    },
+  });
+
+  // The cycle must be OPEN to CREATE a brand-new assessment. An existing
+  // assessment can be edited at any point — even after the cycle is closed.
+  if (!existing) {
+    const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
+    if (!cycle || cycle.status !== "OPEN") {
+      return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
+    }
+  }
+
+  // Once results have been sent the assessment is locked — no further edits.
+  if (existing?.resultsSentAt) {
+    return NextResponse.json(
+      { error: "Results have already been sent; this assessment is locked." },
+      { status: 409 }
+    );
   }
 
   const assessment = await prisma.managerAssessment.upsert({
@@ -82,6 +108,34 @@ export async function POST(request: Request) {
     },
   });
 
+  // Editing an already-completed (submitted) assessment before results are sent
+  // is allowed but recorded in the audit trail.
+  if (existing?.submittedAt) {
+    const changes = diffFields(
+      existing as unknown as Record<string, unknown>,
+      assessment as unknown as Record<string, unknown>,
+      AUDITED_FIELDS
+    );
+    const changed = Object.keys(changes);
+    if (changed.length > 0) {
+      const before: Record<string, unknown> = {};
+      const after: Record<string, unknown> = {};
+      for (const f of changed) {
+        before[f] = changes[f].from;
+        after[f] = changes[f].to;
+      }
+      await logAudit({
+        actorId: session.user.id,
+        action: "assessment.edit",
+        entityType: "ManagerAssessment",
+        entityId: assessment.id,
+        summary: `Edited after completion: ${changed.join(", ")}`,
+        before,
+        after,
+      });
+    }
+  }
+
   // Check if both assessments are now complete
   let bothComplete = false;
   if (assessment.submittedAt) {
@@ -89,6 +143,7 @@ export async function POST(request: Request) {
       where: { cycleId, employeeId, submittedAt: { not: null } },
     });
     bothComplete = !!selfAssessment;
+    await maybeMarkReadyToMeet(cycleId, employeeId);
   }
 
   return NextResponse.json({ ...assessment, bothComplete });

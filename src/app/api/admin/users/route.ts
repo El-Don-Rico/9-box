@@ -22,6 +22,7 @@ export async function GET() {
       role: true,
       isActive: true,
       managerId: true,
+      startDate: true,
       createdAt: true,
       manager: { select: { id: true, name: true } },
     },
@@ -40,7 +41,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { userId, role, managerId, isActive, jobTitle, team } = await request.json();
+  const { userId, role, managerId, isActive, jobTitle, team, startDate } = await request.json();
 
   if (!userId) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -57,11 +58,12 @@ export async function PUT(request: Request) {
   if (isActive !== undefined) data.isActive = isActive;
   if (jobTitle !== undefined) data.jobTitle = jobTitle || null;
   if (team !== undefined) data.team = team || null;
+  if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null;
 
   const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, email: true, name: true, jobTitle: true, team: true, role: true, isActive: true, managerId: true },
+    select: { id: true, email: true, name: true, jobTitle: true, team: true, role: true, isActive: true, managerId: true, startDate: true },
   });
 
   return NextResponse.json(user);

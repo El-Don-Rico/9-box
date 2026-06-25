@@ -1,6 +1,8 @@
 "use client";
 
 import { getRoleDisplayName } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/toggle";
+import { Badge } from "@/components/ui/badge";
 
 const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"] as const;
 
@@ -29,34 +31,27 @@ export function RoleSelector({ selected, onChange }: RoleSelectorProps) {
   }
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-visory-navy mb-2">
-        Visible to
-      </label>
+    <div className="rounded-lg border border-line-2 bg-paper-2 p-3">
+      <label className="eyebrow block mb-2">Visible to</label>
       <div className="space-y-2">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            className="rounded border-visory-border"
-          />
-          <span className="text-sm text-visory-navy font-medium">All roles</span>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox checked={allSelected} onChange={toggleAll} />
+          <span className="text-sm font-medium text-ink">All roles</span>
         </label>
-        <div className="ml-4 space-y-1.5">
-          {ALL_ROLES.map((role) => (
-            <label key={role} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={selected.includes(role)}
-                onChange={() => toggleRole(role)}
-                className="rounded border-visory-border"
-              />
-              <span className="text-sm text-visory-navy">
-                {getRoleDisplayName(role)}
-              </span>
-            </label>
-          ))}
+        <div className="ml-1 space-y-2">
+          {ALL_ROLES.map((role) => {
+            const isOn = selected.includes(role);
+            return (
+              <label key={role} className="flex items-center gap-2 cursor-pointer">
+                <Checkbox checked={isOn} onChange={() => toggleRole(role)} />
+                {isOn ? (
+                  <Badge variant="magenta">{getRoleDisplayName(role)}</Badge>
+                ) : (
+                  <span className="text-sm text-ink-2">{getRoleDisplayName(role)}</span>
+                )}
+              </label>
+            );
+          })}
         </div>
       </div>
     </div>

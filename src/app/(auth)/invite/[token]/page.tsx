@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 interface InvitationData {
   name: string;
@@ -90,74 +89,66 @@ export default function InviteRegisterPage({ params }: { params: Promise<{ token
 
   if (checking) {
     return (
-      <Card>
-        <CardContent>
-          <p className="text-center py-8 text-gray-500">Validating invitation...</p>
-        </CardContent>
-      </Card>
+      <p className="text-center py-8 muted">Validating invitation…</p>
     );
   }
 
   if (!invitation || invitation.usedAt) {
     return (
-      <Card>
-        <CardHeader>
-          <h1 className="text-2xl font-bold text-visory">Visory</h1>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-gray-500">
-            {error || "This invitation is no longer valid."}
-          </p>
-        </CardContent>
-      </Card>
+      <div>
+        <div className="eyebrow mb-2">Invitation</div>
+        <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
+          No longer <em style={{ fontStyle: "italic" }}>valid.</em>
+        </h1>
+        <p className="lead mt-1">
+          {error || "This invitation is no longer valid."}
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-bold text-visory">Welcome to Visory</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Hi {invitation.name}, set a password to complete your account setup.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-visory-navy mb-1">Email</label>
-            <p className="text-sm text-visory-navy bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-              {invitation.email}
-            </p>
-          </div>
-          <Input
-            id="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-            required
-            minLength={8}
-          />
-          <Input
-            id="confirmPassword"
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm your password"
-            required
-          />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create Account"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="eyebrow mb-2">Welcome to Visory</div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
+        Set your <em style={{ fontStyle: "italic" }}>password.</em>
+      </h1>
+      <p className="lead mt-1 mb-5">
+        Hi {invitation.name}, set a password to complete your account setup.
+      </p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="chip chip-magenta w-full justify-start">{error}</div>
+        )}
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">Email</label>
+          <p className="text-sm text-ink bg-paper-2 rounded-lg px-3 py-2 border border-line">
+            {invitation.email}
+          </p>
+        </div>
+        <Input
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 characters"
+          required
+          minLength={8}
+        />
+        <Input
+          id="confirmPassword"
+          label="Confirm Password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirm your password"
+          required
+        />
+        <Button type="submit" variant="magenta" className="w-full" disabled={loading}>
+          {loading ? "Creating account…" : "Create Account"}
+        </Button>
+      </form>
+    </div>
   );
 }

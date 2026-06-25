@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { comparePeriodDesc } from "@/lib/utils";
+import { logAudit, diffFields } from "@/lib/audit";
+
+const SELF_AUDITED_FIELDS = [
+  "performance", "performanceJustification", "achievements", "blockers", "learning",
+  "valCustomerFirst", "valStepIntoArena", "valFlockToProblems", "valGiveEnergy",
+  "valuesReflection", "engagement", "engagementDriver", "supportNeeded", "goalsNextMonth",
+];
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -25,16 +33,14 @@ export async function GET(request: Request) {
   const prefill = searchParams.get("prefill") === "true";
   if (prefill && cycleId && assessments.length > 0 && !assessments[0].submittedAt && !assessments[0].performance) {
     const currentCycle = assessments[0].cycle;
-    const previousCycle = await prisma.assessmentCycle.findFirst({
-      where: {
-        id: { not: cycleId },
-        OR: [
-          { year: { lt: currentCycle.year } },
-          { year: currentCycle.year, month: { lt: currentCycle.month } },
-        ],
-      },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
+    // Find the most recent cycle strictly before the current one. Cycles may be
+    // quarterly or legacy-monthly, so order in JS via the shared comparator.
+    const earlierCycles = await prisma.assessmentCycle.findMany({
+      where: { id: { not: cycleId } },
     });
+    const previousCycle = earlierCycles
+      .filter((c) => comparePeriodDesc(currentCycle, c) < 0)
+      .sort(comparePeriodDesc)[0];
 
     if (previousCycle) {
       const prev = await prisma.selfAssessment.findUnique({
@@ -74,10 +80,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "cycleId is required" }, { status: 400 });
   }
 
-  // Verify cycle is open
-  const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
-  if (!cycle || cycle.status !== "OPEN") {
-    return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
+  const existing = await prisma.selfAssessment.findUnique({
+    where: {
+      cycleId_employeeId: { cycleId, employeeId: session.user.id },
+    },
+  });
+
+  // The cycle must be OPEN to CREATE a brand-new self-assessment. An existing
+  // self-assessment can be edited at any point — even after the cycle is closed.
+  if (!existing) {
+    const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
+    if (!cycle || cycle.status !== "OPEN") {
+      return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
+    }
   }
 
   const assessment = await prisma.selfAssessment.upsert({
@@ -94,6 +109,34 @@ export async function POST(request: Request) {
       ...data,
     },
   });
+
+  // Editing an already-completed (submitted) self-assessment is allowed but
+  // recorded in the audit trail.
+  if (existing?.submittedAt) {
+    const changes = diffFields(
+      existing as unknown as Record<string, unknown>,
+      assessment as unknown as Record<string, unknown>,
+      SELF_AUDITED_FIELDS
+    );
+    const changed = Object.keys(changes);
+    if (changed.length > 0) {
+      const before: Record<string, unknown> = {};
+      const after: Record<string, unknown> = {};
+      for (const f of changed) {
+        before[f] = changes[f].from;
+        after[f] = changes[f].to;
+      }
+      await logAudit({
+        actorId: session.user.id,
+        action: "assessment.edit",
+        entityType: "SelfAssessment",
+        entityId: assessment.id,
+        summary: `Edited after completion: ${changed.join(", ")}`,
+        before,
+        after,
+      });
+    }
+  }
 
   // Check if both assessments are now complete
   let bothComplete = false;

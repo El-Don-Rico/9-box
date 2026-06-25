@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { dbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -21,9 +22,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // When a cycleId is supplied, include this cycle's recorded actual result.
+  const cycleId = searchParams.get("cycleId");
+
   const metrics = await prisma.keyMetric.findMany({
     where: { employeeId },
-    include: { createdBy: { select: { id: true, name: true } } },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      results: cycleId
+        ? { where: { cycleId }, orderBy: { createdAt: "desc" }, take: 1 }
+        : false,
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -35,9 +44,6 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, name, target, unit, notes } = await request.json();
 
@@ -45,19 +51,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "employeeId, name, and target are required" }, { status: 400 });
   }
 
-  const metric = await prisma.keyMetric.create({
-    data: {
-      employeeId,
-      createdById: session.user.id,
-      name,
-      target,
-      unit: unit || null,
-      notes: notes || null,
-    },
-    include: { createdBy: { select: { id: true, name: true } } },
-  });
+  // Employees may set their own key metrics; managers may set them for anyone.
+  const isOwn = employeeId === session.user.id;
+  if (!isOwn && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  return NextResponse.json(metric);
+  try {
+    const metric = await prisma.keyMetric.create({
+      data: {
+        employeeId,
+        createdById: session.user.id,
+        name,
+        target,
+        unit: unit || null,
+        notes: notes || null,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+
+    return NextResponse.json(metric);
+  } catch (err) {
+    return dbErrorResponse(err, "Save metric");
+  }
 }
 
 export async function PATCH(request: Request) {

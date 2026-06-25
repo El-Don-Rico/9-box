@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatCyclePeriod } from "@/lib/utils";
 
 interface TeamMember {
@@ -16,14 +18,26 @@ interface TeamMember {
   team: string | null;
   selfAssessmentStatus: "not_started" | "draft" | "submitted";
   managerAssessmentStatus: "not_started" | "draft" | "submitted";
+  meetingStatus?: string;
+  meetingStarted?: boolean;
+  managerAssessmentId?: string | null;
   resultsSentAt: string | null;
 }
 
 interface CycleData {
   id: string;
-  month: number;
+  month: number | null;
+  quarter: number | null;
   year: number;
   status: "OPEN" | "CLOSED";
+}
+
+function statusVariant(status: TeamMember["selfAssessmentStatus"]) {
+  return status === "submitted" ? "success" : status === "draft" ? "warning" : "slate";
+}
+
+function statusLabel(status: TeamMember["selfAssessmentStatus"]) {
+  return status === "submitted" ? "Done" : status === "draft" ? "Draft" : "Pending";
 }
 
 export default function MyTeamPage() {
@@ -51,127 +65,112 @@ export default function MyTeamPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
+  if (loading) return <div className="text-center py-12 muted">Loading...</div>;
 
   if (!session?.user?.role || session.user.role === "EMPLOYEE") {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-visory-navy mb-2">My Team</h1>
-        <p className="text-gray-500">You don&apos;t have team members assigned to you.</p>
+      <div>
+        <PageHeader
+          eyebrow="Directory"
+          title={<>Your <em>team.</em></>}
+        />
+        <p className="muted">You don&apos;t have team members assigned to you.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">My Team</h1>
-        {cycle && (
-          <p className="text-sm text-gray-600 mt-1">
-            Current cycle: {formatCyclePeriod(cycle.month, cycle.year)}
-            {cycle.status === "OPEN" && (
-              <Badge className="ml-2 bg-green-100 text-green-800 border-green-300">Open</Badge>
-            )}
-          </p>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Directory"
+        title={<>Your <em>team.</em></>}
+        sub={
+          cycle ? (
+            <span className="inline-flex items-center gap-2">
+              <span>
+                Current cycle: <span className="mono tnum">{formatCyclePeriod(cycle)}</span>
+              </span>
+              {cycle.status === "OPEN" && <Badge variant="success">Open</Badge>}
+            </span>
+          ) : undefined
+        }
+      />
 
       {team.length === 0 ? (
         <Card>
-          <CardContent>
-            <p className="text-sm text-gray-500 py-4 text-center">
-              No direct reports found. Ask your admin to assign employees to you.
-            </p>
-          </CardContent>
+          <p className="text-sm muted py-4 text-center">
+            No direct reports found. Ask your admin to assign employees to you.
+          </p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid-12">
           {team.map((member) => {
             const bothSubmitted = member.selfAssessmentStatus === "submitted" && member.managerAssessmentStatus === "submitted";
             return (
-              <Card key={member.id}>
-                <CardContent className="py-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-visory-navy">{member.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {member.jobTitle && <span className="text-xs text-gray-500">{member.jobTitle}</span>}
-                        {member.jobTitle && member.team && <span className="text-xs text-gray-300">&middot;</span>}
-                        {member.team && <span className="text-xs text-gray-500">{member.team}</span>}
-                      </div>
-                      <button
-                        onClick={() => router.push(`/team/${member.id}`)}
-                        className="text-xs text-visory hover:text-visory-dark font-medium mt-1"
-                      >
-                        View Profile
-                      </button>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-gray-500">Self:</span>
-                        <Badge
-                          className={
-                            member.selfAssessmentStatus === "submitted"
-                              ? "bg-green-100 text-green-800 border-green-300"
-                              : member.selfAssessmentStatus === "draft"
-                                ? "bg-amber-100 text-amber-800 border-amber-300"
-                                : "bg-gray-100 text-gray-600 border-gray-300"
-                          }
-                        >
-                          {member.selfAssessmentStatus === "submitted" ? "Done" : member.selfAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-gray-500">Manager:</span>
-                        <Badge
-                          className={
-                            member.managerAssessmentStatus === "submitted"
-                              ? "bg-green-100 text-green-800 border-green-300"
-                              : member.managerAssessmentStatus === "draft"
-                                ? "bg-amber-100 text-amber-800 border-amber-300"
-                                : "bg-gray-100 text-gray-600 border-gray-300"
-                          }
-                        >
-                          {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                        </Badge>
-                      </div>
-
-                      {member.resultsSentAt && (
-                        <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
-                      )}
-
-                      <div className="flex gap-2">
-                        {cycle && member.managerAssessmentStatus !== "submitted" && (
-                          <Button
-                            size="sm"
-                            onClick={() => router.push(`/assess/${member.id}?cycleId=${cycle.id}`)}
-                          >
-                            Assess
-                          </Button>
-                        )}
-                        {cycle && bothSubmitted && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => router.push(`/summary/${member.id}?cycleId=${cycle.id}`)}
-                          >
-                            Review Summary
-                          </Button>
-                        )}
-                        {cycle && member.managerAssessmentStatus === "submitted" && !bothSubmitted && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => router.push(`/summary/${member.id}?cycleId=${cycle.id}`)}
-                          >
-                            View
-                          </Button>
-                        )}
-                      </div>
+              <Card key={member.id} hover className="col-4 flex flex-col gap-4">
+                <div className="flex items-start gap-3">
+                  <Avatar name={member.name} size="lg" />
+                  <div className="min-w-0">
+                    <p className="serif text-lg leading-tight text-ink truncate">{member.name}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                      {member.jobTitle && <span className="text-xs muted">{member.jobTitle}</span>}
+                      {member.jobTitle && member.team && <span className="text-xs muted-2">&middot;</span>}
+                      {member.team && <span className="text-xs muted">{member.team}</span>}
                     </div>
                   </div>
-                </CardContent>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs muted">Self:</span>
+                  <Badge variant={statusVariant(member.selfAssessmentStatus)}>
+                    {statusLabel(member.selfAssessmentStatus)}
+                  </Badge>
+                  <span className="text-xs muted">Manager:</span>
+                  <Badge variant={statusVariant(member.managerAssessmentStatus)}>
+                    {statusLabel(member.managerAssessmentStatus)}
+                  </Badge>
+                  {member.resultsSentAt && <Badge variant="success">Results Sent</Badge>}
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-auto pt-1">
+                  <Button size="sm" variant="secondary" onClick={() => router.push(`/team/${member.id}`)}>
+                    View Profile
+                  </Button>
+                  {cycle && member.managerAssessmentStatus !== "submitted" && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/assess/${member.id}?cycleId=${cycle.id}`)}
+                    >
+                      Assess
+                    </Button>
+                  )}
+                  {cycle && bothSubmitted && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => router.push(`/summary/${member.id}?cycleId=${cycle.id}`)}
+                    >
+                      Review Summary
+                    </Button>
+                  )}
+                  {cycle && member.managerAssessmentStatus === "submitted" && !bothSubmitted && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => router.push(`/summary/${member.id}?cycleId=${cycle.id}`)}
+                    >
+                      View
+                    </Button>
+                  )}
+                  {member.meetingStatus === "MEETING_SCHEDULED" && member.managerAssessmentId && (
+                    <Button
+                      size="sm"
+                      onClick={() => window.open(`/meeting/${member.managerAssessmentId}`, "_blank", "noopener")}
+                    >
+                      {member.meetingStarted ? "Edit Meeting Notes" : "Start Meeting"}
+                    </Button>
+                  )}
+                </div>
               </Card>
             );
           })}

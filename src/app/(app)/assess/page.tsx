@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import type { CycleData, TeamMemberStatus } from "@/types";
 import { formatCyclePeriod } from "@/lib/utils";
 
@@ -39,85 +41,84 @@ export default function AssessTeamPage() {
     return null;
   }
 
+  function statusVariant(status: string) {
+    if (status === "submitted") return "success" as const;
+    if (status === "draft") return "warning" as const;
+    return "slate" as const;
+  }
+
+  function statusLabel(status: string) {
+    return status === "submitted" ? "Done" : status === "draft" ? "Draft" : "Pending";
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Assess Team</h1>
-          <p className="text-sm text-gray-600 mt-1">Review and assess your direct reports</p>
-        </div>
-        <select
-          value={selectedCycleId}
-          onChange={(e) => setSelectedCycleId(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
-        >
-          {cycles.map((c) => (
-            <option key={c.id} value={c.id}>{formatCyclePeriod(c.month, c.year)}</option>
-          ))}
-        </select>
-      </div>
+      <PageHeader
+        eyebrow="Manager"
+        title={<>Assess your <em>team.</em></>}
+        sub="Review and assess your direct reports"
+        actions={
+          <select
+            value={selectedCycleId}
+            onChange={(e) => setSelectedCycleId(e.target.value)}
+            className="mono tnum rounded-full border border-line-2 bg-paper px-3 py-2 text-sm text-ink"
+          >
+            {cycles.map((c) => (
+              <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+            ))}
+          </select>
+        }
+      />
 
       <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Team Members</h2>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y divide-gray-100">
-            {team.map((member) => (
-              <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="card-head">
+          <div>
+            <div className="eyebrow">Direct reports</div>
+            <h2 className="card-title">Team Members</h2>
+          </div>
+        </div>
+        <div className="divide-y divide-line">
+          {team.map((member) => (
+            <div key={member.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Avatar name={member.name} size="md" />
                 <div>
-                  <p className="text-sm font-medium text-visory-navy">{member.name}</p>
-                  <p className="text-xs text-gray-500">{member.email}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    className={
-                      member.selfAssessmentStatus === "submitted"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : member.selfAssessmentStatus === "draft"
-                          ? "bg-amber-100 text-amber-800 border-amber-300"
-                          : "bg-gray-100 text-gray-800 border-gray-300"
-                    }
-                  >
-                    Self: {member.selfAssessmentStatus === "submitted" ? "Done" : member.selfAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                  </Badge>
-                  <Badge
-                    className={
-                      member.managerAssessmentStatus === "submitted"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : member.managerAssessmentStatus === "draft"
-                          ? "bg-amber-100 text-amber-800 border-amber-300"
-                          : "bg-gray-100 text-gray-800 border-gray-300"
-                    }
-                  >
-                    Mgr: {member.managerAssessmentStatus === "submitted" ? "Done" : member.managerAssessmentStatus === "draft" ? "Draft" : "Pending"}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}
-                    onClick={() => router.push(`/assess/${member.id}?cycleId=${selectedCycleId}`)}
-                  >
-                    {member.managerAssessmentStatus === "submitted" ? "View" : "Assess"}
-                  </Button>
-                  {member.managerAssessmentStatus === "submitted" && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => router.push(`/summary/${member.id}?cycleId=${selectedCycleId}`)}
-                    >
-                      Summary
-                    </Button>
-                  )}
+                  <p className="text-sm font-medium text-ink">{member.name}</p>
+                  <p className="text-xs text-ink-3">{member.email}</p>
                 </div>
               </div>
-            ))}
-            {team.length === 0 && (
-              <p className="py-4 text-center text-sm text-gray-500">
-                No team members found. Ask your admin to assign employees to you.
-              </p>
-            )}
-          </div>
-        </CardContent>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={statusVariant(member.selfAssessmentStatus)}>
+                  Self: {statusLabel(member.selfAssessmentStatus)}
+                </Badge>
+                <Badge variant={statusVariant(member.managerAssessmentStatus)}>
+                  Mgr: {statusLabel(member.managerAssessmentStatus)}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant={member.managerAssessmentStatus === "submitted" ? "ghost" : "primary"}
+                  onClick={() => router.push(`/assess/${member.id}?cycleId=${selectedCycleId}`)}
+                >
+                  {member.managerAssessmentStatus === "submitted" ? "View" : "Assess"}
+                </Button>
+                {member.managerAssessmentStatus === "submitted" && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => router.push(`/summary/${member.id}?cycleId=${selectedCycleId}`)}
+                  >
+                    Summary
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          {team.length === 0 && (
+            <p className="py-4 text-center text-sm text-ink-3">
+              No team members found. Ask your admin to assign employees to you.
+            </p>
+          )}
+        </div>
       </Card>
     </div>
   );

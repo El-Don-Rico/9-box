@@ -3,12 +3,15 @@
 import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/toggle";
 import { RichTextEditor } from "@/components/resources/rich-text-editor";
 import { RoleSelector } from "@/components/resources/role-selector";
+import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 const ALL_ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 
@@ -46,11 +49,11 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
   }, [id]);
 
   if (session?.user?.role !== "ADMIN") {
-    return <div className="text-center py-12 text-gray-500">Access denied.</div>;
+    return <div className="text-center py-12 muted">Access denied.</div>;
   }
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
+    return <div className="text-center py-12 muted">Loading...</div>;
   }
 
   async function handleSave() {
@@ -86,19 +89,23 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/resources/${id}`} className="text-sm text-visory-link hover:underline">
-          &larr; Back to Resource
+        <Link
+          href={`/resources/${id}`}
+          className="inline-flex items-center gap-1 text-sm text-cobalt hover:underline mb-2"
+        >
+          <ArrowLeft size={14} strokeWidth={1.6} />
+          Back to Resource
         </Link>
-        <h1 className="text-2xl font-bold text-visory-navy mt-2">Edit Resource</h1>
+        <PageHeader eyebrow="Library" title={<>Edit <em>resource.</em></>} />
       </div>
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Resource Details</h2>
+          <CardTitle>Resource Details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-visory-navy mb-1">Title</label>
+            <label className="eyebrow block mb-1.5">Title</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -107,26 +114,20 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-visory-navy mb-1">Content</label>
+            <label className="eyebrow block mb-1.5">Content</label>
             <RichTextEditor content={content} onChange={setContent} />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="published"
-              checked={published}
-              onChange={(e) => setPublished(e.target.checked)}
-              className="rounded border-visory-border"
-            />
-            <label htmlFor="published" className="text-sm text-visory-navy">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox checked={published} onChange={setPublished} />
+            <span className="text-sm text-ink">
               Publish (visible to team members with matching roles)
-            </label>
-          </div>
+            </span>
+          </label>
 
           <RoleSelector selected={allowedRoles} onChange={setAllowedRoles} />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-magenta-2">{error}</p>}
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSave} disabled={saving}>
@@ -136,7 +137,7 @@ export default function EditResourcePage({ params }: { params: Promise<{ id: str
               <Button variant="secondary">Cancel</Button>
             </Link>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

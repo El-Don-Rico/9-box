@@ -3,9 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, TextStep, MultiRatingStep, RatingWithComment, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
+import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -17,6 +21,7 @@ export default function SelfAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
@@ -70,9 +75,9 @@ export default function SelfAssessmentPage() {
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
-        if (data.bothComplete) {
-          router.push(`/summary/${data.employeeId}?cycleId=${cycleId}`);
-        }
+        setEditing(false);
+        // Always return to the dashboard after submitting.
+        router.push("/dashboard");
       }
     } finally {
       setSaving(false);
@@ -80,21 +85,53 @@ export default function SelfAssessmentPage() {
     }
   }, [cycleId, values]);
 
+  // Re-open a submitted self-assessment for editing via the unlock endpoint.
+  const unlock = useCallback(async () => {
+    if (!assessmentId) return;
+    const res = await fetch("/api/assessments/self/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assessmentId }),
+    });
+    if (res.ok) setEditing(true);
+  }, [assessmentId]);
+
+  // Locked after submit until the employee re-opens it for editing. While
+  // locked the form is read-only.
+  const locked = isSubmitted && !editing;
+
   const steps: StepConfig[] = [
     {
       id: "performance",
-      title: "How would you rate your performance this month?",
+      title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
-    },
-    {
-      id: "performanceJustification",
-      title: "What evidence supports your performance rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe your key contributions and results..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="performance"
+          commentId="performanceJustification"
+          prompts={assessmentPrompts.performance?.self}
+          commentPlaceholder="Describe your key contributions and the evidence behind your rating..."
+        />
+      ),
+      // Mirror what the manager sees under their Performance step: the
+      // goals & key-metrics panel plus the tasks/actions list. (No review
+      // notes — those stay manager-only, as on the manager flow.)
+      footer: session?.user?.id ? (
+        <>
+          <GoalsPanel employeeId={session.user.id} cycleId={cycleId} editable={!locked} showGoalNotes={false} />
+          <ActionsEditor
+            employeeId={session.user.id}
+            readOnly
+            assigneeOptions={[{ id: session.user.id, name: session.user.name || "You" }]}
+          />
+        </>
+      ) : undefined,
     },
     {
       id: "achievements",
-      title: "What are your key achievements this month?",
+      title: "What are your key achievements this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="List your main accomplishments..." />,
     },
     {
@@ -104,49 +141,43 @@ export default function SelfAssessmentPage() {
     },
     {
       id: "learning",
-      title: "What did you learn this month?",
+      title: "What did you learn this quarter?",
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Skills developed, insights gained..." />,
     },
     {
-      id: "valCustomerFirst",
-      title: "Customer First",
-      description: "How well did you embody the 'Customer First' value?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valCustomerFirst?.self} />,
-    },
-    {
-      id: "valStepIntoArena",
-      title: "Step Into the Arena",
-      description: "How well did you step up and take initiative?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valStepIntoArena?.self} />,
-    },
-    {
-      id: "valFlockToProblems",
-      title: "Flock to Problems",
-      description: "How well did you seek out and address challenges?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valFlockToProblems?.self} />,
-    },
-    {
-      id: "valGiveEnergy",
-      title: "Give Energy",
-      description: "How well did you energise and support those around you?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.valGiveEnergy?.self} />,
-    },
-    {
-      id: "valuesReflection",
-      title: "Values Reflection",
-      description: "Share examples of how you demonstrated Visory values.",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Give specific examples..." />,
+      id: "values",
+      title: "Values Alignment",
+      description: "Rate yourself against each value, then share overall reflections for the section.",
+      renderMulti: (vals, onChange) => (
+        <MultiRatingStep
+          values={vals}
+          onChange={onChange}
+          commentId="valuesReflection"
+          commentLabel="Values Reflection"
+          commentPlaceholder="Give specific examples of how you demonstrated Visory values..."
+          items={[
+            { id: "valCustomerFirst", label: "Customer First", prompts: assessmentPrompts.valCustomerFirst?.self },
+            { id: "valStepIntoArena", label: "Step Into the Arena", prompts: assessmentPrompts.valStepIntoArena?.self },
+            { id: "valFlockToProblems", label: "Flock to Problems", prompts: assessmentPrompts.valFlockToProblems?.self },
+            { id: "valGiveEnergy", label: "Give Energy", prompts: assessmentPrompts.valGiveEnergy?.self },
+          ]}
+        />
+      ),
     },
     {
       id: "engagement",
       title: "How engaged do you feel at work?",
       description: "Consider your motivation, energy, and connection to the team.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.self} />,
-    },
-    {
-      id: "engagementDriver",
-      title: "What's driving your engagement level?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="What energises or drains you at work..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="engagement"
+          commentId="engagementDriver"
+          prompts={assessmentPrompts.engagement?.self}
+          commentPlaceholder="What's driving your engagement level — what energises or drains you..."
+        />
+      ),
     },
     {
       id: "supportNeeded",
@@ -154,15 +185,16 @@ export default function SelfAssessmentPage() {
       render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Resources, guidance, feedback..." />,
     },
     {
-      id: "goalsNextMonth",
-      title: "What are your goals for next month?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Key priorities and objectives..." />,
+      id: "goals",
+      title: "What are your goals for next quarter?",
+      description: "Add each goal individually. They are saved to your profile and tracked over time.",
+      render: () => (session?.user?.id ? <SelfGoalsEditor employeeId={session.user.id} /> : null),
     },
   ];
 
   if (!cycleId) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-ink-3">
         No cycle selected. Go to your dashboard to start an assessment.
       </div>
     );
@@ -170,20 +202,28 @@ export default function SelfAssessmentPage() {
 
   return (
     <div className="py-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-visory-navy">Self-Assessment</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Take your time. Your responses auto-save as drafts.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Self-Assessment"
+        title={<>Your <em>reflection.</em></>}
+        sub="Take your time. Your responses auto-save as drafts."
+      />
       {prefilled && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-6 max-w-2xl mx-auto">
-          <p className="text-sm text-blue-800">
-            Text responses have been pre-filled from last month. Review and update as needed.
+        <div className="rounded-lg bg-paper-2 border border-line p-3 mb-6 max-w-2xl mx-auto">
+          <p className="text-sm text-ink-2">
+            Text responses have been pre-filled from last quarter. Review and update as needed.
           </p>
         </div>
       )}
-      {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
+      {isSubmitted && !editing && (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">
+          <p className="text-sm text-ink-2">
+            This assessment has been submitted. You can re-open it to edit — changes are recorded in the audit log.
+          </p>
+          <Button size="sm" variant="magenta" className="shrink-0" disabled={!assessmentId} onClick={unlock}>
+            Edit assessment
+          </Button>
+        </div>
+      )}
       <StepForm
         steps={steps}
         values={values}
@@ -192,7 +232,7 @@ export default function SelfAssessmentPage() {
         onSubmit={() => save(true)}
         saving={saving}
         submitting={submitting}
-        isSubmitted={isSubmitted}
+        isSubmitted={locked}
       />
     </div>
   );

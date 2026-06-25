@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -63,6 +64,14 @@ export async function POST(request: Request) {
   const updated = await prisma.managerAssessment.update({
     where: { id: assessmentId },
     data: { resultsSentAt: new Date() },
+  });
+
+  await logAudit({
+    actorId: session.user.id,
+    action: "assessment.send",
+    entityType: "ManagerAssessment",
+    entityId: assessmentId,
+    summary: "Sent results to employee",
   });
 
   return NextResponse.json({ resultsSentAt: updated.resultsSentAt });

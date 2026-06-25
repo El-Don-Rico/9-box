@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/permissions";
+import { dbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -21,9 +22,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // When a cycleId is supplied, include this cycle's progress update on each goal.
+  const cycleId = searchParams.get("cycleId");
+
   const goals = await prisma.goal.findMany({
     where: { employeeId },
-    include: { createdBy: { select: { id: true, name: true } } },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      updates: cycleId
+        ? { where: { cycleId }, orderBy: { createdAt: "desc" }, take: 1 }
+        : false,
+    },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 
@@ -35,9 +44,6 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, title, description, dueDate } = await request.json();
 
@@ -45,18 +51,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "employeeId and title are required" }, { status: 400 });
   }
 
-  const goal = await prisma.goal.create({
-    data: {
-      employeeId,
-      createdById: session.user.id,
-      title,
-      description: description || null,
-      dueDate: dueDate ? new Date(dueDate) : null,
-    },
-    include: { createdBy: { select: { id: true, name: true } } },
-  });
+  // Employees may set their own goals; managers may set goals for anyone.
+  const isOwnGoal = employeeId === session.user.id;
+  if (!isOwnGoal && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  return NextResponse.json(goal);
+  try {
+    const goal = await prisma.goal.create({
+      data: {
+        employeeId,
+        createdById: session.user.id,
+        title,
+        description: description || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+
+    return NextResponse.json(goal);
+  } catch (err) {
+    return dbErrorResponse(err, "Save goal");
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -76,8 +92,8 @@ export async function PATCH(request: Request) {
   }
 
   const isCreator = goal.createdById === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  const isOwner = goal.employeeId === session.user.id;
+  if (!isCreator && !isOwner && !isManager(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

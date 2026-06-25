@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Toggle } from "@/components/ui/toggle";
+import { PageHeader } from "@/components/ui/page-header";
 import { getRoleDisplayName } from "@/lib/utils";
 
 interface UserData {
@@ -18,6 +20,7 @@ interface UserData {
   role: string;
   isActive: boolean;
   managerId: string | null;
+  startDate: string | null;
   manager: { id: string; name: string } | null;
 }
 
@@ -32,6 +35,13 @@ interface InvitationData {
 }
 
 const ROLES = ["EMPLOYEE", "MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
+
+const SELECT_CLASS =
+  "block w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20";
+const SELECT_SM_CLASS =
+  "rounded-lg border border-line-2 bg-paper-2 px-2 py-1 text-xs text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20";
+const INPUT_SM_CLASS =
+  "rounded-lg border border-line-2 bg-paper-2 px-2 py-1 text-xs text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20";
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
@@ -51,6 +61,40 @@ export default function AdminUsersPage() {
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [copiedJoinLink, setCopiedJoinLink] = useState(false);
   const [pasteData, setPasteData] = useState("");
+  const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSetFor, setPasswordSetFor] = useState<string | null>(null);
+
+  async function setUserPassword(userId: string) {
+    setPasswordError("");
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (res.ok) {
+        setPasswordUserId(null);
+        setNewPassword("");
+        setPasswordSetFor(userId);
+        setTimeout(() => setPasswordSetFor(null), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setPasswordError(data.error || "Failed to set password");
+      }
+    } catch {
+      setPasswordError("Network error while setting password");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
 
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") {
@@ -191,34 +235,37 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">User Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Invite users and manage roles</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/join`); setCopiedJoinLink(true); setTimeout(() => setCopiedJoinLink(false), 2000); }}>
-            {copiedJoinLink ? "Copied!" : "Copy Join Link"}
-          </Button>
-          <Button variant="secondary" onClick={() => { setShowImport(!showImport); setShowInviteForm(false); }}>
-            {showImport ? "Cancel" : "Bulk Import"}
-          </Button>
-          <Button onClick={() => { setShowInviteForm(!showInviteForm); setShowImport(false); }}>
-            {showInviteForm ? "Cancel" : "Invite User"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Admin"
+        title={<>User <em>management.</em></>}
+        sub="Invite users and manage roles."
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/join`); setCopiedJoinLink(true); setTimeout(() => setCopiedJoinLink(false), 2000); }}>
+              {copiedJoinLink ? "Copied!" : "Copy Join Link"}
+            </Button>
+            <Button variant="secondary" onClick={() => { setShowImport(!showImport); setShowInviteForm(false); }}>
+              {showImport ? "Cancel" : "Bulk Import"}
+            </Button>
+            <Button onClick={() => { setShowInviteForm(!showInviteForm); setShowImport(false); }}>
+              {showInviteForm ? "Cancel" : "Invite User"}
+            </Button>
+          </>
+        }
+      />
 
       {showInviteForm && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Invite New User</h2>
-            <p className="text-xs text-gray-500">They will receive a link to set their own password</p>
+            <div>
+              <CardTitle>Invite new <em>user.</em></CardTitle>
+              <p className="text-xs text-ink-3 mt-1">They will receive a link to set their own password</p>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={sendInvite} className="space-y-4">
               {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
+                <div className="rounded-lg bg-magenta-3 border border-magenta/25 p-3 text-sm text-magenta-2">{error}</div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
@@ -247,11 +294,11 @@ export default function AdminUsersPage() {
                   placeholder="e.g. Engineering"
                 />
                 <div>
-                  <label className="block text-sm font-medium text-visory-navy mb-1">Role</label>
+                  <label className="eyebrow block mb-1.5">Role</label>
                   <select
                     value={newInvite.role}
                     onChange={(e) => setNewInvite((u) => ({ ...u, role: e.target.value }))}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
+                    className={SELECT_CLASS}
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>{getRoleDisplayName(r)}</option>
@@ -259,11 +306,11 @@ export default function AdminUsersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-visory-navy mb-1">Manager</label>
+                  <label className="eyebrow block mb-1.5">Manager</label>
                   <select
                     value={newInvite.managerId}
                     onChange={(e) => setNewInvite((u) => ({ ...u, managerId: e.target.value }))}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory"
+                    className={SELECT_CLASS}
                   >
                     <option value="">No Manager</option>
                     {managers.map((m) => (
@@ -283,34 +330,36 @@ export default function AdminUsersPage() {
       {showImport && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Bulk Import Users</h2>
-            <p className="text-xs text-gray-500">Upload a CSV file to create multiple invitations at once</p>
+            <div>
+              <CardTitle>Bulk import <em>users.</em></CardTitle>
+              <p className="text-xs text-ink-3 mt-1">Upload a CSV file to create multiple invitations at once</p>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-              <p className="text-xs font-medium text-gray-600 mb-1">Expected columns (with or without header row)</p>
-              <p className="text-xs text-gray-500 mb-2">Column order: <code className="bg-gray-200 px-1 rounded">name</code>, <code className="bg-gray-200 px-1 rounded">email</code>, <code className="bg-gray-200 px-1 rounded">role</code>, <code className="bg-gray-200 px-1 rounded">jobTitle</code>, <code className="bg-gray-200 px-1 rounded">team</code>, <code className="bg-gray-200 px-1 rounded">managerEmail</code></p>
-              <p className="text-xs text-gray-500">Accepts CSV files or tab-separated data pasted from a spreadsheet.</p>
+            <div className="rounded-lg bg-paper-2 border border-line p-3">
+              <p className="text-xs font-medium text-ink-2 mb-1">Expected columns (with or without header row)</p>
+              <p className="text-xs text-ink-3 mb-2">Column order: <code className="mono bg-paper border border-line px-1 rounded">name</code>, <code className="mono bg-paper border border-line px-1 rounded">email</code>, <code className="mono bg-paper border border-line px-1 rounded">role</code>, <code className="mono bg-paper border border-line px-1 rounded">jobTitle</code>, <code className="mono bg-paper border border-line px-1 rounded">team</code>, <code className="mono bg-paper border border-line px-1 rounded">managerEmail</code></p>
+              <p className="text-xs text-ink-3">Accepts CSV files or tab-separated data pasted from a spreadsheet.</p>
             </div>
             <form onSubmit={handleCsvImport} className="flex items-center gap-3">
               <input
                 type="file"
                 accept=".csv,.tsv,.txt"
                 required
-                className="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-visory file:text-white hover:file:opacity-90 file:cursor-pointer"
+                className="text-sm text-ink-3 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white hover:file:opacity-90 file:cursor-pointer"
               />
               <Button type="submit" disabled={importing}>
                 {importing ? "Importing..." : "Import"}
               </Button>
             </form>
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs font-medium text-gray-600 mb-2">Or paste from spreadsheet</p>
+            <div className="border-t border-line pt-4">
+              <p className="text-xs font-medium text-ink-2 mb-2">Or paste from spreadsheet</p>
               <textarea
                 value={pasteData}
                 onChange={(e) => setPasteData(e.target.value)}
                 placeholder={"Paste rows here (tab-separated from Excel/Sheets)\ne.g. Jane Smith\tjane@company.com\tEMPLOYEE\tAccountant\tTeam 1\tmanager@company.com"}
                 rows={4}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono focus:ring-visory focus:border-visory"
+                className="w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-xs mono text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20"
               />
               <Button
                 type="button"
@@ -323,31 +372,31 @@ export default function AdminUsersPage() {
               </Button>
             </div>
             {importResult && (
-              <div className="rounded-lg border border-gray-200 p-3">
+              <div className="rounded-lg border border-line p-3">
                 <div className="flex gap-4 mb-3">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-visory">{importResult.invited}</p>
-                    <p className="text-xs text-gray-500">Invited</p>
+                    <p className="mono tnum text-lg text-navy">{importResult.invited}</p>
+                    <p className="tiny text-ink-3">Invited</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-green-600">{importResult.emailsSent}</p>
-                    <p className="text-xs text-gray-500">Emails Sent</p>
+                    <p className="mono tnum text-lg text-success">{importResult.emailsSent}</p>
+                    <p className="tiny text-ink-3">Emails Sent</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-gray-400">{importResult.skipped}</p>
-                    <p className="text-xs text-gray-500">Skipped</p>
+                    <p className="mono tnum text-lg text-ink-3">{importResult.skipped}</p>
+                    <p className="tiny text-ink-3">Skipped</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-visory-navy">{importResult.total}</p>
-                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="mono tnum text-lg text-ink">{importResult.total}</p>
+                    <p className="tiny text-ink-3">Total</p>
                   </div>
                 </div>
                 {importResult.results.some((r) => r.status !== "invited") && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Skipped rows:</p>
+                    <p className="text-xs font-medium text-ink-3 mb-1">Skipped rows:</p>
                     <div className="space-y-1">
                       {importResult.results.filter((r) => r.status !== "invited").map((r, i) => (
-                        <p key={i} className="text-xs text-gray-500">
+                        <p key={i} className="text-xs text-ink-3">
                           {r.email} — {r.status === "skipped_existing_user" ? "already registered" : "invitation already pending"}
                         </p>
                       ))}
@@ -362,144 +411,203 @@ export default function AdminUsersPage() {
 
       {/* Pending Invitations */}
       {pendingInvitations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Pending Invitations</h2>
+        <Card className="p-0 overflow-hidden">
+          <CardHeader className="px-5 pt-5">
+            <CardTitle>Pending <em>invitations.</em></CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="divide-y divide-gray-100">
-              {pendingInvitations.map((inv) => (
-                <div key={inv.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-visory-navy">{inv.name}</p>
-                    <p className="text-xs text-gray-500">{inv.email}</p>
-                    <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-xs mt-1">
-                      {getRoleDisplayName(inv.role)}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => resendEmail(inv.id)}
-                      disabled={resendingEmail === inv.id}
-                    >
-                      {resendingEmail === "sent-" + inv.id ? "Sent!" : resendingEmail === inv.id ? "Sending..." : "Send Email"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => copyInviteLink(inv.token)}
-                    >
-                      {copiedToken === inv.token ? "Copied!" : "Copy Link"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          <div
+            className="dt-head grid items-center gap-3 px-5 py-2.5"
+            style={{ gridTemplateColumns: "1fr auto" }}
+          >
+            <span>Invitee</span>
+            <span className="text-right">Actions</span>
+          </div>
+          {pendingInvitations.map((inv) => (
+            <div
+              key={inv.id}
+              className="dt-row grid items-center gap-3 px-5 py-3"
+              style={{ gridTemplateColumns: "1fr auto" }}
+            >
+              <div>
+                <p className="text-sm font-medium text-ink">{inv.name}</p>
+                <p className="text-xs text-ink-3">{inv.email}</p>
+                <Badge variant="warning" className="mt-1">
+                  {getRoleDisplayName(inv.role)}
+                </Badge>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => resendEmail(inv.id)}
+                  disabled={resendingEmail === inv.id}
+                >
+                  {resendingEmail === "sent-" + inv.id ? "Sent!" : resendingEmail === inv.id ? "Sending..." : "Send Email"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyInviteLink(inv.token)}
+                >
+                  {copiedToken === inv.token ? "Copied!" : "Copy Link"}
+                </Button>
+              </div>
             </div>
-          </CardContent>
+          ))}
         </Card>
       )}
 
       {/* Existing Users */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Active Users</h2>
+      <Card className="p-0 overflow-hidden">
+        <CardHeader className="px-5 pt-5">
+          <CardTitle>Active <em>users.</em></CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="divide-y divide-gray-100">
-            {users.map((user) => (
-              <div key={user.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-visory-navy">{user.name}</p>
-                    {!user.isActive && (
-                      <Badge className="bg-red-100 text-red-800 border-red-300">Inactive</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">{user.email}</p>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {user.jobTitle && (
-                      <span className="text-xs text-gray-500">{user.jobTitle}</span>
-                    )}
-                    {user.jobTitle && user.team && <span className="text-xs text-gray-400">&middot;</span>}
-                    {user.team && (
-                      <span className="text-xs text-gray-500">{user.team}</span>
-                    )}
-                  </div>
-                  {user.manager && (
-                    <p className="text-xs text-gray-400">Reports to: {user.manager.name}</p>
+        <div
+          className="dt-head grid gap-3 px-5 py-2.5"
+          style={{ gridTemplateColumns: "1fr auto" }}
+        >
+          <span>User</span>
+          <span className="text-right">Manage</span>
+        </div>
+        {users.map((user) => (
+          <div key={user.id} className="dt-row px-5 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-ink">{user.name}</p>
+                  {!user.isActive && (
+                    <Badge variant="magenta">Inactive</Badge>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    defaultValue={user.jobTitle || ""}
-                    onBlur={(e) => { if (e.target.value !== (user.jobTitle || "")) updateUser(user.id, { jobTitle: e.target.value }); }}
-                    placeholder="Job title"
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-visory"
-                  />
-                  <input
-                    defaultValue={user.team || ""}
-                    onBlur={(e) => { if (e.target.value !== (user.team || "")) updateUser(user.id, { team: e.target.value }); }}
-                    placeholder="Team"
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-visory"
-                  />
-                  <select
-                    value={user.role}
-                    onChange={(e) => updateUser(user.id, { role: e.target.value })}
-                    disabled={user.id === session?.user?.id}
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>{getRoleDisplayName(r)}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={user.managerId || ""}
-                    onChange={(e) => updateUser(user.id, { managerId: e.target.value || null })}
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory"
-                  >
-                    <option value="">No Manager</option>
-                    {managers.filter((m) => m.id !== user.id).map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant={user.isActive ? "danger" : "secondary"}
-                    onClick={() => updateUser(user.id, { isActive: !user.isActive })}
-                    disabled={user.id === session?.user?.id}
-                  >
-                    {user.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                  {user.id !== session?.user?.id && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setConfirmDeleteId(user.id)}
-                    >
-                      Delete
-                    </Button>
+                <p className="text-xs text-ink-3">{user.email}</p>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {user.jobTitle && (
+                    <span className="text-xs text-ink-3">{user.jobTitle}</span>
+                  )}
+                  {user.jobTitle && user.team && <span className="text-xs text-ink-4">&middot;</span>}
+                  {user.team && (
+                    <span className="text-xs text-ink-3">{user.team}</span>
                   )}
                 </div>
-                {confirmDeleteId === user.id && (
-                  <div className="mt-2 rounded-lg bg-red-50 border border-red-200 p-3 flex items-center justify-between gap-3">
-                    <p className="text-sm text-red-700">
-                      Permanently delete <strong>{user.name}</strong> and all their assessment history?
-                    </p>
-                    <div className="flex gap-2 shrink-0">
-                      <Button size="sm" variant="danger" onClick={() => deleteUser(user.id)} disabled={deleting}>
-                        {deleting ? "Deleting..." : "Confirm Delete"}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
+                {user.manager && (
+                  <p className="text-xs text-ink-4">Reports to: {user.manager.name}</p>
                 )}
               </div>
-            ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  defaultValue={user.jobTitle || ""}
+                  onBlur={(e) => { if (e.target.value !== (user.jobTitle || "")) updateUser(user.id, { jobTitle: e.target.value }); }}
+                  placeholder="Job title"
+                  className={`${INPUT_SM_CLASS} w-28`}
+                />
+                <input
+                  defaultValue={user.team || ""}
+                  onBlur={(e) => { if (e.target.value !== (user.team || "")) updateUser(user.id, { team: e.target.value }); }}
+                  placeholder="Team"
+                  className={`${INPUT_SM_CLASS} w-24`}
+                />
+                <input
+                  type="date"
+                  title="Start date"
+                  defaultValue={user.startDate ? user.startDate.slice(0, 10) : ""}
+                  onBlur={(e) => { if (e.target.value !== (user.startDate ? user.startDate.slice(0, 10) : "")) updateUser(user.id, { startDate: e.target.value || null }); }}
+                  className={`${INPUT_SM_CLASS} mono tnum w-32`}
+                />
+                <select
+                  value={user.role}
+                  onChange={(e) => updateUser(user.id, { role: e.target.value })}
+                  disabled={user.id === session?.user?.id}
+                  className={SELECT_SM_CLASS}
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>{getRoleDisplayName(r)}</option>
+                  ))}
+                </select>
+                <select
+                  value={user.managerId || ""}
+                  onChange={(e) => updateUser(user.id, { managerId: e.target.value || null })}
+                  className={SELECT_SM_CLASS}
+                >
+                  <option value="">No Manager</option>
+                  {managers.filter((m) => m.id !== user.id).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1.5" title={user.isActive ? "Active" : "Inactive"}>
+                  <Toggle
+                    checked={user.isActive}
+                    onChange={() => updateUser(user.id, { isActive: !user.isActive })}
+                    disabled={user.id === session?.user?.id}
+                    label={user.isActive ? "Deactivate user" : "Activate user"}
+                  />
+                  <span className="text-xs text-ink-3">{user.isActive ? "Active" : "Inactive"}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setPasswordUserId(passwordUserId === user.id ? null : user.id);
+                    setNewPassword("");
+                    setPasswordError("");
+                  }}
+                >
+                  Set password
+                </Button>
+                {user.id !== session?.user?.id && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmDeleteId(user.id)}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </div>
+            </div>
+            {passwordSetFor === user.id && (
+              <div className="mt-2 rounded-lg bg-paper-2 border border-line p-2 text-sm text-success">
+                Password updated for {user.name}.
+              </div>
+            )}
+            {passwordUserId === user.id && (
+              <div className="mt-2 rounded-lg bg-paper-2 border border-line p-3 space-y-2">
+                <p className="text-sm text-ink-2">
+                  Set a new password for <strong className="text-ink">{user.name}</strong>. Share it securely; they can change it later.
+                </p>
+                {passwordError && <p className="text-sm text-magenta-2">{passwordError}</p>}
+                <div className="flex gap-2">
+                  <Input
+                    id={`pw-${user.id}`}
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min 8 characters)"
+                  />
+                  <Button size="sm" onClick={() => setUserPassword(user.id)} disabled={savingPassword}>
+                    {savingPassword ? "Saving..." : "Save"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setPasswordUserId(null); setNewPassword(""); }}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+            {confirmDeleteId === user.id && (
+              <div className="mt-2 rounded-lg bg-magenta-3 border border-magenta/25 p-3 flex items-center justify-between gap-3">
+                <p className="text-sm text-magenta-2">
+                  Permanently delete <strong>{user.name}</strong> and all their assessment history?
+                </p>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="magenta" onClick={() => deleteUser(user.id)} disabled={deleting}>
+                    {deleting ? "Deleting..." : "Confirm Delete"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        </CardContent>
+        ))}
       </Card>
     </div>
   );

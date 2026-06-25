@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const cycles = await prisma.assessmentCycle.findMany({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
+    orderBy: [{ year: "desc" }, { quarter: "desc" }, { month: "desc" }],
   });
 
   return NextResponse.json(cycles);
@@ -25,21 +25,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { month, year } = await request.json();
+  const { quarter, year } = await request.json();
 
-  if (!month || !year || month < 1 || month > 12) {
-    return NextResponse.json({ error: "Valid month and year are required" }, { status: 400 });
+  if (!quarter || !year || quarter < 1 || quarter > 4) {
+    return NextResponse.json({ error: "Valid quarter (1-4) and year are required" }, { status: 400 });
   }
 
-  const existing = await prisma.assessmentCycle.findUnique({
-    where: { month_year: { month, year } },
+  // Uniqueness per period is enforced here (no DB unique constraint) so legacy
+  // monthly cycles can coexist with quarterly ones.
+  const existing = await prisma.assessmentCycle.findFirst({
+    where: { quarter, year },
   });
   if (existing) {
     return NextResponse.json({ error: "Cycle already exists for this period" }, { status: 409 });
   }
 
   const cycle = await prisma.assessmentCycle.create({
-    data: { month, year },
+    data: { quarter, year },
   });
 
   // Auto-create self-assessments for all active users

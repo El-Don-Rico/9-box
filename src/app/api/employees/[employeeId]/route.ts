@@ -34,6 +34,7 @@ export async function GET(
         role: true,
         managerId: true,
         isActive: true,
+        startDate: true,
         createdAt: true,
         manager: { select: { id: true, name: true } },
       },
@@ -45,8 +46,8 @@ export async function GET(
 
     const assessments = await prisma.managerAssessment.findMany({
       where: { employeeId, submittedAt: { not: null } },
-      include: { cycle: true },
-      orderBy: [{ cycle: { year: "desc" } }, { cycle: { month: "desc" } }],
+      include: { cycle: true, meeting: { select: { id: true } } },
+      orderBy: [{ cycle: { year: "desc" } }, { cycle: { quarter: "desc" } }, { cycle: { month: "desc" } }],
     });
 
     return NextResponse.json({ employee, assessments });

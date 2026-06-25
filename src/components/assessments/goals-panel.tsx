@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+type ProgressStatus = "ON_TRACK" | "OFF_TRACK" | "COMPLETE";
+
+interface GoalUpdateData {
+  id: string;
+  status: ProgressStatus;
+  note: string | null;
+}
+
+interface Creator {
+  id: string;
+  name: string;
+}
 
 interface GoalData {
   id: string;
@@ -9,6 +24,14 @@ interface GoalData {
   description: string | null;
   dueDate: string | null;
   status: string;
+  updates?: GoalUpdateData[];
+  createdBy?: Creator | null;
+}
+
+interface MetricResultData {
+  id: string;
+  actual: string;
+  note: string | null;
 }
 
 interface MetricData {
@@ -16,95 +39,343 @@ interface MetricData {
   name: string;
   target: string;
   unit: string | null;
+  results?: MetricResultData[];
+  createdBy?: Creator | null;
 }
 
-export function GoalsPanel({ employeeId }: { employeeId: string }) {
+// Small badge marking whether a goal/metric was set by the employee themselves
+// or by their manager. `subjectId` is the employee the goal/metric belongs to.
+function CreatorBadge({ createdBy, subjectId }: { createdBy?: Creator | null; subjectId: string }) {
+  if (!createdBy) return null;
+  const byEmployee = createdBy.id === subjectId;
+  return (
+    <Badge variant="slate" className="text-[11px]">
+      {byEmployee ? "Set by employee" : "Set by manager"}
+    </Badge>
+  );
+}
+
+const STATUS_LABELS: Record<ProgressStatus, string> = {
+  ON_TRACK: "On track",
+  OFF_TRACK: "Off track",
+  COMPLETE: "Complete",
+};
+
+const STATUS_VARIANTS: Record<ProgressStatus, "success" | "warning" | "navy"> = {
+  ON_TRACK: "success",
+  OFF_TRACK: "warning",
+  COMPLETE: "navy",
+};
+
+export function GoalsPanel({
+  employeeId,
+  cycleId,
+  editable = false,
+  onMetricsStatus,
+  className,
+  defaultOpen,
+  showGoalNotes = true,
+}: {
+  employeeId: string;
+  cycleId?: string | null;
+  editable?: boolean;
+  /** Reports how many key metrics exist and how many have a saved actual. */
+  onMetricsStatus?: (status: { total: number; complete: number }) => void;
+  /** Override the wrapper classes (defaults to a centred, narrow column). */
+  className?: string;
+  /** Render expanded on first paint regardless of edit mode. */
+  defaultOpen?: boolean;
+  /** Show the per-goal free-text progress note (status dropdown stays either way). */
+  showGoalNotes?: boolean;
+}) {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(defaultOpen ? false : !editable);
+  const [completedMetricIds, setCompletedMetricIds] = useState<Set<string>>(new Set());
+
+  const query = (path: string) =>
+    `${path}?employeeId=${employeeId}${cycleId ? `&cycleId=${cycleId}` : ""}`;
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/goals?employeeId=${employeeId}`).then((r) => r.json()),
-      fetch(`/api/key-metrics?employeeId=${employeeId}`).then((r) => r.json()),
+      fetch(query("/api/goals")).then((r) => (r.ok ? r.json() : [])),
+      fetch(query("/api/key-metrics")).then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([g, m]) => {
-        setGoals(g.filter((goal: GoalData) => goal.status === "ACTIVE"));
-        setMetrics(m);
+      .then(([g, m]: [GoalData[], MetricData[]]) => {
+        // Active goals, plus any goal already reviewed in this cycle.
+        setGoals(
+          (Array.isArray(g) ? g : []).filter(
+            (goal) => goal.status === "ACTIVE" || (goal.updates && goal.updates.length > 0)
+          )
+        );
+        const ms: MetricData[] = Array.isArray(m) ? m : [];
+        setMetrics(ms);
+        setCompletedMetricIds(
+          new Set(ms.filter((metric) => (metric.results?.[0]?.actual ?? "").trim()).map((metric) => metric.id))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [employeeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, cycleId]);
+
+  // Report key-metric completion so a parent can gate on it.
+  useEffect(() => {
+    onMetricsStatus?.({ total: metrics.length, complete: completedMetricIds.size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metrics, completedMetricIds]);
 
   if (loading) return null;
   if (goals.length === 0 && metrics.length === 0) return null;
 
   return (
-    <div className="max-w-2xl mx-auto mb-6">
+    <div className={className ?? "max-w-2xl mx-auto mb-6"}>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between rounded-lg border border-line bg-paper-2 px-4 py-3 hover:bg-paper transition-colors"
       >
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <span className="text-sm font-medium text-visory-navy">
-            Goals &amp; Key Metrics
+          <Target size={16} strokeWidth={1.6} className="text-ink-2" />
+          <span className="text-sm font-medium text-ink">
+            Goals &amp; Key Metrics{editable ? " — Review" : ""}
           </span>
-          <Badge className="bg-gray-200 text-gray-600 border-gray-300 text-xs">
+          <Badge variant="slate" className="mono tnum">
             {goals.length + metrics.length}
           </Badge>
         </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${collapsed ? "" : "rotate-180"}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.6}
+          className={`text-ink-3 transition-transform ${collapsed ? "" : "rotate-180"}`}
+        />
       </button>
 
       {!collapsed && (
-        <div className="border border-t-0 border-gray-200 rounded-b-lg p-4 space-y-4">
+        <div className="border border-t-0 border-line rounded-b-lg p-4 space-y-4">
           {metrics.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Key Metrics</p>
-              <div className="space-y-1">
+              <p className="eyebrow mb-2">Key Metrics</p>
+              <div className="space-y-2">
                 {metrics.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between text-sm">
-                    <span className="text-visory-navy">{m.name}</span>
-                    <span className="text-gray-600 font-medium">
-                      {m.target}{m.unit ? ` ${m.unit}` : ""}
-                    </span>
-                  </div>
+                  <MetricRow
+                    key={m.id}
+                    metric={m}
+                    cycleId={cycleId}
+                    editable={editable}
+                    subjectId={employeeId}
+                    onSaved={() =>
+                      setCompletedMetricIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(m.id);
+                        return next;
+                      })
+                    }
+                  />
                 ))}
               </div>
             </div>
           )}
           {goals.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Active Goals</p>
+              <p className="eyebrow mb-2">Goals</p>
               <div className="space-y-2">
                 {goals.map((g) => (
-                  <div key={g.id} className="text-sm">
-                    <p className="text-visory-navy font-medium">{g.title}</p>
-                    {g.description && <p className="text-gray-500 text-xs">{g.description}</p>}
-                    {g.dueDate && (
-                      <p className="text-xs text-gray-400">
-                        Due: {new Date(g.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
-                    )}
-                  </div>
+                  <GoalRow key={g.id} goal={g} cycleId={cycleId} editable={editable} subjectId={employeeId} showGoalNotes={showGoalNotes} />
                 ))}
               </div>
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function MetricRow({
+  metric,
+  cycleId,
+  editable,
+  subjectId,
+  onSaved,
+}: {
+  metric: MetricData;
+  cycleId?: string | null;
+  editable: boolean;
+  subjectId: string;
+  onSaved?: () => void;
+}) {
+  const existing = metric.results?.[0];
+  const [actual, setActual] = useState(existing?.actual ?? "");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!cycleId || !actual.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/key-metrics/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyMetricId: metric.id, cycleId, actual, note }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        onSaved?.();
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        const e = await res.json().catch(() => ({}));
+        setError(e.error || `Failed to save (${res.status})`);
+      }
+    } catch {
+      setError("Network error while saving");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-line p-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-ink font-medium truncate">{metric.name}</span>
+          <CreatorBadge createdBy={metric.createdBy} subjectId={subjectId} />
+        </span>
+        <span className="text-ink-2 shrink-0">
+          Target: <span className="mono tnum">{metric.target}{metric.unit ? ` ${metric.unit}` : ""}</span>
+        </span>
+      </div>
+      {editable ? (
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={actual}
+              onChange={(e) => setActual(e.target.value)}
+              placeholder={`Actual result${metric.unit ? ` (${metric.unit})` : ""}`}
+              className="flex-1 rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
+            />
+            <Button size="sm" onClick={save} disabled={saving || !actual.trim()}>
+              {saving ? "Saving..." : saved ? "Saved ✓" : "Save"}
+            </Button>
+          </div>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Comment (optional)"
+            className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
+          />
+          {error && <p className="text-xs text-magenta">{error}</p>}
+        </div>
+      ) : (
+        existing && (
+          <p className="mt-1 text-sm text-ink-2">
+            Actual: <span className="font-medium text-ink mono tnum">{existing.actual}</span>
+            {existing.note ? ` — ${existing.note}` : ""}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
+function GoalRow({
+  goal,
+  cycleId,
+  editable,
+  subjectId,
+  showGoalNotes,
+}: {
+  goal: GoalData;
+  cycleId?: string | null;
+  editable: boolean;
+  subjectId: string;
+  showGoalNotes: boolean;
+}) {
+  const existing = goal.updates?.[0];
+  const [status, setStatus] = useState<ProgressStatus>(existing?.status ?? "ON_TRACK");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!cycleId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/goals/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goalId: goal.id, cycleId, status, note }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        const e = await res.json().catch(() => ({}));
+        setError(e.error || `Failed to save (${res.status})`);
+      }
+    } catch {
+      setError("Network error while saving");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-line p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-ink">{goal.title}</p>
+            <CreatorBadge createdBy={goal.createdBy} subjectId={subjectId} />
+          </div>
+          {goal.description && <p className="text-ink-3 text-xs mt-0.5">{goal.description}</p>}
+          {goal.dueDate && (
+            <p className="text-xs text-ink-3 mt-0.5">
+              Due: <span className="mono tnum">{new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+            </p>
+          )}
+        </div>
+        {!editable && existing && (
+          <Badge variant={STATUS_VARIANTS[existing.status]}>{STATUS_LABELS[existing.status]}</Badge>
+        )}
+      </div>
+      {editable ? (
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ProgressStatus)}
+              className="rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
+            >
+              <option value="ON_TRACK">On track</option>
+              <option value="OFF_TRACK">Off track</option>
+              <option value="COMPLETE">Complete</option>
+            </select>
+            <Button size="sm" onClick={save} disabled={saving}>
+              {saving ? "Saving..." : saved ? "Saved ✓" : "Save"}
+            </Button>
+          </div>
+          {showGoalNotes && (
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Progress update (optional)"
+              rows={2}
+              className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
+            />
+          )}
+          {error && <p className="text-xs text-magenta">{error}</p>}
+        </div>
+      ) : (
+        showGoalNotes && existing?.note && <p className="mt-1 text-sm text-ink-2">{existing.note}</p>
       )}
     </div>
   );
