@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { KanbanBoard } from "@/components/meetings/kanban-board";
 import type { CycleData, TeamMemberStatus, TaskData } from "@/types";
 import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
@@ -98,6 +99,10 @@ function EmployeeDashboard() {
   const needsSelfAssessment = !!openCycle && !openSummary?.selfSubmitted;
   const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
 
+  // Goals & key metrics are scoped to the current cycle: prefer the open cycle,
+  // otherwise the latest cycle we have any record for.
+  const goalsCycleId = openCycle?.id ?? latestWithResults?.cycleId ?? cycleSummaries[0]?.cycleId ?? null;
+
   // Compute averages from cycles that have manager assessments
   const completedCycles = cycleSummaries.filter((s) => s.mgrSubmitted);
   const avgPerformance = completedCycles.length > 0
@@ -157,7 +162,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrPerformance ?? "-"}
                 </p>
-                {avgPerformance !== null && completedCycles.length > 1 && (
+                {avgPerformance !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgPerformance.toFixed(1)}</span></p>
                 )}
               </div>
@@ -166,7 +171,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrGrowthReadiness ?? "-"}
                 </p>
-                {avgGrowthReadiness !== null && completedCycles.length > 1 && (
+                {avgGrowthReadiness !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgGrowthReadiness.toFixed(1)}</span></p>
                 )}
               </div>
@@ -175,7 +180,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrValuesAlignment ?? "-"}
                 </p>
-                {avgValues !== null && completedCycles.length > 1 && (
+                {avgValues !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgValues.toFixed(1)}</span></p>
                 )}
               </div>
@@ -184,18 +189,29 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrEngagement ?? "-"}
                 </p>
-                {avgEngagement !== null && completedCycles.length > 1 && (
+                {avgEngagement !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgEngagement.toFixed(1)}</span></p>
                 )}
               </div>
             </div>
-            {completedCycles.length > 1 && (
-              <p className="tiny muted mt-3 text-center">
-                Latest: {formatCyclePeriod(latestWithResults)} · Averages across <span className="mono tnum">{completedCycles.length}</span> cycles
-              </p>
-            )}
+            <p className="tiny muted mt-3 text-center">
+              Current cycle: {formatCyclePeriod(latestWithResults)}
+              {completedCycles.length > 1 && (
+                <> · Avg across <span className="mono tnum">{completedCycles.length}</span> cycles</>
+              )}
+            </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Goals & Key Metrics — current cycle progress (read-only) */}
+      {session?.user?.id && (
+        <GoalsPanel
+          employeeId={session.user.id}
+          cycleId={goalsCycleId}
+          className=""
+          defaultOpen
+        />
       )}
 
       {/* Cycle Cards */}
