@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
-import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
 import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -106,12 +106,17 @@ export default function SelfAssessmentPage() {
       title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
+      // Mirror what the manager sees under their Performance step: the
+      // goals & key-metrics panel plus the tasks/actions list. (No review
+      // notes — those stay manager-only, as on the manager flow.)
       footer: session?.user?.id ? (
         <>
-          <GoalsPanel employeeId={session.user.id} />
-          {cycleId && (
-            <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
-          )}
+          <GoalsPanel employeeId={session.user.id} cycleId={cycleId} editable={!locked} />
+          <ActionsEditor
+            employeeId={session.user.id}
+            readOnly
+            assigneeOptions={[{ id: session.user.id, name: session.user.name || "You" }]}
+          />
         </>
       ) : undefined,
     },
