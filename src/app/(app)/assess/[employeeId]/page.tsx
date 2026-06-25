@@ -2,21 +2,17 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, TextStep, MultiRatingStep, RatingWithComment, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
-import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 import { ActionsEditor } from "@/components/meetings/actions-editor";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
   const cycleId = searchParams.get("cycleId");
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
@@ -24,8 +20,11 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [resultsSent, setResultsSent] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
+  // Whether every key metric has a saved actual result (gates step 1).
+  const [metricsComplete, setMetricsComplete] = useState(true);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -86,30 +85,78 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
     }
   }, [cycleId, employeeId, values]);
 
+  const unlockAndEdit = useCallback(async () => {
+    if (!assessmentId) return;
+    setUnlocking(true);
+    try {
+      const res = await fetch("/api/assessments/manager/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId }),
+      });
+      if (res.ok) {
+        setResultsSent(false);
+        setEditing(true);
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  }, [assessmentId]);
+
+  // Locked once results are sent, or after submit until the manager re-opens
+  // it for editing. While locked the form is read-only and never gates Next.
+  const locked = resultsSent || (isSubmitted && !editing);
+
   const steps: StepConfig[] = [
     {
       id: "performance",
       title: `Performance Rating${employeeName ? ` for ${employeeName}` : ""}`,
       description: "Rate this employee's performance against objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.manager} />,
-    },
-    {
-      id: "performanceEvidence",
-      title: "Performance Evidence",
-      description: "What evidence supports this rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe specific examples of performance..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="performance"
+          commentId="performanceEvidence"
+          prompts={assessmentPrompts.performance?.manager}
+          commentPlaceholder="Describe specific examples of performance..."
+        />
+      ),
+      // Block advancing past Performance Rating until every key metric has a
+      // saved actual result — it's the second most important thing to complete.
+      blockNext: !locked && !metricsComplete,
+      blockNextHint: "Record an actual result for each key metric to continue.",
+      footer: (
+        <>
+          <GoalsPanel
+            employeeId={employeeId}
+            cycleId={cycleId}
+            editable={!locked}
+            onMetricsStatus={({ total, complete }) => setMetricsComplete(total === 0 || complete >= total)}
+          />
+          <ActionsEditor
+            employeeId={employeeId}
+            readOnly
+            assigneeOptions={[{ id: employeeId, name: employeeName || "Employee" }]}
+          />
+        </>
+      ),
     },
     {
       id: "growthReadiness",
       title: "Growth Readiness Rating",
       description: "Rate this employee's readiness for growth and advancement.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }} prompts={assessmentPrompts.growthReadiness?.manager} />,
-    },
-    {
-      id: "growthReadinessEvidence",
-      title: "Growth Readiness Evidence",
-      description: "What evidence supports this growth readiness rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe growth indicators, learning agility..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="growthReadiness"
+          commentId="growthReadinessEvidence"
+          labels={{ 1: "Developing", 2: "Building", 3: "Ready Now" }}
+          prompts={assessmentPrompts.growthReadiness?.manager}
+          commentPlaceholder="Describe growth indicators, learning agility..."
+        />
+      ),
     },
     {
       id: "values",
@@ -135,13 +182,16 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
       id: "engagement",
       title: "Engagement Rating",
       description: "How engaged does this employee appear?",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.manager} />,
-    },
-    {
-      id: "engagementEvidence",
-      title: "Engagement Evidence",
-      description: "What observations support this engagement rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Observable behaviours..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="engagement"
+          commentId="engagementEvidence"
+          prompts={assessmentPrompts.engagement?.manager}
+          commentPlaceholder="Observable behaviours that support this rating..."
+        />
+      ),
     },
     {
       id: "notes",
@@ -166,30 +216,20 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         title={<>Assess <em>{employeeName || "report"}.</em></>}
         sub={employeeName ? `Rate ${employeeName} across performance, growth, values and engagement.` : undefined}
       />
-      <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
-
-      <div className="max-w-2xl mx-auto mb-6">
-        <ReviewNotesPanel employeeId={employeeId} cycleId={cycleId} currentUserId={session?.user?.id} />
-      </div>
-
-      <div className="max-w-2xl mx-auto mb-6">
-        <Card>
-          <ActionsEditor
-            employeeId={employeeId}
-            readOnly={resultsSent}
-            assigneeOptions={[
-              { id: employeeId, name: employeeName || "Employee" },
-              ...(session?.user?.id && session.user.id !== employeeId
-                ? [{ id: session.user.id, name: session.user.name || "You" }]
-                : []),
-            ]}
-          />
-        </Card>
-      </div>
-
       {resultsSent ? (
-        <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-paper-2 border border-line p-4 text-sm text-ink-2">
-          Results have been sent to the employee. This assessment is locked and can no longer be edited.
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-line p-4">
+          <p className="text-sm text-ink-2">
+            Results have been sent to the employee. Unlock to edit this assessment — changes are recorded in the audit log, and you can re-send results afterward.
+          </p>
+          <Button
+            size="sm"
+            variant="magenta"
+            className="shrink-0"
+            disabled={unlocking}
+            onClick={unlockAndEdit}
+          >
+            {unlocking ? "Unlocking..." : "Unlock & edit"}
+          </Button>
         </div>
       ) : isSubmitted && !editing ? (
         <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">

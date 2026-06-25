@@ -9,9 +9,6 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { keyMetricId, cycleId, actual, note } = await request.json();
   if (!keyMetricId || !cycleId || actual === undefined || actual === null || `${actual}`.trim() === "") {
@@ -24,6 +21,13 @@ export async function POST(request: Request) {
   const metric = await prisma.keyMetric.findUnique({ where: { id: keyMetricId } });
   if (!metric) {
     return NextResponse.json({ error: "Metric not found" }, { status: 404 });
+  }
+
+  // The metric's own employee may record their actual & comment; managers may
+  // record for anyone.
+  const isOwner = metric.employeeId === session.user.id;
+  if (!isOwner && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const result = await prisma.metricResult.upsert({

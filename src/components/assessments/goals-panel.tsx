@@ -13,6 +13,11 @@ interface GoalUpdateData {
   note: string | null;
 }
 
+interface Creator {
+  id: string;
+  name: string;
+}
+
 interface GoalData {
   id: string;
   title: string;
@@ -20,6 +25,7 @@ interface GoalData {
   dueDate: string | null;
   status: string;
   updates?: GoalUpdateData[];
+  createdBy?: Creator | null;
 }
 
 interface MetricResultData {
@@ -34,6 +40,19 @@ interface MetricData {
   target: string;
   unit: string | null;
   results?: MetricResultData[];
+  createdBy?: Creator | null;
+}
+
+// Small badge marking whether a goal/metric was set by the employee themselves
+// or by their manager. `subjectId` is the employee the goal/metric belongs to.
+function CreatorBadge({ createdBy, subjectId }: { createdBy?: Creator | null; subjectId: string }) {
+  if (!createdBy) return null;
+  const byEmployee = createdBy.id === subjectId;
+  return (
+    <Badge variant="slate" className="text-[11px]">
+      {byEmployee ? "Set by employee" : "Set by manager"}
+    </Badge>
+  );
 }
 
 const STATUS_LABELS: Record<ProgressStatus, string> = {
@@ -52,15 +71,28 @@ export function GoalsPanel({
   employeeId,
   cycleId,
   editable = false,
+  onMetricsStatus,
+  className,
+  defaultOpen,
+  showGoalNotes = true,
 }: {
   employeeId: string;
   cycleId?: string | null;
   editable?: boolean;
+  /** Reports how many key metrics exist and how many have a saved actual. */
+  onMetricsStatus?: (status: { total: number; complete: number }) => void;
+  /** Override the wrapper classes (defaults to a centred, narrow column). */
+  className?: string;
+  /** Render expanded on first paint regardless of edit mode. */
+  defaultOpen?: boolean;
+  /** Show the per-goal free-text progress note (status dropdown stays either way). */
+  showGoalNotes?: boolean;
 }) {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(!editable);
+  const [collapsed, setCollapsed] = useState(defaultOpen ? false : !editable);
+  const [completedMetricIds, setCompletedMetricIds] = useState<Set<string>>(new Set());
 
   const query = (path: string) =>
     `${path}?employeeId=${employeeId}${cycleId ? `&cycleId=${cycleId}` : ""}`;
@@ -77,18 +109,28 @@ export function GoalsPanel({
             (goal) => goal.status === "ACTIVE" || (goal.updates && goal.updates.length > 0)
           )
         );
-        setMetrics(Array.isArray(m) ? m : []);
+        const ms: MetricData[] = Array.isArray(m) ? m : [];
+        setMetrics(ms);
+        setCompletedMetricIds(
+          new Set(ms.filter((metric) => (metric.results?.[0]?.actual ?? "").trim()).map((metric) => metric.id))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId, cycleId]);
 
+  // Report key-metric completion so a parent can gate on it.
+  useEffect(() => {
+    onMetricsStatus?.({ total: metrics.length, complete: completedMetricIds.size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metrics, completedMetricIds]);
+
   if (loading) return null;
   if (goals.length === 0 && metrics.length === 0) return null;
 
   return (
-    <div className="max-w-2xl mx-auto mb-6">
+    <div className={className ?? "max-w-2xl mx-auto mb-6"}>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
@@ -117,7 +159,20 @@ export function GoalsPanel({
               <p className="eyebrow mb-2">Key Metrics</p>
               <div className="space-y-2">
                 {metrics.map((m) => (
-                  <MetricRow key={m.id} metric={m} cycleId={cycleId} editable={editable} />
+                  <MetricRow
+                    key={m.id}
+                    metric={m}
+                    cycleId={cycleId}
+                    editable={editable}
+                    subjectId={employeeId}
+                    onSaved={() =>
+                      setCompletedMetricIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(m.id);
+                        return next;
+                      })
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -127,7 +182,7 @@ export function GoalsPanel({
               <p className="eyebrow mb-2">Goals</p>
               <div className="space-y-2">
                 {goals.map((g) => (
-                  <GoalRow key={g.id} goal={g} cycleId={cycleId} editable={editable} />
+                  <GoalRow key={g.id} goal={g} cycleId={cycleId} editable={editable} subjectId={employeeId} showGoalNotes={showGoalNotes} />
                 ))}
               </div>
             </div>
@@ -142,10 +197,14 @@ function MetricRow({
   metric,
   cycleId,
   editable,
+  subjectId,
+  onSaved,
 }: {
   metric: MetricData;
   cycleId?: string | null;
   editable: boolean;
+  subjectId: string;
+  onSaved?: () => void;
 }) {
   const existing = metric.results?.[0];
   const [actual, setActual] = useState(existing?.actual ?? "");
@@ -166,6 +225,7 @@ function MetricRow({
       });
       if (res.ok) {
         setSaved(true);
+        onSaved?.();
         setTimeout(() => setSaved(false), 2000);
       } else {
         const e = await res.json().catch(() => ({}));
@@ -181,8 +241,11 @@ function MetricRow({
   return (
     <div className="rounded-lg border border-line p-3">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-ink font-medium">{metric.name}</span>
-        <span className="text-ink-2">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-ink font-medium truncate">{metric.name}</span>
+          <CreatorBadge createdBy={metric.createdBy} subjectId={subjectId} />
+        </span>
+        <span className="text-ink-2 shrink-0">
           Target: <span className="mono tnum">{metric.target}{metric.unit ? ` ${metric.unit}` : ""}</span>
         </span>
       </div>
@@ -204,7 +267,7 @@ function MetricRow({
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Note (optional)"
+            placeholder="Comment (optional)"
             className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
           />
           {error && <p className="text-xs text-magenta">{error}</p>}
@@ -225,10 +288,14 @@ function GoalRow({
   goal,
   cycleId,
   editable,
+  subjectId,
+  showGoalNotes,
 }: {
   goal: GoalData;
   cycleId?: string | null;
   editable: boolean;
+  subjectId: string;
+  showGoalNotes: boolean;
 }) {
   const existing = goal.updates?.[0];
   const [status, setStatus] = useState<ProgressStatus>(existing?.status ?? "ON_TRACK");
@@ -265,7 +332,10 @@ function GoalRow({
     <div className="rounded-lg border border-line p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <p className="text-sm font-medium text-ink">{goal.title}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-ink">{goal.title}</p>
+            <CreatorBadge createdBy={goal.createdBy} subjectId={subjectId} />
+          </div>
           {goal.description && <p className="text-ink-3 text-xs mt-0.5">{goal.description}</p>}
           {goal.dueDate && (
             <p className="text-xs text-ink-3 mt-0.5">
@@ -293,17 +363,19 @@ function GoalRow({
               {saving ? "Saving..." : saved ? "Saved ✓" : "Save"}
             </Button>
           </div>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Progress update (optional)"
-            rows={2}
-            className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
-          />
+          {showGoalNotes && (
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Progress update (optional)"
+              rows={2}
+              className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
+            />
+          )}
           {error && <p className="text-xs text-magenta">{error}</p>}
         </div>
       ) : (
-        existing?.note && <p className="mt-1 text-sm text-ink-2">{existing.note}</p>
+        showGoalNotes && existing?.note && <p className="mt-1 text-sm text-ink-2">{existing.note}</p>
       )}
     </div>
   );
