@@ -111,7 +111,7 @@ export default function SelfAssessmentPage() {
       // notes — those stay manager-only, as on the manager flow.)
       footer: session?.user?.id ? (
         <>
-          <GoalsPanel employeeId={session.user.id} cycleId={cycleId} editable={!locked} />
+          <GoalsPanel employeeId={session.user.id} cycleId={cycleId} editable={!locked} showGoalNotes={false} />
           <ActionsEditor
             employeeId={session.user.id}
             readOnly
