@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -14,7 +15,6 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -136,7 +136,7 @@ function MemberCard({
   // dropping elsewhere is ignored in handleDragEnd.
   const draggable = (settable || column === "NOT_READY") && !closed;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: member.id,
     disabled: !draggable,
   });
@@ -147,7 +147,10 @@ function MemberCard({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
+      // The DragOverlay (below) is what follows the cursor while dragging, so the
+      // source card must stay put — only dim it. Applying the drag transform here
+      // too made the original tile jump on pickup ("doesn't cleanly select").
+      style={{ opacity: isDragging ? 0.4 : 1 }}
       className={`card ${draggable ? "card-hover" : ""} p-2.5 ${closed ? "opacity-70" : ""}`}
     >
       <div className="flex items-start justify-between gap-1.5">
@@ -359,6 +362,11 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     reason: "incomplete" | "no-mgr-assessment";
   } | null>(null);
 
+  // The DragOverlay is portaled to <body> (see below). Gate it behind a mounted
+  // flag so it only renders client-side, where document.body exists.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     setItems(members);
   }, [members]);
@@ -495,13 +503,21 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
             />
           ))}
         </div>
-        <DragOverlay>
-          {activeMember ? (
-            <div className="card border-magenta p-3 shadow-lg w-[210px]">
-              <CardBody member={activeMember} />
-            </div>
-          ) : null}
-        </DragOverlay>
+        {/* Portal the overlay to <body> so its position:fixed is anchored to the
+            viewport. Rendered inside an ancestor (the page <main> runs a transform
+            animation), a transformed ancestor becomes the containing block and the
+            dragged tile drifts away from the cursor. */}
+        {mounted &&
+          createPortal(
+            <DragOverlay>
+              {activeMember ? (
+                <div className="card border-magenta p-3 shadow-lg w-[210px]">
+                  <CardBody member={activeMember} />
+                </div>
+              ) : null}
+            </DragOverlay>,
+            document.body
+          )}
       </DndContext>
 
       {sendTarget && (
