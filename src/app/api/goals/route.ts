@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/permissions";
+import { isManager, canAccessEmployeeRecords } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -94,4 +94,31 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json(updated);
+}
+
+export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const goalId = searchParams.get("goalId");
+  if (!goalId) {
+    return NextResponse.json({ error: "goalId is required" }, { status: 400 });
+  }
+
+  const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+  if (!goal) {
+    return NextResponse.json({ error: "Goal not found" }, { status: 404 });
+  }
+
+  // The employee whose goal it is, or a manager with visibility of them, may delete it.
+  const allowed = await canAccessEmployeeRecords(session.user.id, session.user.role, goal.employeeId);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await prisma.goal.delete({ where: { id: goalId } });
+  return NextResponse.json({ success: true });
 }

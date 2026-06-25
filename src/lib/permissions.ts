@@ -58,6 +58,23 @@ export async function getVisibleEmployeeIds(
 }
 
 /**
+ * Returns true if the user may view/manage records (goals, key metrics) that
+ * belong to the given employee. This is the case when:
+ * - the user owns the records (employeeId === userId), or
+ * - the user is a manager/area lead/leadership/admin with visibility of the employee.
+ */
+export async function canAccessEmployeeRecords(
+  userId: string,
+  role: Role,
+  employeeId: string
+): Promise<boolean> {
+  if (userId === employeeId) return true;
+  const visibleIds = await getVisibleEmployeeIds(userId, role);
+  if (visibleIds === "all") return true;
+  return visibleIds.includes(employeeId);
+}
+
+/**
  * Returns Prisma where filter for manager assessments based on role.
  */
 export async function getManagerAssessmentFilter(

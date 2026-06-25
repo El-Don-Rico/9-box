@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/permissions";
+import { isManager, canAccessEmployeeRecords } from "@/lib/permissions";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -115,9 +115,9 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Metric not found" }, { status: 404 });
   }
 
-  const isCreator = metric.createdById === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
-  if (!isCreator && !isAdmin) {
+  // The employee whose metric it is, or a manager with visibility of them, may delete it.
+  const allowed = await canAccessEmployeeRecords(session.user.id, session.user.role, metric.employeeId);
+  if (!allowed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -149,6 +149,13 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     }
   }
 
+  async function handleDeleteGoal(goalId: string) {
+    const res = await fetch(`/api/goals?goalId=${goalId}`, { method: "DELETE" });
+    if (res.ok) {
+      setGoals((prev) => prev.filter((g) => g.id !== goalId));
+    }
+  }
+
   async function handleAddMetric() {
     if (!newMetricName.trim() || !newMetricTarget.trim()) return;
     setSavingMetric(true);
@@ -407,6 +414,9 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                         <Button size="sm" variant="ghost" onClick={() => handleGoalStatus(goal.id, "CANCELLED")}>
                           Cancel
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteGoal(goal.id)}>
+                          Delete
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -424,8 +434,8 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
               <p className="text-xs font-medium text-gray-500 uppercase mb-2">Past Goals</p>
               <div className="space-y-2">
                 {completedGoals.map((goal) => (
-                  <div key={goal.id} className="flex items-center justify-between py-2 opacity-60">
-                    <div>
+                  <div key={goal.id} className="flex items-center justify-between gap-2 py-2">
+                    <div className="opacity-60">
                       <p className="text-sm text-visory-navy line-through">{goal.title}</p>
                       {goal.dueDate && (
                         <span className="text-xs text-gray-500">
@@ -433,9 +443,16 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                         </span>
                       )}
                     </div>
-                    <Badge className={goal.status === "COMPLETED" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-600 border-gray-300"}>
-                      {goal.status === "COMPLETED" ? "Completed" : "Cancelled"}
-                    </Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className={goal.status === "COMPLETED" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-600 border-gray-300"}>
+                        {goal.status === "COMPLETED" ? "Completed" : "Cancelled"}
+                      </Badge>
+                      {canEdit && (
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteGoal(goal.id)}>
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -11,6 +11,12 @@ import { useState } from "react";
 function getNavLinks(role: string) {
   const links = [{ href: "/dashboard", label: "Dashboard" }];
 
+  // Goals & Key Metrics are part of the personal employee view only.
+  if (role === "EMPLOYEE") {
+    links.push({ href: "/goals", label: "Goals" });
+    links.push({ href: "/key-metrics", label: "Key Metrics" });
+  }
+
   // All roles are employees first - everyone gets results
   links.push({ href: "/my-reviews", label: "My Reviews" });
 

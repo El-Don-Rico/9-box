@@ -15,6 +15,8 @@ export const authConfig: NextAuthConfig = {
         "/assessments",
         "/self-assessment",
         "/my-reviews",
+        "/goals",
+        "/key-metrics",
         "/assess",
         "/team",
         "/calibration",

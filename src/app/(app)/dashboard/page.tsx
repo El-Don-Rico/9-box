@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { GoalsSection, KeyMetricsSection } from "@/components/assessments/goals-metrics-sections";
 import type { CycleData, TeamMemberStatus, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod } from "@/lib/utils";
 import {
@@ -172,6 +173,14 @@ function EmployeeDashboard() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Goals & Key Metrics */}
+      {session?.user?.id && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <GoalsSection employeeId={session.user.id} canDelete />
+          <KeyMetricsSection employeeId={session.user.id} canDelete />
+        </div>
       )}
 
       {/* Cycle Cards */}
