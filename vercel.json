@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "prisma generate && node scripts/clear-failed-migrations.mjs && prisma migrate deploy && next build"
+  "buildCommand": "prisma generate && node scripts/clear-failed-migrations.mjs && PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1 prisma migrate deploy && next build"
 }
