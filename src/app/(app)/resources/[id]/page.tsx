@@ -4,9 +4,10 @@ import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface Resource {
   id: string;
@@ -55,27 +56,29 @@ export default function ResourceDetailPage({ params }: { params: Promise<{ id: s
   }
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
+    return <div className="text-center py-12 muted">Loading...</div>;
   }
 
   if (!resource) {
-    return <div className="text-center py-12 text-gray-500">Resource not found.</div>;
+    return <div className="text-center py-12 muted">Resource not found.</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/resources" className="text-sm text-visory-link hover:underline">
-            &larr; Back to Resources
+          <Link
+            href="/resources"
+            className="inline-flex items-center gap-1 text-sm text-cobalt hover:underline"
+          >
+            <ArrowLeft size={14} strokeWidth={1.6} />
+            Back to Resources
           </Link>
           <div className="flex items-center gap-2 mt-2">
-            <h1 className="text-2xl font-bold text-visory-navy">{resource.title}</h1>
-            {!resource.published && (
-              <Badge className="bg-amber-100 text-amber-800 border-amber-300">Draft</Badge>
-            )}
+            <h1 className="page-title">{resource.title}</h1>
+            {!resource.published && <Badge variant="warning">Draft</Badge>}
           </div>
-          <p className="text-xs text-visory-mid-grey mt-1">
+          <p className="mono tnum text-xs muted mt-1">
             By {resource.createdBy.name} &middot; Updated{" "}
             {new Date(resource.updatedAt).toLocaleDateString("en-AU", {
               day: "numeric",
@@ -90,10 +93,10 @@ export default function ResourceDetailPage({ params }: { params: Promise<{ id: s
               <Button size="sm">Edit</Button>
             </Link>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-600 hover:text-red-700"
+              className="text-magenta-2"
             >
               Delete
             </Button>
@@ -102,19 +105,17 @@ export default function ResourceDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <Card>
-        <CardContent className="py-6">
-          <div
-            className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:text-visory-navy prose-a:text-visory-link prose-strong:text-visory-navy"
-            dangerouslySetInnerHTML={{ __html: resource.content }}
-          />
-        </CardContent>
+        <div
+          className="prose max-w-none"
+          dangerouslySetInnerHTML={{ __html: resource.content }}
+        />
       </Card>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-visory-navy mb-2">Delete Resource?</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50">
+          <div className="bg-paper rounded-xl border border-line shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="serif text-lg text-ink mb-2">Delete Resource?</h3>
+            <p className="text-sm muted mb-4">
               Are you sure you want to delete &ldquo;{resource.title}&rdquo;? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
@@ -122,10 +123,10 @@ export default function ResourceDetailPage({ params }: { params: Promise<{ id: s
                 Cancel
               </Button>
               <Button
+                variant="magenta"
                 size="sm"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="bg-red-600 hover:bg-red-700"
               >
                 {deleting ? "Deleting..." : "Delete"}
               </Button>

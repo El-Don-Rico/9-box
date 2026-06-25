@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -13,12 +15,11 @@ import {
   getValuesAlignment,
   getBox1Action,
   getBox2Action,
-  getBox1Color,
-  getBox2Color,
 } from "@/lib/nine-box";
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
 
 interface SummaryData {
   employee: { id: string; name: string; email: string; jobTitle: string | null; team: string | null; role: string };
@@ -82,19 +83,21 @@ function AuditTrail({ assessmentId }: { assessmentId: string }) {
 
   return (
     <Card>
-      <CardHeader>
-        <h2 className="text-lg font-semibold">Audit Trail</h2>
-        <p className="text-xs text-gray-500">Changes to this assessment</p>
-      </CardHeader>
+      <div className="card-head">
+        <div>
+          <div className="eyebrow">History</div>
+          <h2 className="card-title">Audit Trail</h2>
+        </div>
+      </div>
       <CardContent>
         <ul className="space-y-2">
           {logs.map((log) => (
-            <li key={log.id} className="text-sm text-gray-700 flex flex-col sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-xs text-gray-400 whitespace-nowrap">
+            <li key={log.id} className="text-sm text-ink-2 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="mono tnum text-xs text-ink-3 whitespace-nowrap">
                 {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
               </span>
               <span>
-                <span className="font-medium text-visory-navy">{log.actor.name}</span>
+                <span className="font-medium text-ink">{log.actor.name}</span>
                 {" — "}
                 {log.summary || log.action}
               </span>
@@ -109,9 +112,9 @@ function AuditTrail({ assessmentId }: { assessmentId: string }) {
 function ScoreOutOf3({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={`text-3xl font-bold ${value >= 2 ? "text-green-700" : "text-orange-600"}`}>
-        {value}<span className="text-base font-medium text-gray-400">/3</span>
+      <p className="eyebrow mb-1">{label}</p>
+      <p className={`serif text-3xl ${value >= 2 ? "text-success" : "text-magenta"}`}>
+        <span className="mono tnum">{value}</span><span className="text-base text-ink-3 mono tnum">/3</span>
       </p>
     </div>
   );
@@ -160,8 +163,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
     }
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  if (!data || !data.employee) return <div className="text-center py-12 text-gray-500">Summary not found.</div>;
+  if (loading) return <div className="text-center py-12 text-ink-3">Loading...</div>;
+  if (!data || !data.employee) return <div className="text-center py-12 text-ink-3">Summary not found.</div>;
 
   const { employee, cycle, selfAssessment: self, managerAssessment: mgr } = data;
   const isManagerView = mgr?.manager?.id === session?.user?.id;
@@ -251,27 +254,31 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
-        {(employee.jobTitle || employee.team) && (
-          <p className="text-sm text-gray-500 mt-0.5">
-            {[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        <div className="flex items-center gap-3 mt-1">
-          <p className="text-sm text-gray-600">
-            Assessment Summary {cycle ? `— ${formatCyclePeriod(cycle)}` : ""}
-          </p>
-          {mgr?.resultsSentAt && (
-            <Badge className="bg-green-100 text-green-800 border-green-300">Results Sent</Badge>
-          )}
-        </div>
-        {canSendResults && (
-          <Button className="mt-3" size="sm" onClick={() => setShowSendConfirm(true)}>
-            Send Results to {employee.name}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Assessment summary"
+        title={
+          <span className="flex items-center gap-3">
+            <Avatar name={employee.name} size="lg" />
+            <em>{employee.name}</em>
+          </span>
+        }
+        sub={
+          <span className="flex flex-wrap items-center gap-3">
+            {(employee.jobTitle || employee.team) && (
+              <span>{[employee.jobTitle, employee.team].filter(Boolean).join(" · ")}</span>
+            )}
+            <span className="mono tnum">{cycle ? formatCyclePeriod(cycle) : ""}</span>
+            {mgr?.resultsSentAt && <Badge variant="success">Results Sent</Badge>}
+          </span>
+        }
+        actions={
+          canSendResults ? (
+            <Button size="sm" variant="magenta" onClick={() => setShowSendConfirm(true)}>
+              Send Results to {employee.name}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Performance & Growth (Talent Density) and Engagement & Values (Cultural
           Momentum) shown as separate scores out of 3 — not a combined /9. */}
@@ -279,8 +286,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mgr?.performance && mgr?.growthReadiness && (
             <Card>
-              <CardContent className="py-4">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Talent Density</p>
+              <CardContent className="py-2">
+                <p className="eyebrow mb-3 text-center">Talent Density</p>
                 <div className="grid grid-cols-2 gap-4">
                   <ScoreOutOf3 label="Performance" value={mgr.performance} />
                   <ScoreOutOf3 label="Growth Readiness" value={mgr.growthReadiness} />
@@ -290,8 +297,8 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
           )}
           {mgrValuesAlignment && mgr?.engagement && (
             <Card>
-              <CardContent className="py-4">
-                <p className="text-xs font-medium text-gray-500 uppercase mb-3 text-center">Cultural Momentum</p>
+              <CardContent className="py-2">
+                <p className="eyebrow mb-3 text-center">Cultural Momentum</p>
                 <div className="grid grid-cols-2 gap-4">
                   <ScoreOutOf3 label="Engagement" value={mgr.engagement} />
                   <ScoreOutOf3 label="Values Alignment" value={mgrValuesAlignment} />
@@ -306,28 +313,31 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {(box1Label || box2Label) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {box1Label && (
-            <div className={`rounded-lg border-2 p-4 ${getBox1Color(box1Label)}`}>
-              <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
-              <p className="text-lg font-bold mt-1">{box1Label}</p>
-              <p className="text-sm text-visory-navy mt-2">{getBox1Action(box1Label)}</p>
-            </div>
+            <Card navy>
+              <p className="eyebrow text-white/70">Talent Density</p>
+              <p className="card-title mt-1">{box1Label}</p>
+              <p className="text-sm text-white/80 mt-2">{getBox1Action(box1Label)}</p>
+            </Card>
           )}
           {box2Label && (
-            <div className={`rounded-lg border-2 p-4 ${getBox2Color(box2Label)}`}>
-              <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
-              <p className="text-lg font-bold mt-1">{box2Label}</p>
-              <p className="text-sm text-visory-navy mt-2">{getBox2Action(box2Label)}</p>
-            </div>
+            <Card>
+              <p className="eyebrow">Cultural Momentum</p>
+              <p className="card-title mt-1">{box2Label}</p>
+              <p className="text-sm text-ink-2 mt-2">{getBox2Action(box2Label)}</p>
+            </Card>
           )}
         </div>
       )}
 
       {/* Side-by-side Comparison */}
       <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Assessment Comparison</h2>
-          <p className="text-xs text-gray-500">Click a dimension to expand and compare notes</p>
-        </CardHeader>
+        <div className="card-head">
+          <div>
+            <div className="eyebrow">Self vs manager</div>
+            <h2 className="card-title">Assessment Comparison</h2>
+          </div>
+          <p className="text-xs text-ink-3">Click a dimension to expand and compare notes</p>
+        </div>
         <CardContent>
           <DimensionComparison sections={comparisonSections} />
         </CardContent>
@@ -345,23 +355,40 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
         </Card>
       )}
 
+      {/* Actions (follow-up tasks) */}
+      <Card>
+        <ActionsEditor
+          employeeId={employee.id}
+          readOnly={!isManagerView}
+          assigneeOptions={[
+            { id: employee.id, name: employee.name },
+            ...(mgr?.manager && mgr.manager.id !== employee.id
+              ? [{ id: mgr.manager.id, name: mgr.manager.name }]
+              : []),
+          ]}
+        />
+      </Card>
+
       {/* Additional Self-Assessment Context */}
       {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
         <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Additional Context</h2>
-          </CardHeader>
+          <div className="card-head">
+            <div>
+              <div className="eyebrow">Self-assessment</div>
+              <h2 className="card-title">Additional Context</h2>
+            </div>
+          </div>
           <CardContent className="space-y-4">
             {self.learning && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
-                <p className="text-sm text-visory-navy">{self.learning}</p>
+                <p className="eyebrow mb-1">Learning</p>
+                <p className="text-sm text-ink">{self.learning}</p>
               </div>
             )}
             {self.goalsNextMonth && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
-                <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
+                <p className="eyebrow mb-1">Goals for Next Quarter</p>
+                <p className="text-sm text-ink">{self.goalsNextMonth}</p>
               </div>
             )}
           </CardContent>
@@ -371,12 +398,14 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {/* Manager Additional Notes */}
       {mgr?.submittedAt && mgr.notes && (
         <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Manager Notes</h2>
-            <p className="text-xs text-gray-500">Assessed by {mgr.manager.name}</p>
-          </CardHeader>
+          <div className="card-head">
+            <div>
+              <div className="eyebrow">Assessed by {mgr.manager.name}</div>
+              <h2 className="card-title">Manager Notes</h2>
+            </div>
+          </div>
           <CardContent>
-            <p className="text-sm text-visory-navy">{mgr.notes}</p>
+            <p className="text-sm text-ink">{mgr.notes}</p>
           </CardContent>
         </Card>
       )}
@@ -384,10 +413,10 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {/* 1:1 meeting — managed from the Dashboard board; runnable once scheduled */}
       {isManagerView && mgr?.submittedAt && (
         <Card>
-          <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium text-visory-navy">1:1 Meeting</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-ink">1:1 Meeting</p>
+              <p className="text-xs text-ink-3">
                 Status: {mgr.meetingStatus ? mgr.meetingStatus.replaceAll("_", " ").toLowerCase() : "not ready"}
               </p>
             </div>
@@ -410,7 +439,7 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       {!self?.submittedAt && !mgr?.submittedAt && (
         <Card>
           <CardContent>
-            <p className="text-sm text-gray-500 py-4 text-center">
+            <p className="text-sm text-ink-3 py-4 text-center">
               No assessments have been submitted for this cycle yet.
             </p>
           </CardContent>
@@ -418,23 +447,24 @@ export default function SummaryPage({ params }: { params: Promise<{ employeeId: 
       )}
 
       {showSendConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-visory-navy mb-2">Send Results to {employee.name}?</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50">
+          <div className="bg-paper border border-line rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="eyebrow mb-1">Confirm</div>
+            <h3 className="serif text-xl text-ink mb-3">Send Results to {employee.name}?</h3>
             {mgr?.meetingStatus !== "MEETING_COMPLETE" && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-                <p className="text-sm text-amber-800 font-semibold mb-1">Important</p>
-                <p className="text-sm text-amber-700">
+              <div className="rounded-lg bg-paper-2 border border-amber/40 p-3 mb-4">
+                <p className="text-sm text-ink font-medium mb-1">Important</p>
+                <p className="text-sm text-ink-2">
                   Manager reviews should only be sent after the quarterly 1:1 meeting has been conducted. Please confirm you have completed the 1:1 before sharing results.
                 </p>
               </div>
             )}
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-ink-2 mb-4">
               This will make your assessment visible to {employee.name}. This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="secondary" size="sm" onClick={() => setShowSendConfirm(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleSendResults} disabled={sendingResults}>
+              <Button size="sm" variant="magenta" onClick={handleSendResults} disabled={sendingResults}>
                 {sendingResults ? "Sending..." : "Confirm & Send Results"}
               </Button>
             </div>

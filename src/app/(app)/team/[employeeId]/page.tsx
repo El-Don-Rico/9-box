@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getRatingLabel, getRatingColor, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader, Eyebrow } from "@/components/ui/page-header";
+import { getRatingLabel, getGrowthReadinessLabel, formatCyclePeriod, getRoleDisplayName } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 import { isManager as checkIsManager } from "@/lib/permissions";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
@@ -222,89 +224,97 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
     setEditingNotes(null);
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading...</div>;
-  if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
-  if (!employee) return <div className="text-center py-12 text-gray-500">Employee not found.</div>;
+  if (loading) return <div className="text-center py-12 muted">Loading...</div>;
+  if (error) return <div className="text-center py-12 text-magenta">{error}</div>;
+  if (!employee) return <div className="text-center py-12 muted">Employee not found.</div>;
 
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
   const completedGoals = goals.filter((g) => g.status !== "ACTIVE");
   // A 1:1 can be run once the manager marks the meeting as scheduled.
   const scheduledMeeting = canEdit ? assessments.find((a) => a.meetingStatus === "MEETING_SCHEDULED") : undefined;
 
+  // Map a 1–3 rating to a Visory badge variant (3→success, 2→warning, 1→magenta).
+  const ratingVariant = (r: number): "success" | "warning" | "magenta" =>
+    r >= 3 ? "success" : r >= 2 ? "warning" : "magenta";
+
   return (
     <div className="space-y-6">
       {actionError && (
-        <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-paper-2 border border-magenta/30 p-3 text-sm text-magenta">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 shrink-0">✕</button>
+          <button onClick={() => setActionError(null)} className="text-magenta hover:text-magenta-2 shrink-0">✕</button>
         </div>
       )}
       {/* Profile Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">{employee.name}</h1>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          {employee.jobTitle && <span className="text-sm text-gray-600">{employee.jobTitle}</span>}
-          {employee.jobTitle && employee.team && <span className="text-gray-300">·</span>}
-          {employee.team && <span className="text-sm text-gray-600">{employee.team}</span>}
-          <Badge className="bg-gray-100 text-gray-700 border-gray-200">{getRoleDisplayName(employee.role)}</Badge>
-        </div>
-        <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
-      </div>
+      <PageHeader
+        eyebrow="Team member"
+        title={<><em>{employee.name}</em></>}
+        sub={
+          <span className="flex flex-wrap items-center gap-2">
+            {employee.jobTitle && <span>{employee.jobTitle}</span>}
+            {employee.jobTitle && employee.team && <span className="muted-2">·</span>}
+            {employee.team && <span>{employee.team}</span>}
+            <Badge variant="slate">{getRoleDisplayName(employee.role)}</Badge>
+            <span className="muted-2">·</span>
+            <span className="mono text-xs">{employee.email}</span>
+          </span>
+        }
+        actions={<Avatar name={employee.name} size="xl" />}
+      />
 
       {/* Scheduled 1:1 meeting */}
       {scheduledMeeting && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <Card navy className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-visory-navy">1:1 meeting scheduled</p>
-            <p className="text-sm text-gray-600">
-              {formatCyclePeriod(scheduledMeeting.cycle)} cycle
+            <Eyebrow className="mb-1">1:1 meeting</Eyebrow>
+            <p className="serif text-lg leading-tight">1:1 meeting scheduled</p>
+            <p className="text-sm muted">
+              <span className="mono tnum">{formatCyclePeriod(scheduledMeeting.cycle)}</span> cycle
             </p>
           </div>
-          <Button onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
+          <Button variant="magenta" onClick={() => window.open(`/meeting/${scheduledMeeting.id}`, "_blank", "noopener")}>
             {scheduledMeeting.meeting ? "Edit Meeting Notes" : "Start Meeting"}
           </Button>
-        </div>
+        </Card>
       )}
 
       {/* Key Metrics */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Key Metrics</h2>
-              <p className="text-xs text-gray-500">Recurring performance targets</p>
-            </div>
-            {canEdit && !showMetricForm && (
-              <Button size="sm" variant="secondary" onClick={() => setShowMetricForm(true)}>
-                Add Metric
-              </Button>
-            )}
+          <div>
+            <Eyebrow className="mb-1">Recurring performance targets</Eyebrow>
+            <h2 className="card-title">Key Metrics</h2>
           </div>
+          {canEdit && !showMetricForm && (
+            <Button size="sm" variant="secondary" onClick={() => setShowMetricForm(true)}>
+              Add Metric
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {showMetricForm && (
-            <div className="rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
+            <div className="rounded-lg border border-line p-4 mb-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input
                   type="text"
                   value={newMetricName}
                   onChange={(e) => setNewMetricName(e.target.value)}
                   placeholder="Metric name (e.g., Utilisation)"
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
                 />
                 <input
                   type="text"
                   value={newMetricTarget}
                   onChange={(e) => setNewMetricTarget(e.target.value)}
                   placeholder="Target (e.g., 85%)"
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
                 />
                 <input
                   type="text"
                   value={newMetricUnit}
                   onChange={(e) => setNewMetricUnit(e.target.value)}
                   placeholder="Unit (optional, e.g., %)"
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
                 />
               </div>
               <textarea
@@ -312,7 +322,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                 onChange={(e) => setNewMetricNotes(e.target.value)}
                 placeholder="Notes (optional — visible to employee and manager)"
                 rows={2}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleAddMetric} disabled={savingMetric || !newMetricName.trim() || !newMetricTarget.trim()}>
@@ -323,15 +333,15 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
             </div>
           )}
           {metrics.length > 0 ? (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-line">
               {metrics.map((metric) => (
                 <div key={metric.id} className="py-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-visory-navy">{metric.name}</p>
-                      <p className="text-xs text-gray-500">
-                        Target: <span className="font-medium">{metric.target}</span>
-                        {metric.unit && <span> {metric.unit}</span>}
+                      <p className="text-sm font-medium text-ink">{metric.name}</p>
+                      <p className="text-xs muted">
+                        Target: <span className="mono tnum text-ink">{metric.target}</span>
+                        {metric.unit && <span className="mono"> {metric.unit}</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -349,7 +359,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                   </div>
                   {metric.notes && editingNotes !== metric.id && (
                     <div
-                      className="mt-2 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100"
+                      className="mt-2 text-sm text-ink bg-paper-2 rounded-lg px-3 py-2 cursor-pointer hover:bg-line/40"
                       onClick={() => { setEditingNotes(metric.id); setEditNotesValue(metric.notes || ""); }}
                     >
                       {metric.notes}
@@ -362,7 +372,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                         onChange={(e) => setEditNotesValue(e.target.value)}
                         placeholder="Add a note (visible to employee and manager)..."
                         rows={2}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                        className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -375,7 +385,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-2">No key metrics set yet.</p>
+            <p className="text-sm muted text-center py-2">No key metrics set yet.</p>
           )}
         </CardContent>
       </Card>
@@ -383,42 +393,40 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
       {/* Goals */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Goals</h2>
-              <p className="text-xs text-gray-500">Time-bound objectives</p>
-            </div>
-            {canEdit && !showGoalForm && (
-              <Button size="sm" variant="secondary" onClick={() => setShowGoalForm(true)}>
-                Add Goal
-              </Button>
-            )}
+          <div>
+            <Eyebrow className="mb-1">Time-bound objectives</Eyebrow>
+            <h2 className="card-title">Goals</h2>
           </div>
+          {canEdit && !showGoalForm && (
+            <Button size="sm" variant="secondary" onClick={() => setShowGoalForm(true)}>
+              Add Goal
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {showGoalForm && (
-            <div className="rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
+            <div className="rounded-lg border border-line p-4 mb-4 space-y-3">
               <input
                 type="text"
                 value={newGoalTitle}
                 onChange={(e) => setNewGoalTitle(e.target.value)}
                 placeholder="Goal title"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
               />
               <textarea
                 value={newGoalDesc}
                 onChange={(e) => setNewGoalDesc(e.target.value)}
                 placeholder="Description (optional)"
                 rows={2}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
               />
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Due date (optional)</label>
+                <label className="text-xs muted block mb-1">Due date (optional)</label>
                 <input
                   type="date"
                   value={newGoalDue}
                   onChange={(e) => setNewGoalDue(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink mono focus:outline-none focus:ring-2 focus:ring-magenta"
                 />
               </div>
               <div className="flex gap-2">
@@ -433,15 +441,15 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           {activeGoals.length > 0 && (
             <div className="space-y-3">
               {activeGoals.map((goal) => (
-                <div key={goal.id} className="rounded-lg border border-gray-200 p-3">
+                <div key={goal.id} className="rounded-lg border border-line p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-visory-navy">{goal.title}</p>
-                      {goal.description && <p className="text-sm text-gray-600 mt-0.5">{goal.description}</p>}
+                      <p className="text-sm font-medium text-ink">{goal.title}</p>
+                      {goal.description && <p className="text-sm muted mt-0.5">{goal.description}</p>}
                       <div className="flex items-center gap-2 mt-1">
                         {goal.dueDate && (
-                          <span className="text-xs text-gray-500">
-                            Due: {new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          <span className="text-xs muted">
+                            Due: <span className="mono tnum">{new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                           </span>
                         )}
                       </div>
@@ -463,24 +471,24 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
           )}
 
           {activeGoals.length === 0 && !showGoalForm && (
-            <p className="text-sm text-gray-400 text-center py-2">No active goals.</p>
+            <p className="text-sm muted text-center py-2">No active goals.</p>
           )}
 
           {completedGoals.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Past Goals</p>
+              <p className="eyebrow mb-2">Past Goals</p>
               <div className="space-y-2">
                 {completedGoals.map((goal) => (
                   <div key={goal.id} className="flex items-center justify-between py-2 opacity-60">
                     <div>
-                      <p className="text-sm text-visory-navy line-through">{goal.title}</p>
+                      <p className="text-sm text-ink line-through">{goal.title}</p>
                       {goal.dueDate && (
-                        <span className="text-xs text-gray-500">
-                          Due: {new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        <span className="text-xs muted">
+                          Due: <span className="mono tnum">{new Date(goal.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                         </span>
                       )}
                     </div>
-                    <Badge className={goal.status === "COMPLETED" ? "bg-green-100 text-green-800 border-green-300" : "bg-gray-100 text-gray-600 border-gray-300"}>
+                    <Badge variant={goal.status === "COMPLETED" ? "success" : "slate"}>
                       {goal.status === "COMPLETED" ? "Completed" : "Cancelled"}
                     </Badge>
                   </div>
@@ -493,7 +501,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
 
       {/* Tasks */}
       <Card>
-        <CardContent className="py-4">
+        <CardContent>
           <TasksPanel
             employeeId={employeeId}
             canManage={!!canEdit}
@@ -514,25 +522,28 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
       {/* Performance History */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Performance History</h2>
+          <div>
+            <Eyebrow className="mb-1">Assessment record</Eyebrow>
+            <h2 className="card-title">Performance History</h2>
+          </div>
         </CardHeader>
         <CardContent>
           {assessments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">Period</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Performance</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Growth</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Values</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Engagement</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">TD</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">CM</th>
+                  <tr className="dt-head">
+                    <th className="text-left py-2 px-2 eyebrow">Period</th>
+                    <th className="text-center py-2 px-2 eyebrow">Performance</th>
+                    <th className="text-center py-2 px-2 eyebrow">Growth</th>
+                    <th className="text-center py-2 px-2 eyebrow">Values</th>
+                    <th className="text-center py-2 px-2 eyebrow">Engagement</th>
+                    <th className="text-center py-2 px-2 eyebrow">TD</th>
+                    <th className="text-center py-2 px-2 eyebrow">CM</th>
                     <th className="text-right py-2 px-2"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {assessments.map((a) => {
                     const va = a.valCustomerFirst && a.valStepIntoArena && a.valFlockToProblems && a.valGiveEnergy
                       ? getValuesAlignment(a.valCustomerFirst, a.valStepIntoArena, a.valFlockToProblems, a.valGiveEnergy)
@@ -541,39 +552,39 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
                     const cm = va && a.engagement ? va * a.engagement : null;
 
                     return (
-                      <tr key={a.id}>
-                        <td className="py-2 px-2 font-medium text-visory-navy">
+                      <tr key={a.id} className="dt-row">
+                        <td className="py-2 px-2 font-medium text-ink mono tnum">
                           {formatCyclePeriod(a.cycle)}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.performance ? (
-                            <Badge className={getRatingColor(a.performance)}>{getRatingLabel(a.performance)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.performance)}>{getRatingLabel(a.performance)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.growthReadiness ? (
-                            <Badge className={getRatingColor(a.growthReadiness)}>{getGrowthReadinessLabel(a.growthReadiness)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.growthReadiness)}>{getGrowthReadinessLabel(a.growthReadiness)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {va ? (
-                            <Badge className={getRatingColor(va)}>{getRatingLabel(va)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(va)}>{getRatingLabel(va)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {a.engagement ? (
-                            <Badge className={getRatingColor(a.engagement)}>{getRatingLabel(a.engagement)}</Badge>
-                          ) : <span className="text-gray-400">-</span>}
+                            <Badge variant={ratingVariant(a.engagement)}>{getRatingLabel(a.engagement)}</Badge>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {td !== null ? (
-                            <span className={`text-sm font-bold ${td >= 6 ? "text-green-700" : "text-orange-600"}`}>{td}/9</span>
-                          ) : <span className="text-gray-400">-</span>}
+                            <span className={`mono tnum text-sm ${td >= 6 ? "text-success" : "text-magenta"}`}>{td}/9</span>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-center">
                           {cm !== null ? (
-                            <span className={`text-sm font-bold ${cm >= 6 ? "text-green-700" : "text-orange-600"}`}>{cm}/9</span>
-                          ) : <span className="text-gray-400">-</span>}
+                            <span className={`mono tnum text-sm ${cm >= 6 ? "text-success" : "text-magenta"}`}>{cm}/9</span>
+                          ) : <span className="muted-2">-</span>}
                         </td>
                         <td className="py-2 px-2 text-right">
                           <Button
@@ -591,7 +602,7 @@ export default function EmployeeProfilePage({ params }: { params: Promise<{ empl
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">No assessment history yet.</p>
+            <p className="text-sm muted text-center py-4">No assessment history yet.</p>
           )}
         </CardContent>
       </Card>

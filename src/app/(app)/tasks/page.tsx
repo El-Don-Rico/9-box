@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/toggle";
+import { PageHeader } from "@/components/ui/page-header";
 import { TaskSourceBadge, TaskVisibilityBadge } from "@/components/tasks/task-meta";
 import type { TaskData, TaskStatus, TaskCommentData } from "@/types";
 
@@ -13,11 +16,14 @@ const MANAGER_ROLES = ["MANAGER", "AREA_LEAD", "LEADERSHIP", "ADMIN"];
 const STATUS_LABELS: Record<TaskStatus, string> = { TODO: "To Do", IN_PROGRESS: "In Progress", DONE: "Done" };
 const STATUS_ORDER: TaskStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 
-function statusColor(status: TaskStatus): string {
+const FIELD =
+  "w-full rounded-lg border border-line-2 bg-paper-2 px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-magenta focus:ring-2 focus:ring-magenta/20 focus:outline-none";
+
+function statusVariant(status: TaskStatus): "success" | "warning" | "slate" {
   switch (status) {
-    case "DONE": return "bg-green-100 text-green-800 border-green-300";
-    case "IN_PROGRESS": return "bg-amber-100 text-amber-800 border-amber-300";
-    default: return "bg-gray-100 text-gray-600 border-gray-300";
+    case "DONE": return "success";
+    case "IN_PROGRESS": return "warning";
+    default: return "slate";
   }
 }
 
@@ -46,14 +52,14 @@ function TaskComments({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
+    <div className="mt-3 border-t border-line pt-3 space-y-2">
       {loading ? (
-        <p className="text-xs text-gray-400">Loading…</p>
+        <p className="text-xs muted-2">Loading…</p>
       ) : comments.map((c) => (
         <div key={c.id} className="text-sm">
-          <span className="font-medium text-visory-navy">{c.author?.name ?? "Someone"}</span>{" "}
-          <span className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-          <p className="text-gray-600">{c.body}</p>
+          <span className="font-medium text-ink">{c.author?.name ?? "Someone"}</span>{" "}
+          <span className="mono tnum text-xs muted-2">{new Date(c.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+          <p className="muted">{c.body}</p>
         </div>
       ))}
       <div className="flex gap-2">
@@ -62,7 +68,7 @@ function TaskComments({ taskId }: { taskId: string }) {
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") add(); }}
           placeholder="Add a comment or update…"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+          className={`flex-1 ${FIELD} py-1.5`}
         />
         <Button size="sm" variant="secondary" onClick={add} disabled={!body.trim()}>Post</Button>
       </div>
@@ -181,53 +187,52 @@ export default function TasksPage() {
     }
   }
 
-  if (!role) return <div className="text-center py-12 text-gray-500">Loading…</div>;
-  if (loading) return <div className="text-center py-12 text-gray-500">Loading…</div>;
+  if (!role) return <div className="text-center py-12 muted">Loading…</div>;
+  if (loading) return <div className="text-center py-12 muted">Loading…</div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Tasks</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {manager ? "Tasks across your team — from meetings, plans, or added directly." : "Your tasks and meeting actions."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {manager && (
-            <>
-              <select
-                value={filterEmployee}
-                onChange={(e) => setFilterEmployee(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
-              >
-                <option value="">All employees</option>
-                {reports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
-              >
-                <option value="">All types</option>
-                <option value="Manual">Manual</option>
-                <option value="Meeting action">Meeting action</option>
-                <option value="Performance plan">Performance plan</option>
-              </select>
-            </>
-          )}
-          {!showForm && <Button size="sm" onClick={() => setShowForm(true)}>Add Task</Button>}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Tasks"
+        title={<>Open <em>actions.</em></>}
+        sub={manager ? "Tasks across your team — from meetings, plans, or added directly." : "Your tasks and meeting actions."}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {manager && (
+              <>
+                <select
+                  value={filterEmployee}
+                  onChange={(e) => setFilterEmployee(e.target.value)}
+                  className="rounded-lg border border-line-2 bg-paper px-2 py-1.5 text-sm text-ink focus:border-magenta focus:outline-none"
+                >
+                  <option value="">All employees</option>
+                  {reports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="rounded-lg border border-line-2 bg-paper px-2 py-1.5 text-sm text-ink focus:border-magenta focus:outline-none"
+                >
+                  <option value="">All types</option>
+                  <option value="Manual">Manual</option>
+                  <option value="Meeting action">Meeting action</option>
+                  <option value="Performance plan">Performance plan</option>
+                </select>
+              </>
+            )}
+            {!showForm && <Button size="sm" variant="magenta" onClick={() => setShowForm(true)}>Add Task</Button>}
+          </div>
+        }
+      />
 
       {showForm && (
         <Card>
-          <CardContent className="py-4 space-y-3">
+          <CardContent className="space-y-3">
             {manager && (
               <select
                 value={form.employeeId}
                 onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value, assigneeId: "" }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                className={FIELD}
               >
                 <option value="">Select team member…</option>
                 {reports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -238,7 +243,7 @@ export default function TasksPage() {
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder={form.isPip ? "Plan title (e.g. Performance Improvement Plan)" : "Task"}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+              className={FIELD}
             />
             {!form.isPip && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -246,7 +251,7 @@ export default function TasksPage() {
                   <select
                     value={form.assigneeId}
                     onChange={(e) => setForm((f) => ({ ...f, assigneeId: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                    className={FIELD}
                   >
                     <option value="">Unassigned</option>
                     {assigneeOptions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -256,36 +261,32 @@ export default function TasksPage() {
                   type="date"
                   value={form.dueDate}
                   onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-                  className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+                  className={`mono tnum ${FIELD}`}
                 />
               </div>
             )}
             {manager && (
               <div className="flex flex-wrap items-center gap-4">
                 {!form.isPip && (
-                  <label className="flex items-center gap-1.5 text-sm text-gray-600">
-                    <input
-                      type="checkbox"
+                  <label className="flex items-center gap-2 text-sm muted cursor-pointer">
+                    <Checkbox
                       checked={form.visibility === "MANAGER_ONLY"}
-                      onChange={(e) => setForm((f) => ({ ...f, visibility: e.target.checked ? "MANAGER_ONLY" : "SHARED" }))}
-                      className="rounded border-gray-300 text-visory focus:ring-visory"
+                      onChange={(v) => setForm((f) => ({ ...f, visibility: v ? "MANAGER_ONLY" : "SHARED" }))}
                     />
                     Only visible to me (manager-only)
                   </label>
                 )}
-                <label className="flex items-center gap-1.5 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
+                <label className="flex items-center gap-2 text-sm muted cursor-pointer">
+                  <Checkbox
                     checked={form.isPip}
-                    onChange={(e) => setForm((f) => ({ ...f, isPip: e.target.checked }))}
-                    className="rounded border-gray-300 text-visory focus:ring-visory"
+                    onChange={(v) => setForm((f) => ({ ...f, isPip: v }))}
                   />
                   Performance Improvement Plan
                 </label>
               </div>
             )}
             {form.isPip && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs muted">
                 This creates a manager-only PIP. Manage its performance meetings, notes, and actions from the employee&apos;s profile.
               </p>
             )}
@@ -306,50 +307,60 @@ export default function TasksPage() {
           return (
             <div key={col}>
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-sm font-semibold text-visory-navy">{STATUS_LABELS[col]}</span>
-                <Badge className={statusColor(col)}>{items.length}</Badge>
+                <span className="eyebrow">{STATUS_LABELS[col]}</span>
+                <Badge variant={statusVariant(col)}><span className="mono tnum">{items.length}</span></Badge>
               </div>
-              <div className="rounded-lg bg-gray-50 p-2 space-y-2 min-h-[120px]">
-                {items.map((task) => (
-                  <div key={task.id} className="rounded-lg border border-gray-200 bg-white p-3">
-                    <p className={`text-sm font-medium text-visory-navy ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
-                      {task.title}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {manager && task.employee && (
-                        <a href={`/team/${task.employee.id}`} className="text-xs text-visory hover:text-visory-dark font-medium">
-                          {task.employee.name}
-                        </a>
-                      )}
-                      <span className="text-xs text-gray-500">{task.assignee?.name ?? "Unassigned"}</span>
-                      {task.dueDate && (
-                        <span className="text-xs text-gray-400">
-                          Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                      )}
-                      <TaskSourceBadge task={task} canSeeMeeting={manager} />
-                      <TaskVisibilityBadge task={task} />
+              <Card className="p-0 overflow-hidden">
+                {items.map((task, i) => (
+                  <div key={task.id} className={`p-4 ${i > 0 ? "border-t border-line" : ""}`}>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={task.status === "DONE"}
+                        onChange={(v) => updateStatus(task.id, v ? "DONE" : "TODO")}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium text-ink ${task.status === "DONE" ? "line-through opacity-60" : ""}`}>
+                          {task.title}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                          {manager && task.employee && (
+                            <a href={`/team/${task.employee.id}`} className="text-xs text-magenta-2 font-medium hover:underline underline-offset-2">
+                              {task.employee.name}
+                            </a>
+                          )}
+                          <span className="text-xs muted">{task.assignee?.name ?? "Unassigned"}</span>
+                          {task.dueDate && (
+                            <span className="mono tnum text-xs muted-2">
+                              Due {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                          <TaskSourceBadge task={task} canSeeMeeting={manager} />
+                          <TaskVisibilityBadge task={task} />
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-2.5">
+                          <select
+                            value={task.status}
+                            onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+                            className="rounded-lg border border-line-2 bg-paper px-2 py-1 text-xs text-ink focus:border-magenta focus:outline-none"
+                          >
+                            {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                          </select>
+                          <button
+                            onClick={() => setExpanded(expanded === task.id ? null : task.id)}
+                            className="inline-flex items-center gap-1 text-xs muted hover:text-ink"
+                          >
+                            {expanded === task.id ? "Hide" : "Comments"}
+                            <ChevronRight size={14} strokeWidth={1.6} className={expanded === task.id ? "rotate-90 transition-transform" : "transition-transform"} />
+                          </button>
+                        </div>
+                        {expanded === task.id && <TaskComments taskId={task.id} />}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-2 mt-2">
-                      <select
-                        value={task.status}
-                        onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
-                        className={`rounded-lg border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-visory ${statusColor(task.status)}`}
-                      >
-                        {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                      </select>
-                      <button
-                        onClick={() => setExpanded(expanded === task.id ? null : task.id)}
-                        className="text-xs text-visory hover:text-visory-dark font-medium"
-                      >
-                        {expanded === task.id ? "Hide" : "Comments"}
-                      </button>
-                    </div>
-                    {expanded === task.id && <TaskComments taskId={task.id} />}
                   </div>
                 ))}
-                {items.length === 0 && <p className="text-xs text-gray-400 text-center py-4">None</p>}
-              </div>
+                {items.length === 0 && <p className="text-xs muted-2 text-center py-6">None</p>}
+              </Card>
             </div>
           );
         })}

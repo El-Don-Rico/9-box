@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager, canManageEmployee } from "@/lib/permissions";
-import { canTransition } from "@/lib/meeting";
+import { canTransition, canOverrideTransition } from "@/lib/meeting";
 
 const taskInclude = {
   assignee: { select: { id: true, name: true } },
@@ -19,7 +19,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { assessmentId, meetingStatus } = await request.json();
+  const { assessmentId, meetingStatus, override } = await request.json();
   if (!assessmentId || !meetingStatus) {
     return NextResponse.json({ error: "assessmentId and meetingStatus are required" }, { status: 400 });
   }
@@ -34,8 +34,14 @@ export async function PATCH(request: Request) {
   if (!(await canManageEmployee(session.user.id, session.user.role, assessment.employeeId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  // NOT_READY is system-derived. A manager may override it forward to
+  // READY_TO_MEET (e.g. to start a meeting before both assessments submit);
+  // any other move out of NOT_READY is still rejected.
   if (assessment.meetingStatus === "NOT_READY") {
-    return NextResponse.json({ error: "Assessments must be submitted before scheduling a meeting" }, { status: 400 });
+    const allowed = override === true && canOverrideTransition("NOT_READY", meetingStatus);
+    if (!allowed) {
+      return NextResponse.json({ error: "Assessments must be submitted before scheduling a meeting" }, { status: 400 });
+    }
   }
 
   const updated = await prisma.managerAssessment.update({

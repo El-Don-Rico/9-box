@@ -45,6 +45,15 @@ export function canTransition(to: MeetingStatus): boolean {
   return MANAGER_SETTABLE_STATUSES.includes(to);
 }
 
+/**
+ * The only manager-forced ("override") transition: pulling a card out of the
+ * system-derived NOT_READY column straight to READY_TO_MEET before both
+ * assessments are submitted. Everything else still goes through canTransition.
+ */
+export function canOverrideTransition(from: MeetingStatus, to: MeetingStatus): boolean {
+  return from === "NOT_READY" && to === "READY_TO_MEET";
+}
+
 // ---- Due-date tracking ------------------------------------------------------
 
 export type BoardColumn = MeetingStatus | "REVIEW_COMPLETE";

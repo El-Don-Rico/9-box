@@ -19,20 +19,16 @@ export function TaskSourceBadge({ task, canSeeMeeting }: { task: TaskData; canSe
         href={`/meeting/${assessmentId}`}
         target="_blank"
         rel="noopener"
-        className="text-xs text-visory hover:text-visory-dark underline-offset-2 hover:underline"
+        className="text-xs text-magenta-2 underline-offset-2 hover:underline"
       >
         Meeting action ↗
       </a>
     );
   }
-  return (
-    <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-xs">{label}</Badge>
-  );
+  return <Badge variant="slate">{label}</Badge>;
 }
 
 export function TaskVisibilityBadge({ task }: { task: TaskData }) {
   if (task.visibility !== "MANAGER_ONLY") return null;
-  return (
-    <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">Manager only</Badge>
-  );
+  return <Badge variant="navy">Manager only</Badge>;
 }

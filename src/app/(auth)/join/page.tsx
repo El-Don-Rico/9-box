@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 export default function JoinPage() {
   const router = useRouter();
@@ -92,90 +91,84 @@ export default function JoinPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-bold text-visory">Visory</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          {step === "email"
-            ? "Enter your email to get started"
-            : `Welcome, ${name}`}
-        </p>
-      </CardHeader>
-      <CardContent>
-        {step === "email" ? (
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-            <Input
-              id="email"
-              label="Work Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              required
-            />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Checking..." : "Continue"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister} className="space-y-4">
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-            <div className="rounded-lg bg-visory-grey p-3">
-              <p className="text-sm text-visory-navy">
-                <span className="font-medium">{name}</span>
-                <br />
-                <span className="text-gray-500">{email}</span>
-              </p>
-            </div>
-            <Input
-              id="password"
-              label="Create Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              required
-            />
-            <Input
-              id="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
-              required
-            />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Create Account"}
-            </Button>
-            <button
-              type="button"
-              onClick={() => { setStep("email"); setError(""); setPassword(""); setConfirmPassword(""); }}
-              className="block w-full text-center text-sm text-gray-500 hover:text-visory"
-            >
-              Use a different email
-            </button>
-          </form>
-        )}
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-visory-link hover:underline"
+    <div>
+      <div className="eyebrow mb-2">
+        {step === "email" ? "Get started" : `Welcome, ${name}`}
+      </div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
+        Join <em style={{ fontStyle: "italic" }}>Visory.</em>
+      </h1>
+      <p className="lead mt-1 mb-5">
+        {step === "email"
+          ? "Enter your email to get started."
+          : "Set a password to finish your account."}
+      </p>
+      {step === "email" ? (
+        <form onSubmit={handleEmailSubmit} className="space-y-4">
+          {error && (
+            <div className="chip chip-magenta w-full justify-start">{error}</div>
+          )}
+          <Input
+            id="email"
+            label="Work Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            required
+          />
+          <Button type="submit" variant="magenta" className="w-full" disabled={loading}>
+            {loading ? "Checking…" : "Continue"}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleRegister} className="space-y-4">
+          {error && (
+            <div className="chip chip-magenta w-full justify-start">{error}</div>
+          )}
+          <div className="rounded-lg bg-paper-2 border border-line p-3">
+            <p className="text-sm text-ink">
+              <span className="font-medium">{name}</span>
+              <br />
+              <span className="muted">{email}</span>
+            </p>
+          </div>
+          <Input
+            id="password"
+            label="Create Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+            required
+          />
+          <Input
+            id="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm your password"
+            required
+          />
+          <Button type="submit" variant="magenta" className="w-full" disabled={loading}>
+            {loading ? "Creating account…" : "Create Account"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => { setStep("email"); setError(""); setPassword(""); setConfirmPassword(""); }}
+            className="block w-full text-center small muted hover:text-ink"
           >
-            Sign In
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+            Use a different email
+          </button>
+        </form>
+      )}
+      <p className="mt-4 text-center small muted">
+        Already have an account?{" "}
+        <Link href="/login" className="text-cobalt hover:underline font-medium">
+          Sign In
+        </Link>
+      </p>
+    </div>
   );
 }

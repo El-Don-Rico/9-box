@@ -51,23 +51,23 @@ export function StepForm({
     <div className="max-w-2xl mx-auto">
       {/* Progress bar */}
       <div className="mb-8">
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>Step {currentStep + 1} of {steps.length}</span>
-          <span>{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
+        <div className="flex justify-between mb-1">
+          <span className="eyebrow">Step <span className="mono tnum">{currentStep + 1}</span> of <span className="mono tnum">{steps.length}</span></span>
+          <span className="mono tnum text-xs text-ink-3">{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
         </div>
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="h-2 bg-paper-2 rounded-full overflow-hidden border border-line">
           <div
-            className="h-full bg-visory rounded-full transition-all duration-300"
+            className="h-full bg-magenta rounded-full transition-all duration-300"
             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Step content */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8 min-h-[300px]">
-        <h2 className="text-xl font-semibold text-visory-navy mb-1">{step.title}</h2>
+      <div className="card p-6 sm:p-8 min-h-[300px]">
+        <h2 className="serif text-2xl text-ink mb-1">{step.title}</h2>
         {step.description && (
-          <p className="text-sm text-gray-500 mb-6">{step.description}</p>
+          <p className="text-sm text-ink-3 mb-6">{step.description}</p>
         )}
         <div className="mt-4">
           {step.renderMulti
@@ -130,22 +130,22 @@ export function RatingStep({ value, onChange, labels, prompts }: RatingStepProps
             className={cn(
               "flex-1 p-4 rounded-lg border-2 text-center transition-all",
               value === rating
-                ? "border-visory bg-visory-light text-visory-dark font-semibold"
-                : "border-gray-200 hover:border-gray-300 text-visory-navy"
+                ? "border-magenta bg-magenta-3 text-magenta-2"
+                : "border-line hover:border-line-2 text-ink"
             )}
           >
-            <span className="text-2xl font-bold block">{rating}</span>
+            <span className="mono tnum text-2xl block">{rating}</span>
             <span className="text-sm">{displayLabels[rating]}</span>
           </button>
         ))}
       </div>
       {prompts && prompts.length > 0 && (
-        <div className="mt-4 rounded-lg bg-gray-50 border border-gray-200 p-3">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-2">Consider</p>
+        <div className="mt-4 rounded-lg bg-paper-2 border border-line p-3">
+          <p className="eyebrow mb-2">Consider</p>
           <ul className="space-y-1">
             {prompts.map((p, i) => (
-              <li key={i} className="text-sm text-gray-600 flex gap-2">
-                <span className="text-gray-400 shrink-0">&#8226;</span>
+              <li key={i} className="text-sm text-ink-2 flex gap-2">
+                <span className="text-ink-4 shrink-0">&#8226;</span>
                 <span>{p}</span>
               </li>
             ))}
@@ -170,7 +170,7 @@ export function TextStep({ value, onChange, placeholder, rows = 4 }: TextStepPro
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory focus:border-visory transition-colors"
+      className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta focus:border-magenta transition-colors"
     />
   );
 }
@@ -206,7 +206,7 @@ export function MultiRatingStep({
     <div className="space-y-8">
       {items.map((item) => (
         <div key={item.id}>
-          <p className="text-base font-semibold text-visory-navy mb-3">{item.label}</p>
+          <p className="text-base font-semibold text-ink mb-3">{item.label}</p>
           <RatingStep
             value={(values[item.id] as number | null) ?? null}
             onChange={(v) => onChange(item.id, v)}
@@ -216,7 +216,7 @@ export function MultiRatingStep({
         </div>
       ))}
       <div>
-        <p className="text-base font-semibold text-visory-navy mb-3">{commentLabel}</p>
+        <p className="text-base font-semibold text-ink mb-3">{commentLabel}</p>
         <TextStep
           value={(values[commentId] as string) || ""}
           onChange={(v) => onChange(commentId, v)}

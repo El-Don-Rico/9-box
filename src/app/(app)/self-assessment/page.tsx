@@ -8,6 +8,7 @@ import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -154,7 +155,7 @@ export default function SelfAssessmentPage() {
 
   if (!cycleId) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-ink-3">
         No cycle selected. Go to your dashboard to start an assessment.
       </div>
     );
@@ -162,15 +163,14 @@ export default function SelfAssessmentPage() {
 
   return (
     <div className="py-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-visory-navy">Self-Assessment</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Take your time. Your responses auto-save as drafts.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Self-Assessment"
+        title={<>Your <em>reflection.</em></>}
+        sub="Take your time. Your responses auto-save as drafts."
+      />
       {prefilled && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-6 max-w-2xl mx-auto">
-          <p className="text-sm text-blue-800">
+        <div className="rounded-lg bg-paper-2 border border-line p-3 mb-6 max-w-2xl mx-auto">
+          <p className="text-sm text-ink-2">
             Text responses have been pre-filled from last quarter. Review and update as needed.
           </p>
         </div>

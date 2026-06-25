@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/toggle";
+import { ChevronDown } from "lucide-react";
 
 interface MultiSelectProps {
   label: string;
@@ -42,43 +45,44 @@ export function MultiSelect({ label, options, selected, onChange }: MultiSelectP
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-left min-w-[120px] flex items-center justify-between gap-2",
-          open ? "ring-2 ring-visory border-visory" : "hover:bg-gray-50",
-          selected.length > 0 ? "bg-visory-light text-visory-dark" : "bg-white text-visory-navy"
+          "rounded-lg border bg-paper-2 px-3 py-1.5 text-xs font-medium text-left min-w-[120px] flex items-center justify-between gap-2 transition-colors text-ink",
+          open
+            ? "border-magenta ring-2 ring-magenta/20"
+            : "border-line-2 hover:border-line"
         )}
       >
         <span className="truncate">{displayText}</span>
-        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown size={14} strokeWidth={1.6} className="shrink-0 text-ink-3" />
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-48 bg-white rounded-lg border border-gray-200 shadow-lg py-1 max-h-60 overflow-auto">
+        <div className="absolute z-20 mt-1 w-48 bg-paper rounded-lg border border-line shadow-lg py-1 max-h-60 overflow-auto">
           {selected.length > 0 && (
             <button
               type="button"
               onClick={() => onChange([])}
-              className="w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+              className="w-full text-left px-3 py-1.5 text-xs text-ink-3 hover:bg-paper-2"
             >
               Clear all
             </button>
           )}
-          {options.map((opt) => (
-            <label
-              key={opt}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-visory-navy hover:bg-gray-50 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(opt)}
-                onChange={() => toggle(opt)}
-                className="rounded border-gray-300 text-visory focus:ring-visory"
-              />
-              {opt}
-            </label>
-          ))}
+          {options.map((opt) => {
+            const isOn = selected.includes(opt);
+            return (
+              <label
+                key={opt}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-paper-2 cursor-pointer"
+              >
+                <Checkbox checked={isOn} onChange={() => toggle(opt)} />
+                {isOn ? (
+                  <Badge variant="magenta">{opt}</Badge>
+                ) : (
+                  <span className="text-ink-2">{opt}</span>
+                )}
+              </label>
+            );
+          })}
           {options.length === 0 && (
-            <p className="px-3 py-2 text-xs text-gray-400">No options</p>
+            <p className="px-3 py-2 text-xs text-ink-4">No options</p>
           )}
         </div>
       )}

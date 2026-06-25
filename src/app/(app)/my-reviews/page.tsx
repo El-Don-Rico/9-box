@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { getGrowthReadinessLabel, formatCyclePeriod } from "@/lib/utils";
 import {
   getBox1Label,
@@ -101,16 +102,20 @@ export default function MyResultsPage() {
   }, [session?.user?.id]);
 
   if (loading) {
-    return <div className="text-center py-12 text-gray-500">Loading...</div>;
+    return <div className="text-center py-12 text-ink-3">Loading...</div>;
   }
 
   const cyclesWithResults = cycles.filter((c) => summaries.has(c.id));
 
   if (cyclesWithResults.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-visory-navy mb-2">My Reviews</h1>
-        <p className="text-gray-500">No reviews available yet. Reviews appear after assessments are submitted.</p>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="My Reviews"
+          title={<>Your <em>reviews.</em></>}
+          sub="Your scores, feedback, and prescribed actions"
+        />
+        <p className="text-ink-3">No reviews available yet. Reviews appear after assessments are submitted.</p>
       </div>
     );
   }
@@ -147,50 +152,52 @@ export default function MyResultsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-visory-navy">My Reviews</h1>
-        <p className="text-sm text-gray-600 mt-1">Your scores, feedback, and prescribed actions</p>
-      </div>
+      <PageHeader
+        eyebrow="My Reviews"
+        title={<>Your <em>reviews.</em></>}
+        sub="Your scores, feedback, and prescribed actions"
+      />
 
       {latest && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Performance Summary</h2>
+            <span className="eyebrow">Overview</span>
+            <h2 className="card-title">Performance Summary</h2>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-3 rounded-lg bg-visory-grey">
-                <p className="text-xs text-gray-500 mb-1">Performance</p>
-                <p className="text-xl font-bold text-visory-navy">{latest.performance}</p>
+              <div className="text-center p-3 rounded-lg bg-paper-2 border border-line">
+                <p className="eyebrow mb-1">Performance</p>
+                <p className="mono tnum text-xl text-ink">{latest.performance}</p>
                 {avgPerf !== null && completedSummaries.length > 1 && (
-                  <p className="text-xs text-gray-500 mt-1">Avg: {avgPerf.toFixed(1)}</p>
+                  <p className="text-xs text-ink-3 mt-1">Avg: <span className="mono tnum">{avgPerf.toFixed(1)}</span></p>
                 )}
               </div>
-              <div className="text-center p-3 rounded-lg bg-visory-grey">
-                <p className="text-xs text-gray-500 mb-1">Growth Readiness</p>
-                <p className="text-xl font-bold text-visory-navy">{latest.growthReadiness ?? "-"}</p>
+              <div className="text-center p-3 rounded-lg bg-paper-2 border border-line">
+                <p className="eyebrow mb-1">Growth Readiness</p>
+                <p className="mono tnum text-xl text-ink">{latest.growthReadiness ?? "-"}</p>
                 {avgGrowth !== null && completedSummaries.length > 1 && (
-                  <p className="text-xs text-gray-500 mt-1">Avg: {avgGrowth.toFixed(1)}</p>
+                  <p className="text-xs text-ink-3 mt-1">Avg: <span className="mono tnum">{avgGrowth.toFixed(1)}</span></p>
                 )}
               </div>
-              <div className="text-center p-3 rounded-lg bg-visory-grey">
-                <p className="text-xs text-gray-500 mb-1">Values Alignment</p>
-                <p className="text-xl font-bold text-visory-navy">{latest.valuesAlignment ?? "-"}</p>
+              <div className="text-center p-3 rounded-lg bg-paper-2 border border-line">
+                <p className="eyebrow mb-1">Values Alignment</p>
+                <p className="mono tnum text-xl text-ink">{latest.valuesAlignment ?? "-"}</p>
                 {avgVA !== null && completedSummaries.length > 1 && (
-                  <p className="text-xs text-gray-500 mt-1">Avg: {avgVA.toFixed(1)}</p>
+                  <p className="text-xs text-ink-3 mt-1">Avg: <span className="mono tnum">{avgVA.toFixed(1)}</span></p>
                 )}
               </div>
-              <div className="text-center p-3 rounded-lg bg-visory-grey">
-                <p className="text-xs text-gray-500 mb-1">Engagement</p>
-                <p className="text-xl font-bold text-visory-navy">{latest.engagement ?? "-"}</p>
+              <div className="text-center p-3 rounded-lg bg-paper-2 border border-line">
+                <p className="eyebrow mb-1">Engagement</p>
+                <p className="mono tnum text-xl text-ink">{latest.engagement ?? "-"}</p>
                 {avgEng !== null && completedSummaries.length > 1 && (
-                  <p className="text-xs text-gray-500 mt-1">Avg: {avgEng.toFixed(1)}</p>
+                  <p className="text-xs text-ink-3 mt-1">Avg: <span className="mono tnum">{avgEng.toFixed(1)}</span></p>
                 )}
               </div>
             </div>
             {completedSummaries.length > 1 && (
-              <p className="text-xs text-gray-400 mt-3 text-center">
-                Latest: {formatCyclePeriod(latest)} · Averages across {completedSummaries.length} cycles
+              <p className="text-xs text-ink-4 mt-3 text-center">
+                Latest: <span className="mono tnum">{formatCyclePeriod(latest)}</span> · Averages across <span className="mono tnum">{completedSummaries.length}</span> cycles
               </p>
             )}
           </CardContent>
@@ -288,16 +295,16 @@ export default function MyResultsPage() {
         return (
           <Card key={cycle.id}>
             <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">{formatCyclePeriod(cycle)}</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full">
+                <h2 className="card-title mono tnum">{formatCyclePeriod(cycle)}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   {self?.submittedAt && (
-                    <Badge className="bg-green-100 text-green-800 border-green-300">Self-Assessment Submitted</Badge>
+                    <Badge variant="success">Self-Assessment Submitted</Badge>
                   )}
                   {mgr?.resultsSentAt ? (
-                    <Badge className="bg-green-100 text-green-800 border-green-300">Results Shared</Badge>
+                    <Badge variant="success">Results Shared</Badge>
                   ) : (
-                    <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending Manager Review</Badge>
+                    <Badge variant="warning">Pending Manager Review</Badge>
                   )}
                 </div>
               </div>
@@ -307,16 +314,16 @@ export default function MyResultsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {box1Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox1Color(box1Label)}`}>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Talent Density</p>
-                      <p className="text-base font-bold mt-1">{box1Label}</p>
-                      <p className="text-sm text-visory-navy mt-1">{getBox1Action(box1Label)}</p>
+                      <p className="eyebrow">Talent Density</p>
+                      <p className="serif text-base mt-1">{box1Label}</p>
+                      <p className="text-sm mt-1">{getBox1Action(box1Label)}</p>
                     </div>
                   )}
                   {box2Label && (
                     <div className={`rounded-lg border-2 p-3 ${getBox2Color(box2Label)}`}>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Cultural Momentum</p>
-                      <p className="text-base font-bold mt-1">{box2Label}</p>
-                      <p className="text-sm text-visory-navy mt-1">{getBox2Action(box2Label)}</p>
+                      <p className="eyebrow">Cultural Momentum</p>
+                      <p className="serif text-base mt-1">{box2Label}</p>
+                      <p className="text-sm mt-1">{getBox2Action(box2Label)}</p>
                     </div>
                   )}
                 </div>
@@ -324,28 +331,28 @@ export default function MyResultsPage() {
 
               {(self?.submittedAt || showManager) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                  <h3 className="eyebrow mb-3">
                     {showManager ? "Assessment Comparison" : "Your Ratings"}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">Click a dimension to expand and compare notes</p>
+                  <p className="text-xs text-ink-3 mb-2">Click a dimension to expand and compare notes</p>
                   <DimensionComparison sections={sections} showManagerColumn={showManager} />
                 </div>
               )}
 
               {self?.submittedAt && (self.learning || self.goalsNextMonth) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">Additional Context</h3>
+                  <h3 className="eyebrow mb-3">Additional Context</h3>
                   <div className="space-y-3">
                     {self.learning && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Learning</p>
-                        <p className="text-sm text-visory-navy">{self.learning}</p>
+                        <p className="eyebrow mb-1">Learning</p>
+                        <p className="text-sm text-ink-2">{self.learning}</p>
                       </div>
                     )}
                     {self.goalsNextMonth && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-1">Goals for Next Quarter</p>
-                        <p className="text-sm text-visory-navy">{self.goalsNextMonth}</p>
+                        <p className="eyebrow mb-1">Goals for Next Quarter</p>
+                        <p className="text-sm text-ink-2">{self.goalsNextMonth}</p>
                       </div>
                     )}
                   </div>
@@ -354,11 +361,11 @@ export default function MyResultsPage() {
 
               {showManager && mgr?.notes && (
                 <div>
-                  <h3 className="text-sm font-semibold text-visory-navy uppercase mb-3">
+                  <h3 className="eyebrow mb-3">
                     Manager Notes
-                    <span className="text-xs font-normal text-gray-500 ml-2">by {mgr.manager.name}</span>
+                    <span className="text-xs font-normal text-ink-3 ml-2 normal-case tracking-normal">by {mgr.manager.name}</span>
                   </h3>
-                  <p className="text-sm text-visory-navy">{mgr.notes}</p>
+                  <p className="text-sm text-ink-2">{mgr.notes}</p>
                 </div>
               )}
             </CardContent>

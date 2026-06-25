@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 import { MultiSelect } from "@/components/ui/multi-select";
 import type { CycleData, ManagerAssessmentData } from "@/types";
 import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
@@ -119,6 +120,7 @@ export default function CalibrationPage() {
         .then((r) => r.json())
         .then(setPrevAssessments);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPrevAssessments([]);
     }
   }, [selectedCycleId, cycles, viewMode]);
@@ -214,10 +216,10 @@ export default function CalibrationPage() {
 
   function TrendArrow({ current, previous, suffix = "" }: { current: number; previous: number; suffix?: string }) {
     const diff = current - previous;
-    if (Math.abs(diff) < 0.05) return <span className="text-xs text-gray-400 ml-1">—</span>;
+    if (Math.abs(diff) < 0.05) return <span className="text-xs muted ml-1">—</span>;
     const isUp = diff > 0;
     return (
-      <span className={`text-xs ml-1 ${isUp ? "text-green-600" : "text-red-500"}`}>
+      <span className={`text-xs mono tnum ml-1 ${isUp ? "text-success" : "text-magenta"}`}>
         {isUp ? "↑" : "↓"} {Math.abs(diff).toFixed(1)}{suffix}
       </span>
     );
@@ -231,107 +233,115 @@ export default function CalibrationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-visory-navy">Analysis</h1>
-          <p className="text-sm text-gray-600 mt-1">Team performance analysis and 9-box insights</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-            <button
-              onClick={() => setViewMode("single")}
-              className={`px-3 py-2 text-xs font-medium ${viewMode === "single" ? "bg-visory-navy text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Single Quarter
-            </button>
-            <button
-              onClick={() => { setViewMode("range"); if (!rangeStartId && cycles.length > 0) { setRangeStartId(cycles[cycles.length - 1].id); setRangeEndId(cycles[0].id); } }}
-              className={`px-3 py-2 text-xs font-medium ${viewMode === "range" ? "bg-visory-navy text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Period Average
-            </button>
-          </div>
-
-          {viewMode === "single" ? (
-            <select
-              value={selectedCycleId}
-              onChange={(e) => setSelectedCycleId(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
-            >
-              {cycles.map((c) => (
-                <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-              ))}
-            </select>
-          ) : (
-            <div className="flex items-center gap-2">
-              <select
-                value={rangeStartId}
-                onChange={(e) => setRangeStartId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
+      <PageHeader
+        eyebrow="Calibration"
+        title={<>The <em>grid.</em></>}
+        sub="Team performance analysis and 9-box insights"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex border border-line rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode("single")}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${viewMode === "single" ? "bg-navy text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
               >
-                {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-                ))}
-              </select>
-              <span className="text-sm text-gray-500">to</span>
-              <select
-                value={rangeEndId}
-                onChange={(e) => setRangeEndId(e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:ring-visory"
+                Single Quarter
+              </button>
+              <button
+                onClick={() => { setViewMode("range"); if (!rangeStartId && cycles.length > 0) { setRangeStartId(cycles[cycles.length - 1].id); setRangeEndId(cycles[0].id); } }}
+                className={`px-3 py-2 text-xs font-medium transition-colors ${viewMode === "range" ? "bg-navy text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
               >
-                {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
-                ))}
-              </select>
+                Period Average
+              </button>
             </div>
-          )}
 
-          <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
-          <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
-          <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
-          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-            <button
-              onClick={() => setActiveGrid("box1")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box1" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Talent Density
-            </button>
-            <button
-              onClick={() => setActiveGrid("box2")}
-              className={`px-3 py-2 text-sm font-medium ${activeGrid === "box2" ? "bg-visory text-white" : "bg-white text-visory-navy hover:bg-gray-50"}`}
-            >
-              Cultural Momentum
-            </button>
+            {viewMode === "single" ? (
+              <select
+                value={selectedCycleId}
+                onChange={(e) => setSelectedCycleId(e.target.value)}
+                className="border border-line rounded-md bg-paper text-ink px-3 py-2 text-sm"
+              >
+                {cycles.map((c) => (
+                  <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <select
+                  value={rangeStartId}
+                  onChange={(e) => setRangeStartId(e.target.value)}
+                  className="border border-line rounded-md bg-paper text-ink px-2 py-2 text-sm"
+                >
+                  {cycles.map((c) => (
+                    <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                  ))}
+                </select>
+                <span className="text-sm muted">to</span>
+                <select
+                  value={rangeEndId}
+                  onChange={(e) => setRangeEndId(e.target.value)}
+                  className="border border-line rounded-md bg-paper text-ink px-2 py-2 text-sm"
+                >
+                  {cycles.map((c) => (
+                    <option key={c.id} value={c.id}>{formatCyclePeriod(c)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <MultiSelect label="Titles" options={titleOptions} selected={selectedTitles} onChange={setSelectedTitles} />
+            <MultiSelect label="Teams" options={teamOptions} selected={selectedTeams} onChange={setSelectedTeams} />
+            <MultiSelect label="Tenure" options={[...TENURE_BUCKETS]} selected={selectedTenures} onChange={setSelectedTenures} />
+            <div className="flex border border-line rounded-md overflow-hidden">
+              <button
+                onClick={() => setActiveGrid("box1")}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${activeGrid === "box1" ? "bg-magenta text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
+              >
+                Talent Density
+              </button>
+              <button
+                onClick={() => setActiveGrid("box2")}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${activeGrid === "box2" ? "bg-magenta text-paper" : "bg-paper text-ink hover:bg-paper-2"}`}
+              >
+                Cultural Momentum
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* 9-Box Grid */}
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-2">
             <div className="flex flex-col justify-between items-center w-8 py-4">
-              <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">High</span>
-              <span className="text-xs font-semibold text-visory-navy -rotate-90 whitespace-nowrap">{yLabel}</span>
-              <span className="text-xs font-medium text-gray-500 -rotate-90 whitespace-nowrap">Low</span>
+              <span className="eyebrow -rotate-90 whitespace-nowrap">High</span>
+              <span className="text-xs font-medium text-ink -rotate-90 whitespace-nowrap">{yLabel}</span>
+              <span className="eyebrow -rotate-90 whitespace-nowrap">Low</span>
             </div>
 
             <div className="flex-1">
               <div className="grid grid-cols-3 gap-2">
                 {grid.map((cell) => {
                   const emps = getEmployeesForCell(cell);
+                  // Top-right "ready" cell (high x, high y) is the scarce magenta highlight.
+                  const isReady = cell.x === 3 && cell.y === 3;
                   return (
                     <div
                       key={`${cell.x}-${cell.y}`}
-                      className={`rounded-lg border-2 p-3 min-h-[100px] ${cell.colorClass}`}
+                      className={`rounded-md border p-3 min-h-[100px] ${
+                        isReady ? "bg-magenta-3 border-magenta" : "bg-paper-2 border-line"
+                      }`}
                     >
-                      <p className="text-xs font-semibold text-visory-navy mb-2">{cell.label}</p>
-                      <div className="flex flex-wrap gap-1">
+                      <p className="eyebrow mb-2">{cell.label}</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {emps.map((emp) => (
-                          <Link key={emp.id} href={`/summary/${emp.id}?cycleId=${selectedCycleId}`}>
-                            <Badge className="bg-white/80 text-gray-800 border-gray-300 text-xs cursor-pointer hover:bg-visory-light hover:border-visory/40 transition-colors">
-                              {emp.name}
-                            </Badge>
+                          <Link
+                            key={emp.id}
+                            href={`/summary/${emp.id}?cycleId=${selectedCycleId}`}
+                            className="flex items-center gap-1.5 rounded-full bg-paper border border-line px-1.5 py-0.5 text-xs text-ink hover:border-magenta transition-colors"
+                          >
+                            <Avatar name={emp.name} size="sm" />
+                            <span className="pr-1">{emp.name}</span>
                           </Link>
                         ))}
                       </div>
@@ -341,15 +351,15 @@ export default function CalibrationPage() {
               </div>
 
               <div className="flex justify-between items-center mt-2 px-4">
-                <span className="text-xs font-medium text-gray-500">Low</span>
-                <span className="text-xs font-semibold text-visory-navy">{xLabel}</span>
-                <span className="text-xs font-medium text-gray-500">High</span>
+                <span className="eyebrow">Low</span>
+                <span className="text-xs font-medium text-ink">{xLabel}</span>
+                <span className="eyebrow">High</span>
               </div>
             </div>
           </div>
 
           {filteredEmployees.length === 0 && (
-            <p className="mt-4 text-center text-sm text-gray-500">
+            <p className="mt-4 text-center text-sm muted">
               {placedEmployees.length === 0 ? "No submitted assessments for this period." : "No employees match the selected filters."}
             </p>
           )}
@@ -360,29 +370,27 @@ export default function CalibrationPage() {
       {currentInsights && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Key Insights</h2>
-              {viewMode === "single" && prevInsights && prevCycleLabel && (
-                <span className="text-xs text-gray-500">
-                  vs. {formatCyclePeriod(prevCycleLabel)}
-                </span>
-              )}
-              {viewMode === "range" && (
-                <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">
-                  Averaged across {rangeAssessments.length} quarters
-                </Badge>
-              )}
-            </div>
+            <h2 className="card-title">Key Insights</h2>
+            {viewMode === "single" && prevInsights && prevCycleLabel && (
+              <span className="text-xs mono tnum muted">
+                vs. {formatCyclePeriod(prevCycleLabel)}
+              </span>
+            )}
+            {viewMode === "range" && (
+              <Badge variant="navy">
+                Averaged across <span className="mono tnum">{rangeAssessments.length}</span> quarters
+              </Badge>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Talent Density: performance & growth out of 3, plus rolled-up /9 */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Talent Density</p>
+              <p className="eyebrow mb-2">Talent Density</p>
               <div className="grid grid-cols-3 gap-4">
                 <InsightCard
                   label="Performance"
                   value={`${currentInsights.avgPerf.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgPerf}
                   current={currentInsights.avgPerf}
                   showTrend={viewMode === "single"}
@@ -390,7 +398,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Growth Readiness"
                   value={`${currentInsights.avgGrowth.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgGrowth}
                   current={currentInsights.avgGrowth}
                   showTrend={viewMode === "single"}
@@ -398,7 +406,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Rolled-up (Talent Density)"
                   value={`${currentInsights.avgTD.toFixed(1)}/9`}
-                  color={currentInsights.avgTD >= 6 ? "text-green-700" : "text-orange-600"}
+                  color={currentInsights.avgTD >= 6 ? "text-success" : "text-magenta"}
                   prev={prevInsights?.avgTD}
                   current={currentInsights.avgTD}
                   showTrend={viewMode === "single"}
@@ -408,12 +416,12 @@ export default function CalibrationPage() {
 
             {/* Cultural Momentum: engagement & values out of 3, plus rolled-up /9 */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Cultural Momentum</p>
+              <p className="eyebrow mb-2">Cultural Momentum</p>
               <div className="grid grid-cols-3 gap-4">
                 <InsightCard
                   label="Engagement"
                   value={`${currentInsights.avgEngagement.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgEngagement}
                   current={currentInsights.avgEngagement}
                   showTrend={viewMode === "single"}
@@ -421,7 +429,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Values Alignment"
                   value={`${currentInsights.avgValues.toFixed(1)}/3`}
-                  color="text-visory-navy"
+                  color="text-ink"
                   prev={prevInsights?.avgValues}
                   current={currentInsights.avgValues}
                   showTrend={viewMode === "single"}
@@ -429,7 +437,7 @@ export default function CalibrationPage() {
                 <InsightCard
                   label="Rolled-up (Cultural Momentum)"
                   value={`${currentInsights.avgCM.toFixed(1)}/9`}
-                  color={currentInsights.avgCM >= 6 ? "text-green-700" : "text-orange-600"}
+                  color={currentInsights.avgCM >= 6 ? "text-success" : "text-magenta"}
                   prev={prevInsights?.avgCM}
                   current={currentInsights.avgCM}
                   showTrend={viewMode === "single"}
@@ -442,7 +450,7 @@ export default function CalibrationPage() {
               <InsightCard
                 label="Top Talent"
                 value={`${currentInsights.topTalent}/${currentInsights.total}`}
-                color="text-green-700"
+                color="text-success"
                 prev={prevInsights ? prevInsights.topTalent / prevInsights.total * 100 : undefined}
                 current={currentInsights.topTalent / currentInsights.total * 100}
                 showTrend={viewMode === "single"}
@@ -451,7 +459,7 @@ export default function CalibrationPage() {
               <InsightCard
                 label="At Risk"
                 value={`${currentInsights.atRisk + currentInsights.intervene}`}
-                color={currentInsights.atRisk + currentInsights.intervene > 0 ? "text-red-600" : "text-green-700"}
+                color={currentInsights.atRisk + currentInsights.intervene > 0 ? "text-magenta" : "text-success"}
                 prev={prevInsights ? prevInsights.atRisk + prevInsights.intervene : undefined}
                 current={currentInsights.atRisk + currentInsights.intervene}
                 showTrend={viewMode === "single"}
@@ -465,27 +473,29 @@ export default function CalibrationPage() {
       {viewMode === "single" && prevPlacedEmployees.length > 0 && filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Quarter-over-Quarter Movement</h2>
-            <p className="text-xs text-gray-500">
-              {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel)} vs.{" "}
-              {prevCycleLabel && formatCyclePeriod(prevCycleLabel)}
-            </p>
+            <div>
+              <h2 className="card-title">Quarter-over-Quarter Movement</h2>
+              <p className="text-xs mono tnum muted mt-0.5">
+                {selectedCycleLabel && formatCyclePeriod(selectedCycleLabel)} vs.{" "}
+                {prevCycleLabel && formatCyclePeriod(prevCycleLabel)}
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">Employee</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Perf</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Growth</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Values</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">Engage</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">TD</th>
-                    <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">CM</th>
+                  <tr className="dt-head">
+                    <th className="text-left py-2 px-2">Employee</th>
+                    <th className="text-center py-2 px-2">Perf</th>
+                    <th className="text-center py-2 px-2">Growth</th>
+                    <th className="text-center py-2 px-2">Values</th>
+                    <th className="text-center py-2 px-2">Engage</th>
+                    <th className="text-center py-2 px-2">TD</th>
+                    <th className="text-center py-2 px-2">CM</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {filteredEmployees.map((emp) => {
                     const prev = filteredPrev.find((p) => p.id === emp.id);
                     const td = emp.performance * emp.growthReadiness;
@@ -493,34 +503,35 @@ export default function CalibrationPage() {
                     const prevTd = prev ? prev.performance * prev.growthReadiness : null;
                     const prevCm = prev ? prev.valuesAlignment * prev.engagement : null;
                     return (
-                      <tr key={emp.id}>
+                      <tr key={emp.id} className="dt-row">
                         <td className="py-2 px-2">
-                          <Link href={`/team/${emp.id}`} className="text-sm font-medium text-visory-navy hover:underline">
+                          <Link href={`/team/${emp.id}`} className="flex items-center gap-2 text-sm font-medium text-ink hover:text-magenta transition-colors">
+                            <Avatar name={emp.name} size="sm" />
                             {emp.name}
                           </Link>
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.performance}</span>
+                          <span className="text-sm mono tnum">{emp.performance}</span>
                           {prev && <TrendDot current={emp.performance} previous={prev.performance} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.growthReadiness}</span>
+                          <span className="text-sm mono tnum">{emp.growthReadiness}</span>
                           {prev && <TrendDot current={emp.growthReadiness} previous={prev.growthReadiness} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.valuesAlignment}</span>
+                          <span className="text-sm mono tnum">{emp.valuesAlignment}</span>
                           {prev && <TrendDot current={emp.valuesAlignment} previous={prev.valuesAlignment} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className="text-sm">{emp.engagement}</span>
+                          <span className="text-sm mono tnum">{emp.engagement}</span>
                           {prev && <TrendDot current={emp.engagement} previous={prev.engagement} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className={`text-sm font-bold ${td >= 6 ? "text-green-700" : "text-orange-600"}`}>{td}</span>
+                          <span className={`text-sm mono tnum font-semibold ${td >= 6 ? "text-success" : "text-magenta"}`}>{td}</span>
                           {prevTd !== null && <TrendDot current={td} previous={prevTd} />}
                         </td>
                         <td className="py-2 px-2 text-center">
-                          <span className={`text-sm font-bold ${cm >= 6 ? "text-green-700" : "text-orange-600"}`}>{cm}</span>
+                          <span className={`text-sm mono tnum font-semibold ${cm >= 6 ? "text-success" : "text-magenta"}`}>{cm}</span>
                           {prevCm !== null && <TrendDot current={cm} previous={prevCm} />}
                         </td>
                       </tr>
@@ -537,22 +548,23 @@ export default function CalibrationPage() {
       {filteredEmployees.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Prescribed Actions</h2>
+            <h2 className="card-title">Prescribed Actions</h2>
           </CardHeader>
           <CardContent>
-            <div className="divide-y divide-gray-100">
+            <div>
               {filteredEmployees.map((emp) => {
                 const label = activeGrid === "box1" ? emp.box1Label : emp.box2Label;
                 const action = activeGrid === "box1" ? getBox1Action(label) : getBox2Action(label);
                 return (
-                  <div key={emp.id} className="py-3">
+                  <div key={emp.id} className="py-3 border-b border-line last:border-b-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Link href={`/team/${emp.id}`} className="text-sm font-medium text-visory-navy hover:text-visory underline-offset-2 hover:underline transition-colors">
+                      <Link href={`/team/${emp.id}`} className="flex items-center gap-2 text-sm font-medium text-ink hover:text-magenta underline-offset-2 hover:underline transition-colors">
+                        <Avatar name={emp.name} size="sm" />
                         {emp.name}
                       </Link>
-                      <Badge className="bg-visory-light text-visory-dark border-visory/20 text-xs">{label}</Badge>
+                      <Badge variant="slate">{label}</Badge>
                     </div>
-                    <p className="text-sm text-gray-600">{action}</p>
+                    <p className="text-sm muted">{action}</p>
                   </div>
                 );
               })}
@@ -576,14 +588,14 @@ function InsightCard({ label, value, color, prev, current, showTrend, suffix = "
   const diff = prev !== undefined ? current - prev : 0;
   const hasTrend = showTrend && prev !== undefined && Math.abs(diff) >= 0.05;
   return (
-    <div className="text-center p-3 rounded-lg bg-visory-grey">
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    <div className="text-center p-3 rounded-md bg-paper-2 border border-line">
+      <p className={`text-xl mono tnum ${color}`}>{value}</p>
       {hasTrend && (
-        <span className={`text-xs ${diff > 0 ? "text-green-600" : "text-red-500"}`}>
+        <span className={`text-xs mono tnum ${diff > 0 ? "text-success" : "text-magenta"}`}>
           {diff > 0 ? "↑" : "↓"} {Math.abs(diff).toFixed(1)}{suffix}
         </span>
       )}
-      <p className="text-xs text-gray-600 mt-1">{label}</p>
+      <p className="eyebrow mt-1">{label}</p>
     </div>
   );
 }
@@ -592,7 +604,7 @@ function TrendDot({ current, previous }: { current: number; previous: number }) 
   const diff = current - previous;
   if (diff === 0) return null;
   return (
-    <span className={`text-xs ml-0.5 ${diff > 0 ? "text-green-600" : "text-red-500"}`}>
+    <span className={`text-xs ml-0.5 ${diff > 0 ? "text-success" : "text-magenta"}`}>
       {diff > 0 ? "↑" : "↓"}
     </span>
   );

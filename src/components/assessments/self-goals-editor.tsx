@@ -70,20 +70,20 @@ export function SelfGoalsEditor({ employeeId }: { employeeId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-3">
         Set your goals for next quarter. These are saved to your profile as tracked goals (not free text).
       </p>
 
       {!loading && goals.length > 0 && (
         <div className="space-y-2">
           {goals.map((g) => (
-            <div key={g.id} className="flex items-start justify-between rounded-lg border border-gray-200 px-3 py-2">
+            <div key={g.id} className="flex items-start justify-between rounded-lg border border-line px-3 py-2">
               <div>
-                <p className="text-sm font-medium text-visory-navy">{g.title}</p>
-                {g.description && <p className="text-xs text-gray-500">{g.description}</p>}
+                <p className="text-sm font-medium text-ink">{g.title}</p>
+                {g.description && <p className="text-xs text-ink-3">{g.description}</p>}
                 {g.dueDate && (
-                  <Badge className="bg-gray-100 text-gray-600 border-gray-300 text-[11px] mt-1">
-                    Due {new Date(g.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  <Badge variant="slate" className="text-[11px] mt-1">
+                    <span className="mono tnum">Due {new Date(g.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                   </Badge>
                 )}
               </div>
@@ -95,27 +95,27 @@ export function SelfGoalsEditor({ employeeId }: { employeeId: string }) {
         </div>
       )}
 
-      <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+      <div className="rounded-lg border border-line p-3 space-y-2">
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Goal title"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+          className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={2}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-visory"
+          className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
         />
         <div className="flex items-center gap-2">
           <input
             type="date"
             value={due}
             onChange={(e) => setDue(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-visory"
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink mono tnum focus:ring-magenta"
           />
           <Button size="sm" onClick={addGoal} disabled={saving || !title.trim()}>
             {saving ? "Adding..." : "Add Goal"}

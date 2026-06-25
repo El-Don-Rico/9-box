@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,57 +40,49 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-bold text-visory">Visory</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Sign in to Visory Performance
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <Input
-            id="email"
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@visory.com"
-            required
-          />
-          <Input
-            id="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-          />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
-        <p className="mt-3 text-center text-sm">
-          <Link href="/forgot-password" className="text-visory-link hover:underline">
-            Forgot password?
-          </Link>
-        </p>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Have an invitation?{" "}
-          <Link
-            href="/join"
-            className="font-semibold text-visory-link hover:underline"
-          >
-            Join here
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="eyebrow mb-2">Welcome back</div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
+        Sign <em style={{ fontStyle: "italic" }}>in.</em>
+      </h1>
+      <p className="lead mt-1 mb-5">Continue to Visory Performance &amp; Growth.</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="chip chip-magenta w-full justify-start">{error}</div>
+        )}
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@visory.com"
+          required
+        />
+        <Input
+          id="password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter your password"
+          required
+        />
+        <Button type="submit" variant="magenta" className="w-full" disabled={loading}>
+          {loading ? "Signing in…" : "Sign In"}
+        </Button>
+      </form>
+      <p className="mt-4 text-center small">
+        <Link href="/forgot-password" className="text-cobalt hover:underline">
+          Forgot password?
+        </Link>
+      </p>
+      <p className="mt-2 text-center small muted">
+        Have an invitation?{" "}
+        <Link href="/join" className="text-cobalt hover:underline font-medium">
+          Join here
+        </Link>
+      </p>
+    </div>
   );
 }
