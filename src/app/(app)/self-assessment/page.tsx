@@ -9,6 +9,7 @@ import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -20,6 +21,7 @@ export default function SelfAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function SelfAssessmentPage() {
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
+        setEditing(false);
         // Always return to the dashboard after submitting.
         router.push("/dashboard");
       }
@@ -82,12 +85,35 @@ export default function SelfAssessmentPage() {
     }
   }, [cycleId, values]);
 
+  // Re-open a submitted self-assessment for editing via the unlock endpoint.
+  const unlock = useCallback(async () => {
+    if (!assessmentId) return;
+    const res = await fetch("/api/assessments/self/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assessmentId }),
+    });
+    if (res.ok) setEditing(true);
+  }, [assessmentId]);
+
+  // Locked after submit until the employee re-opens it for editing. While
+  // locked the form is read-only.
+  const locked = isSubmitted && !editing;
+
   const steps: StepConfig[] = [
     {
       id: "performance",
       title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
+      footer: session?.user?.id ? (
+        <>
+          <GoalsPanel employeeId={session.user.id} />
+          {cycleId && (
+            <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
+          )}
+        </>
+      ) : undefined,
     },
     {
       id: "performanceJustification",
@@ -175,10 +201,14 @@ export default function SelfAssessmentPage() {
           </p>
         </div>
       )}
-      {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
-      {session?.user?.id && cycleId && (
-        <div className="max-w-2xl mx-auto mb-6">
-          <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
+      {isSubmitted && !editing && (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">
+          <p className="text-sm text-ink-2">
+            This assessment has been submitted. You can re-open it to edit — changes are recorded in the audit log.
+          </p>
+          <Button size="sm" variant="magenta" className="shrink-0" disabled={!assessmentId} onClick={unlock}>
+            Edit assessment
+          </Button>
         </div>
       )}
       <StepForm
@@ -189,7 +219,7 @@ export default function SelfAssessmentPage() {
         onSubmit={() => save(true)}
         saving={saving}
         submitting={submitting}
-        isSubmitted={isSubmitted}
+        isSubmitted={locked}
       />
     </div>
   );
