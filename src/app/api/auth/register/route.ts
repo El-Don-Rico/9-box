@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// An invitation's `managerId` carries no foreign key (see migration 0003), so it
+// can point at a user who has since been removed. Copying a stale id straight
+// into `User.create` would trip the User.managerId FK and fail the whole
+// registration. Resolve it to null when the referenced manager no longer exists.
+async function resolveManagerId(managerId: string | null): Promise<string | null> {
+  if (!managerId) return null;
+  const manager = await prisma.user.findUnique({
+    where: { id: managerId },
+    select: { id: true },
+  });
+  return manager ? managerId : null;
+}
+
 export async function POST(request: Request) {
   try {
     const { name, email, password, token } = await request.json();
@@ -42,7 +55,8 @@ export async function POST(request: Request) {
           jobTitle: invitation.jobTitle,
           team: invitation.team,
           role: invitation.role,
-          managerId: invitation.managerId,
+          managerId: await resolveManagerId(invitation.managerId),
+          isActive: true,
         },
       });
 
@@ -68,7 +82,8 @@ export async function POST(request: Request) {
           jobTitle: invitation.jobTitle,
           team: invitation.team,
           role: invitation.role,
-          managerId: invitation.managerId,
+          managerId: await resolveManagerId(invitation.managerId),
+          isActive: true,
         },
       });
 
@@ -86,11 +101,15 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash },
+      data: { name, email, passwordHash, isActive: true },
     });
 
     return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 });
-  } catch {
+  } catch (error) {
+    // Surface the real cause in the server logs — the previous bare `catch`
+    // collapsed every failure into an opaque "Internal server error" with no
+    // way to diagnose it from the Vercel runtime logs.
+    console.error("Registration failed:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
