@@ -511,7 +511,12 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
           createPortal(
             <DragOverlay>
               {activeMember ? (
-                <div className="card border-magenta p-3 shadow-lg w-[210px]">
+                // dnd-kit sizes this overlay's wrapper to the source card's real
+                // measured width. Match it with w-full (not a fixed width) and the
+                // source card's p-2.5 padding so the visible tile exactly covers the
+                // card you grabbed — a hardcoded width left the cursor off the tile
+                // whenever the column (flex-1) grew wider than that fixed value.
+                <div className="card border-magenta p-2.5 shadow-lg w-full cursor-grabbing">
                   <CardBody member={activeMember} />
                 </div>
               ) : null}
