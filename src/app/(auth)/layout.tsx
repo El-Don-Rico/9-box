@@ -1,5 +1,3 @@
-import { VisoryMark } from "@/components/brand/visory-mark";
-
 export default function AuthLayout({
   children,
 }: {
@@ -11,7 +9,7 @@ export default function AuthLayout({
         <div className="splash-art">
           <div className="flex items-center gap-3">
             <span className="brand-mark">
-              <VisoryMark size={18} color="#fff" />
+              <span className="v-glyph" />
             </span>
             <div>
               <div className="brand-name" style={{ color: "#fff" }}>

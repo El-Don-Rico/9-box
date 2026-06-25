@@ -293,6 +293,15 @@ h1, h2, h3, h4 {
   padding-bottom: 3px;
 }
 .theme-pulse .brand-mark { border-radius: 6px; }
+/* The "v" is masked from /public/visory-mark.svg so the color comes from here
+   (white on the magenta tile). Replace that file with the official asset for a
+   zero-code, correctly-colored swap. */
+.brand-mark .v-glyph {
+  width: 18px; height: 18px;
+  background: #fff;
+  -webkit-mask: url(/visory-mark.svg) center / contain no-repeat;
+  mask: url(/visory-mark.svg) center / contain no-repeat;
+}
 .brand-name {
   font-family: var(--font-display);
   font-size: 22px;
