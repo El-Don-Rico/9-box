@@ -52,15 +52,19 @@ export function GoalsPanel({
   employeeId,
   cycleId,
   editable = false,
+  onMetricsStatus,
 }: {
   employeeId: string;
   cycleId?: string | null;
   editable?: boolean;
+  /** Reports how many key metrics exist and how many have a saved actual. */
+  onMetricsStatus?: (status: { total: number; complete: number }) => void;
 }) {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(!editable);
+  const [completedMetricIds, setCompletedMetricIds] = useState<Set<string>>(new Set());
 
   const query = (path: string) =>
     `${path}?employeeId=${employeeId}${cycleId ? `&cycleId=${cycleId}` : ""}`;
@@ -77,12 +81,22 @@ export function GoalsPanel({
             (goal) => goal.status === "ACTIVE" || (goal.updates && goal.updates.length > 0)
           )
         );
-        setMetrics(Array.isArray(m) ? m : []);
+        const ms: MetricData[] = Array.isArray(m) ? m : [];
+        setMetrics(ms);
+        setCompletedMetricIds(
+          new Set(ms.filter((metric) => (metric.results?.[0]?.actual ?? "").trim()).map((metric) => metric.id))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId, cycleId]);
+
+  // Report key-metric completion so a parent can gate on it.
+  useEffect(() => {
+    onMetricsStatus?.({ total: metrics.length, complete: completedMetricIds.size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metrics, completedMetricIds]);
 
   if (loading) return null;
   if (goals.length === 0 && metrics.length === 0) return null;
@@ -117,7 +131,19 @@ export function GoalsPanel({
               <p className="eyebrow mb-2">Key Metrics</p>
               <div className="space-y-2">
                 {metrics.map((m) => (
-                  <MetricRow key={m.id} metric={m} cycleId={cycleId} editable={editable} />
+                  <MetricRow
+                    key={m.id}
+                    metric={m}
+                    cycleId={cycleId}
+                    editable={editable}
+                    onSaved={() =>
+                      setCompletedMetricIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(m.id);
+                        return next;
+                      })
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -142,10 +168,12 @@ function MetricRow({
   metric,
   cycleId,
   editable,
+  onSaved,
 }: {
   metric: MetricData;
   cycleId?: string | null;
   editable: boolean;
+  onSaved?: () => void;
 }) {
   const existing = metric.results?.[0];
   const [actual, setActual] = useState(existing?.actual ?? "");
@@ -166,6 +194,7 @@ function MetricRow({
       });
       if (res.ok) {
         setSaved(true);
+        onSaved?.();
         setTimeout(() => setSaved(false), 2000);
       } else {
         const e = await res.json().catch(() => ({}));

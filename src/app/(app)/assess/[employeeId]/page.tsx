@@ -2,21 +2,17 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
-import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
 import { ActionsEditor } from "@/components/meetings/actions-editor";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function ManagerAssessPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
   const cycleId = searchParams.get("cycleId");
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
@@ -26,6 +22,8 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [resultsSent, setResultsSent] = useState(false);
   const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
+  // Whether every key metric has a saved actual result (gates step 1).
+  const [metricsComplete, setMetricsComplete] = useState(true);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -86,12 +84,35 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
     }
   }, [cycleId, employeeId, values]);
 
+  // Locked once results are sent, or after submit until the manager re-opens
+  // it for editing. While locked the form is read-only and never gates Next.
+  const locked = resultsSent || (isSubmitted && !editing);
+
   const steps: StepConfig[] = [
     {
       id: "performance",
       title: `Performance Rating${employeeName ? ` for ${employeeName}` : ""}`,
       description: "Rate this employee's performance against objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.manager} />,
+      // Block advancing past Performance Rating until every key metric has a
+      // saved actual result — it's the second most important thing to complete.
+      blockNext: !locked && !metricsComplete,
+      blockNextHint: "Record an actual result for each key metric to continue.",
+      footer: (
+        <>
+          <GoalsPanel
+            employeeId={employeeId}
+            cycleId={cycleId}
+            editable={!locked}
+            onMetricsStatus={({ total, complete }) => setMetricsComplete(total === 0 || complete >= total)}
+          />
+          <ActionsEditor
+            employeeId={employeeId}
+            readOnly
+            assigneeOptions={[{ id: employeeId, name: employeeName || "Employee" }]}
+          />
+        </>
+      ),
     },
     {
       id: "performanceEvidence",
@@ -166,27 +187,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         title={<>Assess <em>{employeeName || "report"}.</em></>}
         sub={employeeName ? `Rate ${employeeName} across performance, growth, values and engagement.` : undefined}
       />
-      <GoalsPanel employeeId={employeeId} cycleId={cycleId} editable />
-
-      <div className="max-w-2xl mx-auto mb-6">
-        <ReviewNotesPanel employeeId={employeeId} cycleId={cycleId} currentUserId={session?.user?.id} />
-      </div>
-
-      <div className="max-w-2xl mx-auto mb-6">
-        <Card>
-          <ActionsEditor
-            employeeId={employeeId}
-            readOnly={resultsSent}
-            assigneeOptions={[
-              { id: employeeId, name: employeeName || "Employee" },
-              ...(session?.user?.id && session.user.id !== employeeId
-                ? [{ id: session.user.id, name: session.user.name || "You" }]
-                : []),
-            ]}
-          />
-        </Card>
-      </div>
-
       {resultsSent ? (
         <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-paper-2 border border-line p-4 text-sm text-ink-2">
           Results have been sent to the employee. This assessment is locked and can no longer be edited.
