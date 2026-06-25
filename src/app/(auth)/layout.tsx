@@ -1,3 +1,5 @@
+import { VisoryMark } from "@/components/brand/visory-mark";
+
 export default function AuthLayout({
   children,
 }: {
@@ -8,12 +10,14 @@ export default function AuthLayout({
       <div className="splash-card fade-up">
         <div className="splash-art">
           <div className="flex items-center gap-3">
-            <span className="brand-mark">v</span>
+            <span className="brand-mark">
+              <VisoryMark size={18} color="#fff" />
+            </span>
             <div>
               <div className="brand-name" style={{ color: "#fff" }}>
                 Visory
               </div>
-              <div className="brand-sub">Performance</div>
+              <div className="brand-sub">Performance &amp; Growth</div>
             </div>
           </div>
           <div>
@@ -22,9 +26,15 @@ export default function AuthLayout({
             </div>
             <h2
               className="serif"
-              style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-0.02em", marginTop: 8 }}
+              style={{
+                fontSize: 38,
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
+                marginTop: 8,
+                color: "rgba(255,255,255,0.92)",
+              }}
             >
-              Performance, <em style={{ fontStyle: "italic" }}>clearly.</em>
+              Performance and growth, <em style={{ fontStyle: "italic" }}>clearly.</em>
             </h2>
           </div>
         </div>

@@ -27,8 +27,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Visory Performance",
-  description: "Quarterly performance management and 9-box assessment tool",
+  title: "Visory Performance & Growth",
+  description: "Quarterly performance and growth management with 9-box assessment",
 };
 
 export default function RootLayout({

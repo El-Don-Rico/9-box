@@ -45,7 +45,7 @@ export default function LoginPage() {
       <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-0.02em" }}>
         Sign <em style={{ fontStyle: "italic" }}>in.</em>
       </h1>
-      <p className="lead mt-1 mb-5">Continue to Visory Performance.</p>
+      <p className="lead mt-1 mb-5">Continue to Visory Performance &amp; Growth.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="chip chip-magenta w-full justify-start">{error}</div>

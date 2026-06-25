@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn, getRoleDisplayName } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
+import { VisoryMark } from "@/components/brand/visory-mark";
 
 interface NavItem {
   href: string;
@@ -79,13 +80,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="sidebar">
-      <div className="brand">
-        <span className="brand-mark">v</span>
+      <Link href="/dashboard" className="brand" aria-label="Visory — go to dashboard">
+        <span className="brand-mark">
+          <VisoryMark size={18} color="#fff" />
+        </span>
         <div>
           <div className="brand-name">Visory</div>
-          <div className="brand-sub">Performance</div>
+          <div className="brand-sub">Performance &amp; Growth</div>
         </div>
-      </div>
+      </Link>
 
       <div className="nav flex-1 overflow-y-auto">
         {sections.map((section) => (
