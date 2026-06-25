@@ -14,7 +14,6 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -136,7 +135,7 @@ function MemberCard({
   // dropping elsewhere is ignored in handleDragEnd.
   const draggable = (settable || column === "NOT_READY") && !closed;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: member.id,
     disabled: !draggable,
   });
@@ -147,7 +146,10 @@ function MemberCard({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
+      // The DragOverlay (below) is what follows the cursor while dragging, so the
+      // source card must stay put — only dim it. Applying the drag transform here
+      // too made the original tile jump on pickup ("doesn't cleanly select").
+      style={{ opacity: isDragging ? 0.4 : 1 }}
       className={`card ${draggable ? "card-hover" : ""} p-2.5 ${closed ? "opacity-70" : ""}`}
     >
       <div className="flex items-start justify-between gap-1.5">
