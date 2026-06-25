@@ -52,27 +52,19 @@ export function GoalsPanel({
   employeeId,
   cycleId,
   editable = false,
-  section = "all",
-  title,
-  requireNote = false,
+  onMetricsStatus,
 }: {
   employeeId: string;
   cycleId?: string | null;
   editable?: boolean;
-  /** which part of the panel to render */
-  section?: "all" | "metrics" | "goals";
-  /** override the collapsible header label */
-  title?: string;
-  /** require a note (not just an actual) when saving a metric result */
-  requireNote?: boolean;
+  /** Reports how many key metrics exist and how many have a saved actual. */
+  onMetricsStatus?: (status: { total: number; complete: number }) => void;
 }) {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(!editable);
-
-  const showMetrics = section !== "goals";
-  const showGoals = section !== "metrics";
+  const [completedMetricIds, setCompletedMetricIds] = useState<Set<string>>(new Set());
 
   const query = (path: string) =>
     `${path}?employeeId=${employeeId}${cycleId ? `&cycleId=${cycleId}` : ""}`;
@@ -89,18 +81,25 @@ export function GoalsPanel({
             (goal) => goal.status === "ACTIVE" || (goal.updates && goal.updates.length > 0)
           )
         );
-        setMetrics(Array.isArray(m) ? m : []);
+        const ms: MetricData[] = Array.isArray(m) ? m : [];
+        setMetrics(ms);
+        setCompletedMetricIds(
+          new Set(ms.filter((metric) => (metric.results?.[0]?.actual ?? "").trim()).map((metric) => metric.id))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId, cycleId]);
 
-  const shownGoals = showGoals ? goals : [];
-  const shownMetrics = showMetrics ? metrics : [];
+  // Report key-metric completion so a parent can gate on it.
+  useEffect(() => {
+    onMetricsStatus?.({ total: metrics.length, complete: completedMetricIds.size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metrics, completedMetricIds]);
 
   if (loading) return null;
-  if (shownGoals.length === 0 && shownMetrics.length === 0) return null;
+  if (goals.length === 0 && metrics.length === 0) return null;
 
   return (
     <div className="max-w-2xl mx-auto mb-6">
@@ -112,11 +111,10 @@ export function GoalsPanel({
         <div className="flex items-center gap-2">
           <Target size={16} strokeWidth={1.6} className="text-ink-2" />
           <span className="text-sm font-medium text-ink">
-            {title ??
-              `${showGoals && showMetrics ? "Goals & Key Metrics" : showMetrics ? "Key Metrics" : "Goals"}${editable ? " — Review" : ""}`}
+            Goals &amp; Key Metrics{editable ? " — Review" : ""}
           </span>
           <Badge variant="slate" className="mono tnum">
-            {shownGoals.length + shownMetrics.length}
+            {goals.length + metrics.length}
           </Badge>
         </div>
         <ChevronDown
@@ -128,21 +126,33 @@ export function GoalsPanel({
 
       {!collapsed && (
         <div className="border border-t-0 border-line rounded-b-lg p-4 space-y-4">
-          {shownMetrics.length > 0 && (
+          {metrics.length > 0 && (
             <div>
               <p className="eyebrow mb-2">Key Metrics</p>
               <div className="space-y-2">
-                {shownMetrics.map((m) => (
-                  <MetricRow key={m.id} metric={m} cycleId={cycleId} editable={editable} requireNote={requireNote} />
+                {metrics.map((m) => (
+                  <MetricRow
+                    key={m.id}
+                    metric={m}
+                    cycleId={cycleId}
+                    editable={editable}
+                    onSaved={() =>
+                      setCompletedMetricIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(m.id);
+                        return next;
+                      })
+                    }
+                  />
                 ))}
               </div>
             </div>
           )}
-          {shownGoals.length > 0 && (
+          {goals.length > 0 && (
             <div>
               <p className="eyebrow mb-2">Goals</p>
               <div className="space-y-2">
-                {shownGoals.map((g) => (
+                {goals.map((g) => (
                   <GoalRow key={g.id} goal={g} cycleId={cycleId} editable={editable} />
                 ))}
               </div>
@@ -158,12 +168,12 @@ function MetricRow({
   metric,
   cycleId,
   editable,
-  requireNote = false,
+  onSaved,
 }: {
   metric: MetricData;
   cycleId?: string | null;
   editable: boolean;
-  requireNote?: boolean;
+  onSaved?: () => void;
 }) {
   const existing = metric.results?.[0];
   const [actual, setActual] = useState(existing?.actual ?? "");
@@ -172,10 +182,8 @@ function MetricRow({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const complete = actual.trim().length > 0 && (!requireNote || note.trim().length > 0);
-
   async function save() {
-    if (!cycleId || !complete) return;
+    if (!cycleId || !actual.trim()) return;
     setSaving(true);
     setError(null);
     try {
@@ -186,6 +194,7 @@ function MetricRow({
       });
       if (res.ok) {
         setSaved(true);
+        onSaved?.();
         setTimeout(() => setSaved(false), 2000);
       } else {
         const e = await res.json().catch(() => ({}));
@@ -216,7 +225,7 @@ function MetricRow({
               placeholder={`Actual result${metric.unit ? ` (${metric.unit})` : ""}`}
               className="flex-1 rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
             />
-            <Button size="sm" onClick={save} disabled={saving || !complete}>
+            <Button size="sm" onClick={save} disabled={saving || !actual.trim()}>
               {saving ? "Saving..." : saved ? "Saved ✓" : "Save"}
             </Button>
           </div>
@@ -224,12 +233,9 @@ function MetricRow({
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder={requireNote ? "Note (required)" : "Note (optional)"}
+            placeholder="Note (optional)"
             className="w-full rounded-lg border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-magenta"
           />
-          {requireNote && !complete && (
-            <p className="text-xs text-ink-3">Enter an actual result and a note to record this metric.</p>
-          )}
           {error && <p className="text-xs text-magenta">{error}</p>}
         </div>
       ) : (

@@ -22,6 +22,8 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
   const [resultsSent, setResultsSent] = useState(false);
   const [editing, setEditing] = useState(false);
   const [employeeName, setEmployeeName] = useState("");
+  // Whether every key metric has a saved actual result (gates step 1).
+  const [metricsComplete, setMetricsComplete] = useState(true);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -82,20 +84,27 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
     }
   }, [cycleId, employeeId, values]);
 
+  // Locked once results are sent, or after submit until the manager re-opens
+  // it for editing. While locked the form is read-only and never gates Next.
+  const locked = resultsSent || (isSubmitted && !editing);
+
   const steps: StepConfig[] = [
     {
       id: "performance",
       title: `Performance Rating${employeeName ? ` for ${employeeName}` : ""}`,
       description: "Rate this employee's performance against objectives.",
       render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.manager} />,
+      // Block advancing past Performance Rating until every key metric has a
+      // saved actual result — it's the second most important thing to complete.
+      blockNext: !locked && !metricsComplete,
+      blockNextHint: "Record an actual result for each key metric to continue.",
       footer: (
         <>
           <GoalsPanel
             employeeId={employeeId}
             cycleId={cycleId}
-            editable={!resultsSent && !(isSubmitted && !editing)}
-            section="metrics"
-            requireNote
+            editable={!locked}
+            onMetricsStatus={({ total, complete }) => setMetricsComplete(total === 0 || complete >= total)}
           />
           <ActionsEditor
             employeeId={employeeId}
@@ -178,13 +187,6 @@ export default function ManagerAssessPage({ params }: { params: Promise<{ employ
         title={<>Assess <em>{employeeName || "report"}.</em></>}
         sub={employeeName ? `Rate ${employeeName} across performance, growth, values and engagement.` : undefined}
       />
-      <GoalsPanel
-        employeeId={employeeId}
-        cycleId={cycleId}
-        editable={!resultsSent && !(isSubmitted && !editing)}
-        section="goals"
-      />
-
       {resultsSent ? (
         <div className="max-w-2xl mx-auto mb-6 rounded-lg bg-paper-2 border border-line p-4 text-sm text-ink-2">
           Results have been sent to the employee. This assessment is locked and can no longer be edited.
