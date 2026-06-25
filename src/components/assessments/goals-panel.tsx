@@ -53,17 +53,23 @@ export function GoalsPanel({
   cycleId,
   editable = false,
   onMetricsStatus,
+  className,
+  defaultOpen,
 }: {
   employeeId: string;
   cycleId?: string | null;
   editable?: boolean;
   /** Reports how many key metrics exist and how many have a saved actual. */
   onMetricsStatus?: (status: { total: number; complete: number }) => void;
+  /** Override the wrapper classes (defaults to a centred, narrow column). */
+  className?: string;
+  /** Render expanded on first paint regardless of edit mode. */
+  defaultOpen?: boolean;
 }) {
   const [goals, setGoals] = useState<GoalData[]>([]);
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(!editable);
+  const [collapsed, setCollapsed] = useState(defaultOpen ? false : !editable);
   const [completedMetricIds, setCompletedMetricIds] = useState<Set<string>>(new Set());
 
   const query = (path: string) =>
@@ -102,7 +108,7 @@ export function GoalsPanel({
   if (goals.length === 0 && metrics.length === 0) return null;
 
   return (
-    <div className="max-w-2xl mx-auto mb-6">
+    <div className={className ?? "max-w-2xl mx-auto mb-6"}>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
