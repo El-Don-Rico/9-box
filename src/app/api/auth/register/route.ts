@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // An invitation's `managerId` carries no foreign key (see migration 0003), so it
@@ -13,6 +14,39 @@ async function resolveManagerId(managerId: string | null): Promise<string | null
     select: { id: true },
   });
   return manager ? managerId : null;
+}
+
+// Build the create payload for an invited user, OMITTING any optional field that
+// has no value rather than passing it as an explicit `null`.
+//
+// Why: production's `User` table drifted from this schema (it was first created
+// with `prisma db push` from an older schema — see migration 0016). On prod,
+// `jobTitle`/`team` carry a NOT NULL constraint with a default, so sending an
+// explicit `null` trips a `P2011` null-constraint violation, whereas omitting
+// the field lets the column default apply. Invitations very often have no
+// jobTitle/team (they default to null when an admin invites without them), so
+// the invite registration path used to 500 for those users. Omitting null
+// values mirrors how the open-registration path already behaves and keeps the
+// route resilient to the column drift.
+function buildInvitedUserData(params: {
+  name: string;
+  email: string;
+  passwordHash: string;
+  jobTitle: string | null;
+  team: string | null;
+  role: Prisma.UserUncheckedCreateInput["role"];
+  managerId: string | null;
+}): Prisma.UserUncheckedCreateInput {
+  return {
+    name: params.name,
+    email: params.email,
+    passwordHash: params.passwordHash,
+    role: params.role,
+    isActive: true,
+    ...(params.jobTitle ? { jobTitle: params.jobTitle } : {}),
+    ...(params.team ? { team: params.team } : {}),
+    ...(params.managerId ? { managerId: params.managerId } : {}),
+  };
 }
 
 export async function POST(request: Request) {
@@ -48,7 +82,7 @@ export async function POST(request: Request) {
       }
 
       const user = await prisma.user.create({
-        data: {
+        data: buildInvitedUserData({
           name: name || invitation.name,
           email: invitation.email,
           passwordHash,
@@ -56,8 +90,7 @@ export async function POST(request: Request) {
           team: invitation.team,
           role: invitation.role,
           managerId: await resolveManagerId(invitation.managerId),
-          isActive: true,
-        },
+        }),
       });
 
       await prisma.invitation.update({
@@ -75,7 +108,7 @@ export async function POST(request: Request) {
 
     if (invitation) {
       const user = await prisma.user.create({
-        data: {
+        data: buildInvitedUserData({
           name: name || invitation.name,
           email: invitation.email,
           passwordHash,
@@ -83,8 +116,7 @@ export async function POST(request: Request) {
           team: invitation.team,
           role: invitation.role,
           managerId: await resolveManagerId(invitation.managerId),
-          isActive: true,
-        },
+        }),
       });
 
       await prisma.invitation.update({
