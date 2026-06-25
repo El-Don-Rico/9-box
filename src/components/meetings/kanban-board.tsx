@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -361,6 +362,11 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
     reason: "incomplete" | "no-mgr-assessment";
   } | null>(null);
 
+  // The DragOverlay is portaled to <body> (see below). Gate it behind a mounted
+  // flag so it only renders client-side, where document.body exists.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     setItems(members);
   }, [members]);
@@ -497,13 +503,21 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
             />
           ))}
         </div>
-        <DragOverlay>
-          {activeMember ? (
-            <div className="card border-magenta p-3 shadow-lg w-[210px]">
-              <CardBody member={activeMember} />
-            </div>
-          ) : null}
-        </DragOverlay>
+        {/* Portal the overlay to <body> so its position:fixed is anchored to the
+            viewport. Rendered inside an ancestor (the page <main> runs a transform
+            animation), a transformed ancestor becomes the containing block and the
+            dragged tile drifts away from the cursor. */}
+        {mounted &&
+          createPortal(
+            <DragOverlay>
+              {activeMember ? (
+                <div className="card border-magenta p-3 shadow-lg w-[210px]">
+                  <CardBody member={activeMember} />
+                </div>
+              ) : null}
+            </DragOverlay>,
+            document.body
+          )}
       </DndContext>
 
       {sendTarget && (
