@@ -37,19 +37,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Diagnostic logging: collapse-to-null hides why a login failed, which
         // made an invited user's sign-in failure impossible to triage from the
-        // runtime logs. Log the discriminating reason (never the password/hash).
+        // runtime logs. Log the discriminating reason and the user id where we
+        // have one, but never the email address, password, or hash.
         if (!user) {
-          console.warn(`[auth] login rejected: no user found for "${normalizedEmail}"`);
+          console.warn("[auth] login rejected: no matching user");
           return null;
         }
         if (!user.isActive) {
-          console.warn(`[auth] login rejected: user ${user.id} (${user.email}) is inactive`);
+          console.warn(`[auth] login rejected: user ${user.id} is inactive`);
           return null;
         }
 
         const passwordMatch = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatch) {
-          console.warn(`[auth] login rejected: password mismatch for user ${user.id} (${user.email})`);
+          console.warn(`[auth] login rejected: password mismatch for user ${user.id}`);
           return null;
         }
 

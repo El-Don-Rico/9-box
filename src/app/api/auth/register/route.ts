@@ -61,7 +61,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // Store and look up emails in a single canonical (lowercased, trimmed) form.
+    // Email is case-insensitive, so keeping one casing prevents near-duplicate
+    // accounts and the login mismatches that come from storing mixed casing.
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
@@ -77,14 +82,14 @@ export async function POST(request: Request) {
       if (invitation.usedAt) {
         return NextResponse.json({ error: "This invitation has already been used" }, { status: 400 });
       }
-      if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+      if (invitation.email.toLowerCase() !== normalizedEmail) {
         return NextResponse.json({ error: "Email does not match the invitation" }, { status: 400 });
       }
 
       const user = await prisma.user.create({
         data: buildInvitedUserData({
           name: name || invitation.name,
-          email: invitation.email,
+          email: invitation.email.toLowerCase(),
           passwordHash,
           jobTitle: invitation.jobTitle,
           team: invitation.team,
@@ -103,14 +108,14 @@ export async function POST(request: Request) {
 
     // No token: look up pending invitation by email
     const invitation = await prisma.invitation.findFirst({
-      where: { email: { equals: email, mode: "insensitive" }, usedAt: null },
+      where: { email: { equals: normalizedEmail, mode: "insensitive" }, usedAt: null },
     });
 
     if (invitation) {
       const user = await prisma.user.create({
         data: buildInvitedUserData({
           name: name || invitation.name,
-          email: invitation.email,
+          email: invitation.email.toLowerCase(),
           passwordHash,
           jobTitle: invitation.jobTitle,
           team: invitation.team,
@@ -133,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, isActive: true },
+      data: { name, email: normalizedEmail, passwordHash, isActive: true },
     });
 
     return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 });
