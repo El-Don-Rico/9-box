@@ -54,14 +54,20 @@ export interface CycleDueDates {
 }
 
 /**
- * Target due dates for a cycle's close-out, anchored to the final calendar month
- * of the period (the last month of the quarter, or a legacy month):
+ * Target due dates for a cycle's close-out, anchored to the calendar month that
+ * follows the end of the period. A quarter can't be reviewed until it has
+ * closed, so the close-out happens the month after the quarter's final month
+ * (e.g. Q2 ends Jun 30 → reviewed in July). Legacy month cycles keep their
+ * original month. In each case:
  *  - Ready to Meet by the 10th
  *  - Meeting Complete by the 20th
  *  - Results Sent / Review Complete by the 25th
  */
 export function getCycleDueDates(period: CyclePeriod): CycleDueDates {
-  const month = period.quarter ? period.quarter * 3 : period.month ?? 12;
+  // quarter * 3 is the quarter's last month; + 1 rolls to the month after it
+  // ends. Month 13 (Q4) overflows to January of the following year, which is
+  // the correct close-out for a quarter that ends in December.
+  const month = period.quarter ? period.quarter * 3 + 1 : period.month ?? 12;
   return {
     readyToMeet: new Date(period.year, month - 1, 10),
     meetingComplete: new Date(period.year, month - 1, 20),
