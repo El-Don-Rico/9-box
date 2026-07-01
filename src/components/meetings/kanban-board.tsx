@@ -514,6 +514,9 @@ export function KanbanBoard({ members, cycle }: { members: TeamMemberStatus[]; c
         READY_TO_MEET: dueDates.meetingComplete,
         MEETING_SCHEDULED: dueDates.meetingComplete,
         MEETING_COMPLETE: dueDates.resultsSent,
+        // Terminal column shares the results deadline so its header keeps a
+        // "by <date>" line, matching the other columns and staying aligned.
+        REVIEW_COMPLETE: dueDates.resultsSent,
       }
     : {};
 
