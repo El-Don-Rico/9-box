@@ -60,12 +60,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "cycleId and employeeId are required" }, { status: 400 });
   }
 
-  // Verify cycle is open
-  const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
-  if (!cycle || cycle.status !== "OPEN") {
-    return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
-  }
-
   // Verify employee is a direct report
   const employee = await prisma.user.findFirst({
     where: { id: employeeId, managerId: session.user.id },
@@ -79,6 +73,15 @@ export async function POST(request: Request) {
       cycleId_managerId_employeeId: { cycleId, managerId: session.user.id, employeeId },
     },
   });
+
+  // The cycle must be OPEN to CREATE a brand-new assessment. An existing
+  // assessment can be edited at any point — even after the cycle is closed.
+  if (!existing) {
+    const cycle = await prisma.assessmentCycle.findUnique({ where: { id: cycleId } });
+    if (!cycle || cycle.status !== "OPEN") {
+      return NextResponse.json({ error: "Cycle is not open" }, { status: 400 });
+    }
+  }
 
   // Once results have been sent the assessment is locked — no further edits.
   if (existing?.resultsSentAt) {

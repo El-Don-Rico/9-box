@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { StepForm, RatingStep, TextStep, MultiRatingStep, type StepConfig } from "@/components/assessments/step-form";
+import { StepForm, TextStep, MultiRatingStep, RatingWithComment, type StepConfig } from "@/components/assessments/step-form";
 import { assessmentPrompts } from "@/lib/assessment-prompts";
 import { GoalsPanel } from "@/components/assessments/goals-panel";
-import { ReviewNotesPanel } from "@/components/assessments/review-notes-panel";
+import { ActionsEditor } from "@/components/meetings/actions-editor";
 import { SelfGoalsEditor } from "@/components/assessments/self-goals-editor";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 
 export default function SelfAssessmentPage() {
   const { data: session } = useSession();
@@ -20,6 +21,7 @@ export default function SelfAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function SelfAssessmentPage() {
       setAssessmentId(data.id);
       if (submit) {
         setIsSubmitted(true);
+        setEditing(false);
         // Always return to the dashboard after submitting.
         router.push("/dashboard");
       }
@@ -82,17 +85,49 @@ export default function SelfAssessmentPage() {
     }
   }, [cycleId, values]);
 
+  // Re-open a submitted self-assessment for editing via the unlock endpoint.
+  const unlock = useCallback(async () => {
+    if (!assessmentId) return;
+    const res = await fetch("/api/assessments/self/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assessmentId }),
+    });
+    if (res.ok) setEditing(true);
+  }, [assessmentId]);
+
+  // Locked after submit until the employee re-opens it for editing. While
+  // locked the form is read-only.
+  const locked = isSubmitted && !editing;
+
   const steps: StepConfig[] = [
     {
       id: "performance",
       title: "How would you rate your performance this quarter?",
       description: "Consider your output, quality of work, and meeting of objectives.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.performance?.self} />,
-    },
-    {
-      id: "performanceJustification",
-      title: "What evidence supports your performance rating?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="Describe your key contributions and results..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="performance"
+          commentId="performanceJustification"
+          prompts={assessmentPrompts.performance?.self}
+          commentPlaceholder="Describe your key contributions and the evidence behind your rating..."
+        />
+      ),
+      // Mirror what the manager sees under their Performance step: the
+      // goals & key-metrics panel plus the tasks/actions list. (No review
+      // notes — those stay manager-only, as on the manager flow.)
+      footer: session?.user?.id ? (
+        <>
+          <GoalsPanel employeeId={session.user.id} cycleId={cycleId} editable={!locked} showGoalNotes={false} />
+          <ActionsEditor
+            employeeId={session.user.id}
+            readOnly
+            assigneeOptions={[{ id: session.user.id, name: session.user.name || "You" }]}
+          />
+        </>
+      ) : undefined,
     },
     {
       id: "achievements",
@@ -133,12 +168,16 @@ export default function SelfAssessmentPage() {
       id: "engagement",
       title: "How engaged do you feel at work?",
       description: "Consider your motivation, energy, and connection to the team.",
-      render: (val, onChange) => <RatingStep value={val as number | null} onChange={onChange as (v: number) => void} prompts={assessmentPrompts.engagement?.self} />,
-    },
-    {
-      id: "engagementDriver",
-      title: "What's driving your engagement level?",
-      render: (val, onChange) => <TextStep value={val as string} onChange={onChange as (v: string) => void} placeholder="What energises or drains you at work..." />,
+      renderMulti: (vals, onChange) => (
+        <RatingWithComment
+          values={vals}
+          onChange={onChange}
+          ratingId="engagement"
+          commentId="engagementDriver"
+          prompts={assessmentPrompts.engagement?.self}
+          commentPlaceholder="What's driving your engagement level — what energises or drains you..."
+        />
+      ),
     },
     {
       id: "supportNeeded",
@@ -175,10 +214,14 @@ export default function SelfAssessmentPage() {
           </p>
         </div>
       )}
-      {session?.user?.id && <GoalsPanel employeeId={session.user.id} />}
-      {session?.user?.id && cycleId && (
-        <div className="max-w-2xl mx-auto mb-6">
-          <ReviewNotesPanel employeeId={session.user.id} cycleId={cycleId} currentUserId={session.user.id} />
+      {isSubmitted && !editing && (
+        <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 rounded-lg bg-paper-2 border border-amber/40 p-4">
+          <p className="text-sm text-ink-2">
+            This assessment has been submitted. You can re-open it to edit — changes are recorded in the audit log.
+          </p>
+          <Button size="sm" variant="magenta" className="shrink-0" disabled={!assessmentId} onClick={unlock}>
+            Edit assessment
+          </Button>
         </div>
       )}
       <StepForm
@@ -189,7 +232,7 @@ export default function SelfAssessmentPage() {
         onSubmit={() => save(true)}
         saving={saving}
         submitting={submitting}
-        isSubmitted={isSubmitted}
+        isSubmitted={locked}
       />
     </div>
   );

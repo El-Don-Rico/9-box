@@ -19,6 +19,13 @@ export interface StepConfig {
     values: Record<string, unknown>,
     onChange: (key: string, val: unknown) => void
   ) => React.ReactNode;
+  // Extra content rendered beneath this step's input (e.g. supporting panels
+  // that belong to the step but aren't part of its value).
+  footer?: React.ReactNode;
+  // When true, the user cannot advance past this step (Next is disabled).
+  blockNext?: boolean;
+  // Hint shown next to a blocked Next button explaining what's required.
+  blockNextHint?: string;
 }
 
 interface StepFormProps {
@@ -74,6 +81,9 @@ export function StepForm({
             ? step.renderMulti(values, onChange)
             : step.render?.(values[step.id], (val) => onChange(step.id, val))}
         </div>
+        {step.footer && (
+          <div className="mt-6 pt-6 border-t border-line space-y-6">{step.footer}</div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -94,9 +104,14 @@ export function StepForm({
               {isSubmitted ? "Submitted" : submitting ? "Submitting..." : "Submit"}
             </Button>
           ) : (
-            <Button onClick={() => setCurrentStep((s) => s + 1)}>
-              Next
-            </Button>
+            <div className="flex items-center gap-3">
+              {step.blockNext && step.blockNextHint && (
+                <span className="text-xs text-ink-3 max-w-[16rem] text-right">{step.blockNextHint}</span>
+              )}
+              <Button onClick={() => setCurrentStep((s) => s + 1)} disabled={step.blockNext}>
+                Next
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -189,6 +204,48 @@ interface MultiRatingStepProps {
   commentLabel?: string;
   commentPlaceholder?: string;
   labels?: Record<number, string>;
+}
+
+// Renders a single rating together with a free-text comments box beneath it,
+// each bound to its own field in the shared values map. Lets a rating and its
+// "general comments" live in one step instead of two.
+export function RatingWithComment({
+  values,
+  onChange,
+  ratingId,
+  commentId,
+  prompts,
+  labels,
+  commentLabel = "Comments",
+  commentPlaceholder,
+}: {
+  values: Record<string, unknown>;
+  onChange: (key: string, val: unknown) => void;
+  ratingId: string;
+  commentId: string;
+  prompts?: string[];
+  labels?: Record<number, string>;
+  commentLabel?: string;
+  commentPlaceholder?: string;
+}) {
+  return (
+    <div className="space-y-6">
+      <RatingStep
+        value={(values[ratingId] as number | null) ?? null}
+        onChange={(v) => onChange(ratingId, v)}
+        prompts={prompts}
+        labels={labels}
+      />
+      <div>
+        <p className="text-base font-semibold text-ink mb-3">{commentLabel}</p>
+        <TextStep
+          value={(values[commentId] as string) || ""}
+          onChange={(v) => onChange(commentId, v)}
+          placeholder={commentPlaceholder}
+        />
+      </div>
+    </div>
+  );
 }
 
 // Renders several ratings (one per value) plus a single shared comment box,

@@ -18,6 +18,7 @@ import {
 import { DimensionComparison } from "@/components/assessments/dimension-comparison";
 
 interface SelfAssessmentData {
+  id: string;
   performance: number | null;
   performanceJustification: string | null;
   achievements: string | null;
@@ -66,6 +67,47 @@ interface CycleData {
   quarter: number | null;
   year: number;
   status: string;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  summary: string | null;
+  createdAt: string;
+  actor: { id: string; name: string };
+}
+
+// Compact audit trail for an employee's own self-assessment.
+function SelfAuditTrail({ selfAssessmentId }: { selfAssessmentId: string }) {
+  const [logs, setLogs] = useState<AuditEntry[]>([]);
+  useEffect(() => {
+    fetch(`/api/audit?entityType=SelfAssessment&entityId=${selfAssessmentId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setLogs(Array.isArray(d) ? d : []))
+      .catch(() => setLogs([]));
+  }, [selfAssessmentId]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <div>
+      <h3 className="eyebrow mb-2">History</h3>
+      <ul className="space-y-2">
+        {logs.map((log) => (
+          <li key={log.id} className="text-sm text-ink-2 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            <span className="mono tnum text-xs text-ink-3 whitespace-nowrap">
+              {new Date(log.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+            </span>
+            <span>
+              <span className="font-medium text-ink">{log.actor.name}</span>
+              {" — "}
+              {log.summary || log.action}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default function MyResultsPage() {
@@ -368,6 +410,8 @@ export default function MyResultsPage() {
                   <p className="text-sm text-ink-2">{mgr.notes}</p>
                 </div>
               )}
+
+              {self?.id && self?.submittedAt && <SelfAuditTrail selfAssessmentId={self.id} />}
             </CardContent>
           </Card>
         );

@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { TasksPanel } from "@/components/tasks/tasks-panel";
+import { GoalsPanel } from "@/components/assessments/goals-panel";
 import { KanbanBoard } from "@/components/meetings/kanban-board";
 import type { CycleData, TeamMemberStatus, TaskData } from "@/types";
-import { formatCyclePeriod, comparePeriodDesc } from "@/lib/utils";
+import { formatCyclePeriod, comparePeriodDesc, pickDefaultCycle } from "@/lib/utils";
 import { getValuesAlignment } from "@/lib/nine-box";
 
 export default function DashboardPage() {
@@ -98,6 +99,10 @@ function EmployeeDashboard() {
   const needsSelfAssessment = !!openCycle && !openSummary?.selfSubmitted;
   const latestWithResults = cycleSummaries.find((s) => s.mgrSubmitted);
 
+  // Goals & key metrics are scoped to the current cycle: prefer the open cycle,
+  // otherwise the latest cycle we have any record for.
+  const goalsCycleId = openCycle?.id ?? latestWithResults?.cycleId ?? cycleSummaries[0]?.cycleId ?? null;
+
   // Compute averages from cycles that have manager assessments
   const completedCycles = cycleSummaries.filter((s) => s.mgrSubmitted);
   const avgPerformance = completedCycles.length > 0
@@ -157,7 +162,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrPerformance ?? "-"}
                 </p>
-                {avgPerformance !== null && completedCycles.length > 1 && (
+                {avgPerformance !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgPerformance.toFixed(1)}</span></p>
                 )}
               </div>
@@ -166,7 +171,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrGrowthReadiness ?? "-"}
                 </p>
-                {avgGrowthReadiness !== null && completedCycles.length > 1 && (
+                {avgGrowthReadiness !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgGrowthReadiness.toFixed(1)}</span></p>
                 )}
               </div>
@@ -175,7 +180,7 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrValuesAlignment ?? "-"}
                 </p>
-                {avgValues !== null && completedCycles.length > 1 && (
+                {avgValues !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgValues.toFixed(1)}</span></p>
                 )}
               </div>
@@ -184,18 +189,29 @@ function EmployeeDashboard() {
                 <p className="serif text-2xl mono tnum">
                   {latestWithResults.mgrEngagement ?? "-"}
                 </p>
-                {avgEngagement !== null && completedCycles.length > 1 && (
+                {avgEngagement !== null && (
                   <p className="tiny muted mt-1">Avg: <span className="mono tnum">{avgEngagement.toFixed(1)}</span></p>
                 )}
               </div>
             </div>
-            {completedCycles.length > 1 && (
-              <p className="tiny muted mt-3 text-center">
-                Latest: {formatCyclePeriod(latestWithResults)} · Averages across <span className="mono tnum">{completedCycles.length}</span> cycles
-              </p>
-            )}
+            <p className="tiny muted mt-3 text-center">
+              Current cycle: {formatCyclePeriod(latestWithResults)}
+              {completedCycles.length > 1 && (
+                <> · Avg across <span className="mono tnum">{completedCycles.length}</span> cycles</>
+              )}
+            </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Goals & Key Metrics — current cycle progress (read-only) */}
+      {session?.user?.id && (
+        <GoalsPanel
+          employeeId={session.user.id}
+          cycleId={goalsCycleId}
+          className=""
+          defaultOpen
+        />
       )}
 
       {/* Cycle Cards */}
@@ -321,28 +337,33 @@ function ManagerDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
   const role = session?.user?.role;
-  const [cycle, setCycle] = useState<CycleData | null>(null);
+  const [cycles, setCycles] = useState<CycleData[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   const [team, setTeam] = useState<TeamMemberStatus[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
 
   useEffect(() => {
     fetch("/api/cycles")
       .then((r) => r.json())
-      .then((cycles: CycleData[]) => {
-        // Use the most active cycle (open if any, else most recent).
-        const current = cycles.find((c) => c.status === "OPEN") || cycles[0];
-        if (current) {
-          setCycle(current);
-          fetch(`/api/team?cycleId=${current.id}`)
-            .then((r) => r.json())
-            .then((t) => setTeam(Array.isArray(t) ? t : []));
-        }
+      .then((cs: CycleData[]) => {
+        const sorted = [...cs].sort(comparePeriodDesc);
+        setCycles(sorted);
+        // Default to the most recently opened cycle; managers can toggle below.
+        setSelectedCycleId(pickDefaultCycle(sorted)?.id ?? "");
       });
     fetch("/api/tasks?scope=managed")
       .then((r) => (r.ok ? r.json() : []))
       .then((t) => setTasks(Array.isArray(t) ? t : []));
   }, []);
 
+  useEffect(() => {
+    if (!selectedCycleId) return;
+    fetch(`/api/team?cycleId=${selectedCycleId}`)
+      .then((r) => r.json())
+      .then((t) => setTeam(Array.isArray(t) ? t : []));
+  }, [selectedCycleId]);
+
+  const cycle = cycles.find((c) => c.id === selectedCycleId) ?? null;
   const assessed = team.filter((t) => t.managerAssessmentStatus === "submitted").length;
   const selfDone = team.filter((t) => t.selfAssessmentStatus === "submitted").length;
 
@@ -362,6 +383,23 @@ function ManagerDashboard() {
           ) : (
             "Track your team through the current cycle"
           )
+        }
+        actions={
+          cycles.length > 0 ? (
+            <select
+              value={selectedCycleId}
+              onChange={(e) => setSelectedCycleId(e.target.value)}
+              aria-label="Select cycle"
+              className="rounded-lg border border-line-2 bg-paper px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-magenta focus:ring-2 focus:ring-magenta/20"
+            >
+              {cycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatCyclePeriod(c)}
+                  {c.status === "OPEN" ? " · Open" : ""}
+                </option>
+              ))}
+            </select>
+          ) : undefined
         }
       />
 

@@ -44,14 +44,17 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isManager(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { employeeId, name, target, unit, notes } = await request.json();
 
   if (!employeeId || !name || !target) {
     return NextResponse.json({ error: "employeeId, name, and target are required" }, { status: 400 });
+  }
+
+  // Employees may set their own key metrics; managers may set them for anyone.
+  const isOwn = employeeId === session.user.id;
+  if (!isOwn && !isManager(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
